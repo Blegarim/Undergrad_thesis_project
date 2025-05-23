@@ -1,0 +1,22 @@
+# Ignore the cloned PIE repo and large datasets
+PIE/
+data/
+venv/
+*.mp4
+*.avi
+
+# Ignore Python cache, logs, weights
+__pycache__/
+*.pt
+*.pth
+*.ckpt
+*.log
+*.pkl
+
+
+# Ignore Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
