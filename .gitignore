@@ -1,7 +1,7 @@
 # Ignore the cloned PIE repo and large datasets
 PIE/
 data/
-venv/
+.venv/
 *.mp4
 *.avi
 

@@ -49,7 +49,7 @@ def generate_sequences(database, dataset_obj, set_id, video_id, sequence_length=
             image_root = Path(ROOT_DIR) / "data" / "videos"
 
             seq_image_paths = [
-                str(image_root / set_id / video_id / f"{int(f):06d}.jpg")
+                str(image_root / set_id / video_id / f"{int(f):05d}.jpg")
                 for f in seq_frames
             ]
 
