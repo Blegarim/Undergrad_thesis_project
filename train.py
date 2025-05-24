@@ -83,6 +83,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
 def main():
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print({device})
 
     # Hyperparameters
     embedding_dim = 128
