@@ -101,7 +101,7 @@ def main():
 
     # Model initialization
     model = MultimodalModel(
-        cnn_backbone = CNNFeatureExtractor(),
+        cnn_backbone = CNNFeatureExtractor(backbone='efficientnet_b0'),
         motion_transformer = MotionTransformer(),
         cross_attention = CrossAttentionModule()
     ).to(device)
