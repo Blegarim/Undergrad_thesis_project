@@ -4,7 +4,7 @@ import torch
 import torchvision.transforms as T
 from pathlib import Path
 import sys
-from ComputeMotionFeatures import compute_motion_features
+from scripts.ComputeMotionFeatures import compute_motion_features
 
 # Add PIE root directory to path
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -12,7 +12,7 @@ sys.path.append(str(ROOT_DIR))
 
 # PIE-specific imports
 from PIE.utilities.pie_data import PIE
-from generate_sequences import generate_all_sequences
+from scripts.generate_sequences import generate_all_sequences
 
 class PIESequenceDataset(Dataset):
     """
@@ -107,7 +107,7 @@ def build_dataloader(set_ids=['set01'], sequence_length=10, batch_size=8, crop=T
 
     return train_loader, val_loader
 
-if __name__ == '__main__':
+def sanity_check():
     train_loader, val_loader = build_dataloader()
     print("Type of dataloader:", type(train_loader))
     print("Type of first element in dataloader:", type(next(iter(train_loader))))
