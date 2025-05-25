@@ -4,7 +4,7 @@ import torch
 import torchvision.transforms as T
 from pathlib import Path
 import sys
-from scripts.ComputeMotionFeatures import compute_motion_features
+from ComputeMotionFeatures import compute_motion_features
 
 # Add PIE root directory to path
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -12,18 +12,19 @@ sys.path.append(str(ROOT_DIR))
 
 # PIE-specific imports
 from PIE.utilities.pie_data import PIE
-from scripts.generate_sequences import generate_all_sequences
+from generate_sequences import generate_all_sequences
 
 class PIESequenceDataset(Dataset):
     """
     Custom Dataset for loading sequences of pedestrian crops from PIE dataset.
     Each sample is a sequence of cropped images and a label (default: last frame label).
     """
-    def __init__(self, sequences, transform=None, crop=True, include_motion_deltas=False):
+    def __init__(self, sequences, transform=None, crop=True, include_motion_deltas=False, label_key=None):
         self.sequences = sequences
         self.transform = transform
         self.crop = crop
         self.include_motion_deltas = include_motion_deltas
+        self.label_key = label_key
 
     def __len__(self):
         return len(self.sequences)
@@ -55,7 +56,13 @@ class PIESequenceDataset(Dataset):
         )
 
         # Use last-frame label by default (can be changed later)
-        label = torch.tensor(sequence['labels'][-1], dtype=torch.long)
+        labels_dict = sequence['labels']
+        if self.label_key:
+            label = torch.tensor(labels_dict[self.label_key][-1], dtype=torch.long)
+        else:
+            label = {
+                key: torch.tensor(labels_dict[key][-1], dtype=torch.long) for key in labels_dict
+            }
 
         return images, motions, label
 
@@ -101,27 +108,22 @@ def build_dataloader(set_ids=['set01'], sequence_length=10, batch_size=8, crop=T
     return train_loader, val_loader
 
 if __name__ == '__main__':
-    dataloader = build_dataloader()
+    train_loader, val_loader = build_dataloader()
+    print("Type of dataloader:", type(train_loader))
+    print("Type of first element in dataloader:", type(next(iter(train_loader))))
 
-    dataloader = build_dataloader()
-    print("Type of dataloader:", type(dataloader))
-    print("Type of first element in dataloader:", type(next(iter(dataloader))))
+    for batch in train_loader:
+        imgs, motions, labels = batch  # labels is now a dict
 
-    for batch in dataloader:
-        print(f"Batch has {len(batch)} elements")  # Debug print
+        print("Images shape:", imgs.shape)   # Expected: [B, T, 3, 128, 128]
+        print("Motion shape:", motions.shape) # Expected: [B, T, 3]
 
-        # Try safe unpacking
-        if len(batch) == 3:
-            imgs, motions, labels = batch
-        else:
-            print("Unexpected batch format:", batch)
-            break
+        # Labels is a dict of tensors: { 'crossing': [B], 'looking': [B], ... }
+        print("Label keys:", labels.keys())
+        for key, value in labels.items():
+            print(f"{key} label shape: {value.shape}")
 
-        print("Images shape:", imgs.shape)   # Expected: [batch_size, seq_len, 3, 128, 128]
-        print("Motion shape:", motions.shape) # Expected: [batch_size, seq_len, 3] (cx, cy, dt)
-        print("Labels shape:", labels.shape) # Expected: [batch_size]
-
-        print("Example motion features (first sample):")
-        print(motions[0])
+        print("Example motion features (first sample):", motions[0])
         break
+
 

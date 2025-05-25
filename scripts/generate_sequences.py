@@ -26,11 +26,16 @@ def generate_sequences(database, dataset_obj, set_id, video_id, sequence_length=
         track = video_db['ped_annotations'][pid]
         frames = track['frames']
         bboxes = track['bbox']
-        labels = track['behavior'].get('crossing', [])
 
-        # Pad labels if empty or shorter than frames length
-        if len(labels) < len(frames):
-            labels = labels + [0] * (len(frames) - len(labels))
+        # Extract multiple behavior labels
+        behavior_keys = ['crossing', 'looking', 'walking', 'action']
+        all_labels = {}
+
+        for key in behavior_keys:
+            key_labels = track['behavior'].get(key, [])
+            if len(key_labels) < len(frames):
+                key_labels = key_labels + [0] * (len(frames) - len(key_labels))
+            all_labels[key] = key_labels
 
         if len(frames) < sequence_length:
             continue
@@ -44,12 +49,13 @@ def generate_sequences(database, dataset_obj, set_id, video_id, sequence_length=
                     continue  # Skip sequences with non-consecutive frames
 
             seq_bboxes = bboxes[i:i + sequence_length]
-            seq_labels = labels[i:i + sequence_length]
+            seq_labels = {key: all_labels[key][i:i + sequence_length] for key in behavior_keys}
+
 
             image_root = Path(ROOT_DIR) / "data" / "images"
 
             seq_image_paths = [
-                str(image_root / set_id / video_id / f"{int(f):05d}.png")
+                str(image_root / set_id / video_id / f"{int(f):05d}.jpg")
                 for f in seq_frames
             ]
 
@@ -125,9 +131,9 @@ def sanity_check_sequences(sequences, sequence_length=10, sample_size=1000):
         bboxes = seq['bboxes']
         labels = seq['labels']
 
-        assert len(frames) == sequence_length, f"Seq {seq_idx} frames length mismatch"
+        for key, label_seqs in labels.items():
+            assert len(label_seqs) == sequence_length, f"{key} label in seq {seq_idx} length mismatch"
         assert len(bboxes) == sequence_length, f"Seq {seq_idx} bboxes length mismatch"
-        assert len(labels) == sequence_length, f"Seq {seq_idx} labels length mismatch"
 
         for i in range(sequence_length - 1):
             assert frames[i+1] > frames[i], f"Seq {seq_idx} frames not increasing at position {i}"
@@ -149,7 +155,7 @@ if __name__ == "__main__":
     )
 
     # Optional: check integrity
-    #sanity_check_sequences(train_sequences, sequence_length=10, sample_size=500)
-    #sanity_check_sequences(val_sequences, sequence_length=10, sample_size=500)
+    sanity_check_sequences(train_sequences, sequence_length=10, sample_size=500)
+    sanity_check_sequences(val_sequences, sequence_length=10, sample_size=500)
 
 

@@ -25,14 +25,19 @@ for file in video_dir.glob('*.mp4'):
     frame_id = 0
     saved_id = 0
 
+    count = 0
+
     while True:
         ret, frame = cap.read()
         if not ret:
             break
         if frame_id % frame_skip == 0:
-            frame_name = f"{saved_id:05d}.jpg"
+            if count % 100 == 0:
+                print(f"Processing {video_name}, Frame: {frame_id}, Saved: {saved_id}")
+            frame_name = f"{saved_id:05d}.png"
             cv2.imwrite(str(output_dir / frame_name), frame)
             saved_id += 1
+            count += 1
         frame_id += 1
 
     cap.release()
