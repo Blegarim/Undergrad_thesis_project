@@ -89,6 +89,7 @@ class PIESequenceDataset(Dataset):
             include_frame_deltas=self.include_motion_deltas
         )
 
+        # Convert motions to tensor
         if self.label_key:
             if self.label_vocab:
                 label = torch.tensor(seq['encoded_labels'][self.label_key], dtype=torch.long)

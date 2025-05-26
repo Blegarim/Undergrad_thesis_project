@@ -8,13 +8,14 @@ sys.path.append(str(ROOT_DIR))
 
 from PIE.utilities.pie_data import PIE
 from pprint import pprint
-
-# This script generates sequences of frames and annotations for a given video
-# and pedestrian ID. It uses the PIE dataset to extract sequences of frames
-# and their corresponding bounding boxes and labels. The sequences are
-# generated based on a specified sequence length and are stored in a list
-# of dictionaries, each containing the pedestrian ID, frame numbers,
-# image paths, bounding boxes, and labels.
+'''
+This script generates sequences of frames and annotations for a given video
+and pedestrian ID. It uses the PIE dataset to extract sequences of frames
+and their corresponding bounding boxes and labels. The sequences are
+generated based on a specified sequence length and are stored in a list
+of dictionaries, each containing the pedestrian ID, frame numbers,
+image paths, bounding boxes, and labels.
+'''
 def generate_sequences(database, dataset_obj, set_id, video_id, sequence_length=10, strict=False):
     
     video_db = database[set_id][video_id]
