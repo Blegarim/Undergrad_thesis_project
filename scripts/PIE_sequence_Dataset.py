@@ -108,7 +108,7 @@ class PIESequenceDataset(Dataset):
                 label = label[-1]
 
 
-        return images, motions, label, seq.get('pid', None)
+        return images, motions, label
 
 def build_dataset(set_ids=['set01'], sequence_length=10, crop=True, train_split=0.8, seed=42, label_keys=None):
     transform = T.Compose([
@@ -160,7 +160,7 @@ def build_dataloader(set_ids=['set01'], sequence_length=10, batch_size=8, crop=T
 def sanity_check():
     train_loader, val_loader, _ = build_dataloader()
 
-    for images, motions, labels in train_loader:
+    for images, motions, labels, in train_loader:
         print("Images:", images.shape)    # [B, T, 3, 128, 128]
         print("Motion:", motions.shape)   # [B, T, 3]
 

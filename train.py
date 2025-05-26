@@ -7,7 +7,8 @@ from models.CNN_Feature_Extractor import CNNFeatureExtractor
 from models.Motion_Transformer import MotionTransformer
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import MultimodalModel
-from scripts.PIE_sequence_Dataset import build_dataloader, build_dataset  # Make sure this import path is correct
+from scripts.PIE_sequence_Dataset import build_dataloader, build_dataset 
+
 
 # Training and validation loops
 
@@ -34,15 +35,17 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device):
     total_loss = 0
 
     for batch_idx, (images, motions, labels) in enumerate(dataloader):
+        loss = 0
         images = images.to(device)
         motions = motions.to(device)
-        labels = labels.to(device)
+        labels = {k: v.to(device) for k, v in labels.items()}
 
         optimizer.zero_grad()
 
         outputs = model(images, motions) # Shape: [batch_size, num_classes]
-        
-        loss = criterion(outputs, labels)
+
+        for name in outputs:
+            loss += criterion(outputs[name], labels[name])
         loss.backward()
         optimizer.step()
 
@@ -57,26 +60,33 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device):
 def validate_one_epoch(model, dataloader, criterion, device):
     model.eval()
     running_loss = 0
-    correct = 0
-    total = 0
+    correct = {}
+    total = {}
 
     with torch.no_grad():
         for images, motions, labels in dataloader:
             images = images.to(device)
             motions = motions.to(device)
-            labels = labels.to(device)
+            # Move each label tensor to device
+            labels = {k: v.to(device) for k, v in labels.items()}
 
             outputs = model(images, motions)
-            loss = criterion(outputs, labels)
-            running_loss += loss.item()
+            batch_loss = 0
+            for name in outputs:
+                loss = criterion(outputs[name], labels[name])
+                batch_loss += loss.item()
 
-            _, preds = torch.max(outputs, 1)
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
+                _, preds = torch.max(outputs[name], 1)
+                correct[name] = correct.get(name, 0) + (preds == labels[name]).sum().item()
+                total[name] = total.get(name, 0) + labels[name].size(0)
+
+            running_loss += batch_loss
 
     epoch_loss = running_loss / len(dataloader)
-    accuracy = correct / total
+    accuracy = sum(correct.values()) / sum(total.values()) if sum(total.values()) > 0 else 0.0
+
     return epoch_loss, accuracy
+
 
 # Main training function
 
@@ -94,7 +104,16 @@ def main():
     num_epochs = 10
     val_ratio = 0.2
 
-    train_dataset, val_dataset = build_dataset(set_ids=['set01'], sequence_length=sequence_length, crop=True, train_split=1-val_ratio, seed=42)
+    train_dataset, val_dataset, label_vocab = build_dataset(set_ids=['set01'], 
+                                                            sequence_length=sequence_length, 
+                                                            crop=True, 
+                                                            train_split=1-val_ratio, 
+                                                            seed=42
+                                                            )
+    print('Label vocabulary: ', label_vocab)
+    
+    num_classes_dict = {key: len(vocab) for key, vocab in label_vocab.items()}
+    print('Number of classes per label: ', num_classes_dict)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
@@ -103,7 +122,7 @@ def main():
     model = MultimodalModel(
         cnn_backbone = CNNFeatureExtractor(backbone='efficientnet_b0'),
         motion_transformer = MotionTransformer(),
-        cross_attention = CrossAttentionModule()
+        cross_attention = CrossAttentionModule(num_classes_dict=num_classes_dict)
     ).to(device)
 
     # Loss and optimizer
@@ -117,7 +136,7 @@ def main():
         print(f"Epoch {epoch+1}/{num_epochs}")
         train_one_epoch(model, train_loader, criterion, optimizer, device)
         val_loss, val_acc = validate_one_epoch(model, val_loader, criterion, device)
-        print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
+        print(f"Validation Loss: {val_loss:.4f}, Accuracy (overall): {val_acc:.4f}")
 
         # Early stopping check
         early_stopping(val_loss)

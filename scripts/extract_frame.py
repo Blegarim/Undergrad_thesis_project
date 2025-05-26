@@ -34,7 +34,7 @@ for file in video_dir.glob('*.mp4'):
         if frame_id % frame_skip == 0:
             if count % 100 == 0:
                 print(f"Processing {video_name}, Frame: {frame_id}, Saved: {saved_id}")
-            frame_name = f"{saved_id:05d}.png"
+            frame_name = f"{saved_id:05d}.jpg"
             cv2.imwrite(str(output_dir / frame_name), frame)
             saved_id += 1
             count += 1
