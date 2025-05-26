@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 import random
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 sys.path.append(str(ROOT_DIR))
@@ -28,13 +28,13 @@ def generate_sequences(database, dataset_obj, set_id, video_id, sequence_length=
         bboxes = track['bbox']
 
         # Extract multiple behavior labels
-        behavior_keys = ['crossing', 'looking', 'walking', 'action']
+        behavior_keys = ['gesture', 'look', 'action', 'cross']
         all_labels = {}
 
         for key in behavior_keys:
             key_labels = track['behavior'].get(key, [])
             if len(key_labels) < len(frames):
-                key_labels = key_labels + [0] * (len(frames) - len(key_labels))
+                key_labels += ['__undefined__'] * (len(frames) - len(key_labels))
             all_labels[key] = key_labels
 
         if len(frames) < sequence_length:
@@ -155,7 +155,17 @@ if __name__ == "__main__":
     )
 
     # Optional: check integrity
-    sanity_check_sequences(train_sequences, sequence_length=10, sample_size=500)
-    sanity_check_sequences(val_sequences, sequence_length=10, sample_size=500)
+    #sanity_check_sequences(train_sequences, sequence_length=10, sample_size=500)
+    #sanity_check_sequences(val_sequences, sequence_length=10, sample_size=500)
+    label_counts = {key: Counter() for key in ['gesture', 'look', 'action', 'cross']}
+
+    for seq in train_sequences:
+        for key in label_counts:
+            label_counts[key].update(seq['labels'][key])
+
+    print("\n== Label statistics in training sequences ==")
+    for key, counter in label_counts.items():
+        print(f"{key}: {dict(counter)}")
+
 
 

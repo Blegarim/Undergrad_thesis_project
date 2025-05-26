@@ -4,7 +4,7 @@ import torchvision.models as models
 from torchvision.models import MobileNet_V2_Weights, EfficientNet_B0_Weights
 
 class CNNFeatureExtractor(nn.Module):
-    def __init__(self, backbone='mobilenetv2', embedding_dim=128, pretrained=True):
+    def __init__(self, backbone='mobilenetv2', embedding_dim=128, pretrained=True, freeze_backbone=False):
         super().__init__()
 
         self.embedding_dim = embedding_dim
@@ -24,6 +24,10 @@ class CNNFeatureExtractor(nn.Module):
             raise NotImplementedError("Custom CNN not implemented yet.")
         else:
             raise ValueError(f"Unsupported backbone: {backbone}")
+        
+        if freeze_backbone:
+            for param in self.feature_extractor.parameters():
+                param.requires_grad = False
 
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc_layers = nn.Sequential(
@@ -44,7 +48,7 @@ class CNNFeatureExtractor(nn.Module):
 
 if __name__ == '__main__':
     dummy_input = torch.randn(8, 10, 3, 128, 128)  # [B, T, C, H, W]
-    model = CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=128)
+    model = CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=128, freeze_backbone=True)
     output = model(dummy_input)
     print(output.shape)  # Expected: [8, 10, 128]
 
