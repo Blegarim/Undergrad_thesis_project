@@ -21,8 +21,12 @@ def visualize_prediction(dataset, model, idx, device='cpu', label_names=None):
         pred_class = torch.argmax(probs).item()
 
         gt_label = labels[head].item() if isinstance(labels, dict) else labels.item()
-        print(f"{head.uppter()}: GT={gt_label} | Pred={pred_class} | Prob={probs[pred_class]:.2f}")
 
+        # Use label names if provided
+        pred_name = label_names[head][pred_class] if label_names and head in label_names else str(pred_class)
+        gt_name = label_names[head][gt_label] if label_names and head in label_names else str(gt_label)
+
+        print(f"{head.upper()}: GT={gt_name} | Pred={pred_name} | Prob={probs[pred_class]:.2f}")
     print('========================\n')
 
     # Plot sequences
@@ -33,7 +37,7 @@ def visualize_prediction(dataset, model, idx, device='cpu', label_names=None):
 
     for i, ax in enumerate(axes):
         img = F.to_pil_image(images[0, i].cpu())
-        ax.imgshow(img)
+        ax.imshow(img)
         ax.axis('off')
 
     plt.suptitle('Prediction vs Ground Truth', fontsize=14)
