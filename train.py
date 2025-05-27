@@ -109,7 +109,7 @@ def main():
     # Hyperparameters
     embedding_dim = 128
     learning_rate = 5e-5
-    batch_size = 8
+    batch_size = 16
     sequence_length = 10
     num_epochs = 10
     val_ratio = 0.2
@@ -119,7 +119,6 @@ def main():
                                                             crop=True, 
                                                             train_split=1-val_ratio, 
                                                             seed=42,
-                                                            label_mode='per_frame'
                                                             )
     print('Label vocabulary: ', label_vocab)
     
@@ -127,7 +126,7 @@ def main():
     print('Number of classes per label: ', num_classes_dict)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
     # Model initialization
     model = MultimodalModel(
