@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,11 +9,15 @@ from models.CNN_Feature_Extractor import CNNFeatureExtractor
 from models.Motion_Transformer import MotionTransformer
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import MultimodalModel
+
 from scripts.PIE_sequence_Dataset import build_dataloader, build_dataset 
 
-
-# Training and validation loops
-
+'''This script trains a multimodal model on the PIE dataset.
+It includes a CNN feature extractor, a motion transformer, and a cross-attention module.
+The model is trained using a cross-entropy loss function and an Adam optimizer.
+The training process includes early stopping based on validation loss.
+'''
+# Early stopping utility
 class EarlyStopping:
     def __init__(self, patience=3, min_delta=0.0):
         self.patience = patience
@@ -29,7 +35,7 @@ class EarlyStopping:
             if self.counter >= self.patience:
                 self.early_stop = True
 
-
+# Training and validation loops
 def train_one_epoch(model, dataloader, criterion, optimizer, device):
     model.train()
     total_loss = 0
@@ -45,7 +51,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device):
         outputs = model(images, motions) # Shape: [batch_size, num_classes]
 
         for name in outputs:
-            loss += criterion(outputs[name], labels[name])
+            loss += criterion[name](outputs[name], labels[name])
         loss.backward()
         optimizer.step()
 
@@ -73,7 +79,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
             outputs = model(images, motions)
             batch_loss = 0
             for name in outputs:
-                loss = criterion(outputs[name], labels[name])
+                loss = criterion[name](outputs[name], labels[name])
                 batch_loss += loss.item()
 
                 _, preds = torch.max(outputs[name], 1)
@@ -83,13 +89,18 @@ def validate_one_epoch(model, dataloader, criterion, device):
             running_loss += batch_loss
 
     epoch_loss = running_loss / len(dataloader)
+    for name in correct:
+        if total[name] > 0:
+            acc = correct[name] / total[name]
+            print(f"Validation Accuracy for {name}: {acc:.4f}")
+        else:
+            acc = 0.0
+            print(f"No samples for {name}, accuracy set to 0.0")
     accuracy = sum(correct.values()) / sum(total.values()) if sum(total.values()) > 0 else 0.0
 
     return epoch_loss, accuracy
 
-
 # Main training function
-
 def main():
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -97,8 +108,7 @@ def main():
 
     # Hyperparameters
     embedding_dim = 128
-    num_classes = 3
-    learning_rate = 1e-4
+    learning_rate = 5e-5
     batch_size = 8
     sequence_length = 10
     num_epochs = 10
@@ -108,7 +118,8 @@ def main():
                                                             sequence_length=sequence_length, 
                                                             crop=True, 
                                                             train_split=1-val_ratio, 
-                                                            seed=42
+                                                            seed=42,
+                                                            label_mode='per_frame'
                                                             )
     print('Label vocabulary: ', label_vocab)
     
@@ -126,10 +137,14 @@ def main():
     ).to(device)
 
     # Loss and optimizer
-    criterion = nn.CrossEntropyLoss()
+    criterion = {name: nn.CrossEntropyLoss() for name in num_classes_dict}
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
     early_stopping = EarlyStopping(patience=2, min_delta=0.01)
+    # Initialize best validation loss
+    best_val_loss = float('inf')
+
+    os.makedirs('outputs', exist_ok=True)
 
     # Training loop
     for epoch in range(num_epochs):
@@ -138,10 +153,16 @@ def main():
         val_loss, val_acc = validate_one_epoch(model, val_loader, criterion, device)
         print(f"Validation Loss: {val_loss:.4f}, Accuracy (overall): {val_acc:.4f}")
 
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            print(f"New best validation loss: {best_val_loss:.4f}. Saving model...")
+            torch.save(model.state_dict(), f'outputs/best_model_epoch{epoch+1}.pth')
+
         # Early stopping check
         early_stopping(val_loss)
         if early_stopping.early_stop:
             print("Early stopping triggered. Stopping training. Do better.")
+            torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}.pth')
             break
 
 if __name__ == "__main__":
