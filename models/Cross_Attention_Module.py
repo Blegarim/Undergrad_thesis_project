@@ -47,7 +47,7 @@ if __name__ == "__main__":
     img_feats = torch.randn(B, T, D)
     motion_feats = torch.randn(B, T, D)
 
-    model = CrossAttentionModule(d_model=D, num_heads=4, num_classes_dict=num_classes_dict)
+    model = CrossAttentionModule(d_model=D, num_heads=4)
     out = model(img_feats, motion_feats)
     print("Output:", {k: v.shape for k, v in out.items()})  # [4, 2]
 
