@@ -1,43 +1,52 @@
 from collections import defaultdict
 
-def build_label_vocab(sequences, behavior_keys=['gesture', 'look', 'action', 'cross']):
+def build_label_vocab(sequences, behavior_keys=['cross']):
     """
-    Build a vocabulary mapping for each behavior key from the sequence labels.
+    Builds vocabularies (unique label -> index) for each behavior key.
 
     Args:
-        sequences (list of dict): List of sequence dicts from generate_sequences.
-        behavior_keys (list): Keys to extract labels for.
+        sequences: list of dicts, each with a 'labels' field that contains multiple label types.
+        behavior_keys: list of label keys to process.
 
     Returns:
-        dict: A dictionary where each key is a behavior type and value is a label-to-index mapping.
+        A dictionary mapping each behavior key to its label vocab: {label_str: index}
     """
+    from collections import defaultdict
+
     vocab = {key: set() for key in behavior_keys}
 
-    #Gather all labels string for each behavior key
     for seq in sequences:
         for key in behavior_keys:
-            vocab[key].update(seq['labels'][key])
+            labels_per_frame = seq['labels'][key]
+            # Flatten list of lists: frame-level multi-label → flat label list
+            for frame_labels in labels_per_frame:
+                if isinstance(frame_labels, list):
+                    vocab[key].update(frame_labels)
+                else:
+                    vocab[key].add(frame_labels)
 
-    # Convert sets to sorted lists and create label-to-index mappings
-    vocab_maps = {}
-    for key, label_set in vocab.items():
-        labels_sorted = sorted(label_set)
-        vocab_maps[key] = {label: idx for idx, label in enumerate(labels_sorted)}
+    vocab = {
+        key: {label: idx for idx, label in enumerate(sorted(vocab[key]))}
+        for key in vocab
+    }
 
-    return vocab_maps 
+    return vocab
 
 def encode_labels(label_seq, vocab_map):
     """
-    Encode a list of raw labels into indices using the given vocab_map.
-
-    Args:
-        label_seq (list): List of raw labels.
-        vocab_map (dict): Mapping from raw label to index.
-
-    Returns:
-        list: List of encoded labels (integers).
+    label_seq: List of labels per frame, where each frame can have multiple labels.
+    Returns a list of lists of label indices.
     """
-    return [vocab_map[label] for label in label_seq]
+    encoded = []
+
+    for label in label_seq:
+        if isinstance(label, list):
+            encoded.append([vocab_map[l] for l in label])
+        else:
+            encoded.append([vocab_map[label]])
+
+    return encoded
+
 
 
 def decode_labels(encoded_seq, reverse_vocab_map):
