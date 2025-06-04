@@ -84,18 +84,20 @@ class PIESequenceDataset(Dataset):
     
 def pad_sequence_tensor(tensor_list, pad_value=0):
     """
-    Pads a list of Tensors [T_i, C, H, W] into [B, T_max, C, H, W]
-    Also works for label tensors [T_i]
+    Pads a list of tensors [T_i, ...] into [B, T_max, ...] along the first dimension.
+    Works for any shape: [T], [T, D], [T, C, H, W], etc.
     """
     max_len = max(t.shape[0] for t in tensor_list)
     batch = []
     for t in tensor_list:
         pad_len = max_len - t.shape[0]
-        if t.dim() == 4:
-            pad = torch.full((pad_len, *t.shape[1:]), pad_value, dtype=t.dtype)
+        if pad_len > 0:
+            pad_shape = (pad_len,) + t.shape[1:]
+            pad = torch.full(pad_shape, pad_value, dtype=t.dtype, device=t.device)
+            t_padded = torch.cat([t, pad], dim=0)
         else:
-            pad = torch.full((pad_len,), pad_value, dtype=t.dtype)
-        batch.append(torch.cat([t, pad], dim=0))
+            t_padded = t
+        batch.append(t_padded)
     return torch.stack(batch)
 
 def collate_with_padding(batch):
