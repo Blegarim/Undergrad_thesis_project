@@ -6,13 +6,22 @@ from PIE.utilities.pie_data import PIE
 
 import pickle
 
-def generate_sequences(imdb, split='train', seq_type='all', 
-                       min_track_size=10, out_path='sequences.pkl'):
+def generate_sequences(
+        imdb, 
+        split='train', 
+        seq_type='all', 
+        min_track_size=10, 
+        out_path='sequences.pkl',
+        seq_len=20,           # <<< new: desired subsequence length
+        stride=1              # <<< new: sliding window stride
+    ):
     """
     imdb: PIE instance
     split: 'train', 'val', 'test', or 'all'
     seq_type: 'crossing' or 'all' (to include all behaviors)
     min_track_size: minimum sequence length
+    seq_len: desired length of output sub-sequences
+    stride: sliding window step size
     Returns: List of dicts, each with images, bboxes, and behavior labels (per frame)
     """
 
@@ -38,14 +47,22 @@ def generate_sequences(imdb, split='train', seq_type='all',
         crosses = [c[0] for c in sequences['cross'][i]]
         gestures = [g[0] for g in sequences['gesture'][i]]
 
-        dataset.append({
-            'images': images,
-            'bboxes': bboxes,
-            'actions': actions,
-            'looks': looks,
-            'crosses': crosses,
-            'gestures': gestures
-        })
+        n = len(images)
+        if n < seq_len:
+            continue  # skip too-short tracks
+
+        # Sliding window: create many fixed-length sub-sequences
+        for start in range(0, n - seq_len + 1, stride):
+            end = start + seq_len
+            dataset.append({
+                'images': images[start:end],
+                'bboxes': bboxes[start:end],
+                'actions': actions[start:end],
+                'looks': looks[start:end],
+                'crosses': crosses[start:end],
+                'gestures': gestures[start:end]
+            })
+
     # Save the dataset to a pickle file
     with open(out_path, 'wb') as f:
         pickle.dump(dataset, f)
@@ -57,6 +74,6 @@ if __name__ == '__main__':
     pie_path = ROOT_DIR / 'data'
     imdb = PIE(data_path=pie_path)
 
-    generate_sequences(imdb, split='train', seq_type='all', out_path=  'sequences_train.pkl')
-    generate_sequences(imdb, split='val', seq_type='all', out_path='sequences_val.pkl')
-    generate_sequences(imdb, split='test', seq_type='all', out_path='sequences_test.pkl')
+    generate_sequences(imdb, split='train', seq_type='all', out_path='sequences_train.pkl', seq_len=20, stride=1)
+    generate_sequences(imdb, split='val', seq_type='all', out_path='sequences_val.pkl', seq_len=20, stride=1)
+    generate_sequences(imdb, split='test', seq_type='all', out_path='sequences_test.pkl', seq_len=20, stride=1)
