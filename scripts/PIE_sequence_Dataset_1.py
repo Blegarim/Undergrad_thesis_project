@@ -80,8 +80,6 @@ class PIESequenceDataset(Dataset):
                'video_id': seq.get('video_id', None) 
             }
 
-        print(f"idx={idx} len(images)={len(images)}, len(bboxes)={len(seq['bboxes'])}, len(actions)={len(actions)}, motions.shape={motions.shape}")
-
         return sample
     
 def pad_sequence_tensor(tensor_list, pad_value=0):

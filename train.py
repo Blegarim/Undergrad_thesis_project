@@ -37,6 +37,13 @@ class EarlyStopping:
             if self.counter >= self.patience:
                 self.early_stop = True
 
+def remap_cross_labels(labels):
+    # Map only: -1 → 2 (irrelevant)
+    crosses = labels['crosses']
+    crosses = crosses.clone()  # avoid in-place mutation
+    crosses[crosses == -1] = 2
+    labels['crosses'] = crosses
+
 # --- Training and validation loops ---
 def train_one_epoch(model, dataloader, criterion, optimizer, device):
     model.train()
@@ -47,12 +54,14 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device):
         motions = motions.to(device)
         labels = {k: v.to(device) for k, v in labels.items()}
 
+        remap_cross_labels(labels)
+
         optimizer.zero_grad()
         outputs = model(images, motions)  # Dict of logits for each head
 
         loss = 0
         for name in outputs:
-            loss += criterion[name](outputs[name], labels[name])
+            loss += criterion[name](outputs[name], labels[name].view(-1))
         loss.backward()
         optimizer.step()
 
@@ -76,10 +85,12 @@ def validate_one_epoch(model, dataloader, criterion, device):
             motions = motions.to(device)
             labels = {k: v.to(device) for k, v in labels.items()}
 
+            remap_cross_labels(labels)
+
             outputs = model(images, motions)
             batch_loss = 0
             for name in outputs:
-                loss = criterion[name](outputs[name], labels[name])
+                loss = criterion[name](outputs[name], labels[name].view(-1))
                 batch_loss += loss.item()
 
                 _, preds = torch.max(outputs[name], 1)
