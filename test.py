@@ -11,7 +11,7 @@ loader = build_dataloader(sequences, batch_size=8, shuffle=True, transform=trans
 
 for batch in loader:
     print("Batch images:", batch['images'].shape)  # Expect [B, T, C, H, W]
+    print('Motions shape:', batch['motions'].shape)
     print("Actions shape:", batch['actions'].shape)  # [B, T]
-    print("First bboxes:", batch['bboxes'][0])  # List of boxes
     print("Meta:", batch.get('meta', None))  # Optional
     break
