@@ -115,7 +115,6 @@ def postprocess_add_behavior_labels(sequences, dataset, annot_db):
 
 
 def generate_sequences(set_ids, seq_type, output_dir):
-    from PIE.utilities.pie_data import PIE
 
     DATA_ROOT = ROOT_DIR / 'data'
     OUTPUT_FILENAME = f'sequences_{"_".join(set_ids)}_{seq_type}.pkl'
