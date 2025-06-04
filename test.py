@@ -1,22 +1,17 @@
-import pickle
-from pathlib import Path
+from scripts.PIE_sequence_Dataset_1 import load_sequences_from_pkl, PIESequenceDataset, build_dataloader
+from torchvision import transforms
+from torchvision.transforms import ToTensor
 
-db_path = Path("data/data_cache/pie_database.pkl")  # Adjust path if needed
-with open(db_path, "rb") as f:
-    db = pickle.load(f)
+sequences = load_sequences_from_pkl("sequences_train.pkl")
+transform = transforms.Compose([
+    transforms.Resize((128, 128)),  # Change size if needed
+    transforms.ToTensor(),
+])
+loader = build_dataloader(sequences, batch_size=8, shuffle=True, transform=transform, crop=True, pad=True)
 
-print("✅ Annotation DB loaded")
-print("Available sets:", list(db.keys()))
-
-for set_id in db:
-    print(f"\nSet: {set_id}")
-    for video_id in db[set_id]:
-        print(f"  Video: {video_id}")
-        ped_annot = db[set_id][video_id].get("ped_annotations", {})
-        for ped_id, ped_data in ped_annot.items():
-            print(f"    Pedestrian ID: {ped_id}")
-            frames = ped_data.get("frames", {})
-            print(f"      Num frames: {len(frames)}")
-
-        break  # just show one video for now
-    break  # just show one set for now
+for batch in loader:
+    print("Batch images:", batch['images'].shape)  # Expect [B, T, C, H, W]
+    print("Actions shape:", batch['actions'].shape)  # [B, T]
+    print("First bboxes:", batch['bboxes'][0])  # List of boxes
+    print("Meta:", batch.get('meta', None))  # Optional
+    break

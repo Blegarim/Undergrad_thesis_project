@@ -28,11 +28,13 @@ def generate_sequences(imdb, split='train', seq_type='all',
     sequences = imdb.generate_data_trajectory_sequence(split, **data_opts)
     num_sequences = len(sequences['image'])
     dataset = []
+    print("Available sequence keys:", sequences.keys())
+
     for i in range(num_sequences):
         images = sequences['image'][i]
         bboxes = sequences['bbox'][i]
-        actions = [a[0] for a in sequences['action'][i]]
-        looks = [l[0] for l in sequences['look'][i]]
+        actions = [a[0] for a in sequences['actions'][i]] 
+        looks = [l[0] for l in sequences['looks'][i]]
         crosses = [c[0] for c in sequences['cross'][i]]
         gestures = [g[0] for g in sequences['gesture'][i]]
 
@@ -55,6 +57,6 @@ if __name__ == '__main__':
     pie_path = ROOT_DIR / 'data'
     imdb = PIE(data_path=pie_path)
 
-    generate_sequences(imdb, split='train', seq_type='all', out_path='sequences_train.pkl')
+    generate_sequences(imdb, split='train', seq_type='all', out_path=  'sequences_train.pkl')
     generate_sequences(imdb, split='val', seq_type='all', out_path='sequences_val.pkl')
     generate_sequences(imdb, split='test', seq_type='all', out_path='sequences_test.pkl')
