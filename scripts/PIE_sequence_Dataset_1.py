@@ -46,12 +46,27 @@ class PIESequenceDataset(Dataset):
         
         images = torch.stack(images, dim=0)
 
+        # Extract labels
         actions = seq['actions']
         looks = seq['looks']
         crosses = seq['crosses']
         gestures = seq['gestures']
+
+        # Compute motions (center coordinates + deltas)
+        centers = []
+        for bbox in seq['bboxes']:
+            x1, y1, x2, y2 = bbox
+            cx = (x1 + x2) / 2
+            cy = (y1 + y2) / 2
+            centers.append([cx, cy])
+        centers = torch.tensor(centers, dtype=torch.float32)
+        dt = centers[1:] - centers[:-1]
+        dt = torch.cat([dt[0:1], dt], dim=0)
+        motions = torch.cat([centers, dt], dim=1)  # [T, 4]
+
         sample = {
             'images': images,   # Tensor [T, C, H, W]
+            'motions': motions, # Tensor [T, 4] (cx, cy, dx, dy)
             'bboxes': seq['bboxes'],
             'actions': torch.tensor(actions, dtype=torch.long),
             'looks': torch.tensor(looks, dtype=torch.long),
@@ -88,6 +103,7 @@ def collate_with_padding(batch):
     Custom collate function to pad variable-length sequences
     """
     images = pad_sequence_tensor([item['images'] for item in batch])
+    motions = pad_sequence_tensor([item['motions'] for item in batch])
     actions = pad_sequence_tensor([item['actions'] for item in batch])
     looks = pad_sequence_tensor([item['looks'] for item in batch])
     crosses = pad_sequence_tensor([item['crosses'] for item in batch])
@@ -97,6 +113,7 @@ def collate_with_padding(batch):
 
     out = {
         'images': images,     # [B, T, C, H, W]
+        'motions': motions,  # [B, T, 4] (cx, cy, dx, dy)
         'actions': actions,   # [B, T]
         'looks': looks,
         'crosses': crosses,
