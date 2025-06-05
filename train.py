@@ -125,6 +125,22 @@ def validate_one_epoch(model, dataloader, criterion, device):
 
     return epoch_loss, overall_acc
 
+def get_dataset(split):
+    pt_path = f'preprocessed_{split}.pt'
+    if os.path.exists(pt_path):
+        print(f"Loading preprocessed {split} set from {pt_path}")
+        data = torch.load(pt_path)
+        dataset = PIESequenceDataset(data, preload=False)
+    else:
+        print(f"Loading raw {split} set from PKL")
+        sequences = load_sequences_from_pkl(f'sequences_{split}.pkl')
+        transform = transforms.Compose([
+            transforms.Resize((128, 128)),
+            transforms.ToTensor(),
+        ])
+        dataset = PIESequenceDataset(sequences, transform=transform, crop=True, preload=True)
+    return dataset
+
 # --- Main training function ---
 def main():
     # Device setup
@@ -139,34 +155,28 @@ def main():
     num_epochs = 10
     num_workers = 4
 
-    # Image transform
-    transform = transforms.Compose([
-        transforms.Resize((128, 128)),
-        transforms.ToTensor(),
-    ])
+    # Load datasets (already Dataset objects)
+    train_dataset = get_dataset('train')
+    val_dataset = get_dataset('val')
+    print(f"Loaded {len(train_dataset)} train and {len(val_dataset)} val sequences.")
 
-    # Load data
-    train_sequences = load_sequences_from_pkl('sequences_train.pkl')
-    val_sequences = load_sequences_from_pkl('sequences_val.pkl')
-    print(f"Loaded {len(train_sequences)} train and {len(val_sequences)} val sequences.")
-
-    # Building Dataloader
-    train_dataset = PIESequenceDataset(train_sequences, transform=transform, crop=True, preload=True)
-    val_dataset = PIESequenceDataset(val_sequences, transform=transform, crop=True, preload=False)
-    train_loader = DataLoader(train_dataset, 
-                              batch_size=batch_size, 
-                              shuffle=True, 
-                              num_workers=num_workers, 
-                              collate_fn=collate_fn, 
-                              pin_memory=True
-                              )
-    val_loader = DataLoader(val_dataset, 
-                            batch_size=batch_size, 
-                            shuffle=False, 
-                            num_workers=num_workers, 
-                            collate_fn=collate_fn, 
-                            pin_memory=True
-                            )
+    # Build DataLoaders
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        collate_fn=collate_fn,
+        pin_memory=True
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        collate_fn=collate_fn,
+        pin_memory=True
+    )
 
     # Number of prediction classes per head
     num_classes_dict = {
@@ -178,9 +188,9 @@ def main():
 
     # Model
     model = MultimodalModel(
-        cnn_backbone = CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=embedding_dim),
-        motion_transformer = MotionTransformer(d_model=embedding_dim, max_len=sequence_length, num_heads=8, num_layers=2),
-        cross_attention = CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
+        cnn_backbone=CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=embedding_dim),
+        motion_transformer=MotionTransformer(d_model=embedding_dim, max_len=sequence_length, num_heads=8, num_layers=2),
+        cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
     ).to(device)
 
     # Loss and optimizer
