@@ -61,7 +61,9 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device):
 
         loss = 0
         for name in outputs:
-            loss += criterion[name](outputs[name], labels[name].view(-1))
+            logits = outputs[name].reshape(-1, outputs[name].shape[-1]) # Flatten for loss computation
+            targets = labels[name].reshape(-1) # Flatten targets
+            loss += criterion[name(logits, targets)]
         loss.backward()
         optimizer.step()
 
@@ -90,7 +92,9 @@ def validate_one_epoch(model, dataloader, criterion, device):
             outputs = model(images, motions)
             batch_loss = 0
             for name in outputs:
-                loss = criterion[name](outputs[name], labels[name].view(-1))
+                logits = outputs[name].reshape(-1, outputs[name].shape[-1]) # Flatten for loss computation
+                targets = labels[name].reshape(-1) # Flatten targets
+                loss += criterion[name(logits, targets)]
                 batch_loss += loss.item()
 
                 _, preds = torch.max(outputs[name], 1)
