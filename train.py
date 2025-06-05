@@ -12,6 +12,8 @@ from models.Unified_Module import MultimodalModel
 
 from scripts.PIE_sequence_Dataset_1 import load_sequences_from_pkl, PIESequenceDataset
 
+import time
+
 # --- Collate function ---
 def collate_fn(batch):
     images = torch.stack([item['images'] for item in batch], dim=0)  # [B, T, 3, H, W]
@@ -50,6 +52,8 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device):
     total_loss = 0
 
     for batch_idx, (images, motions, labels) in enumerate(dataloader):
+        start_time = time.time()
+
         images = images.to(device)
         motions = motions.to(device)
         labels = {k: v.to(device) for k, v in labels.items()}
@@ -61,16 +65,18 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device):
 
         loss = 0
         for name in outputs:
-            logits = outputs[name].reshape(-1, outputs[name].shape[-1]) # Flatten for loss computation
-            targets = labels[name].reshape(-1) # Flatten targets
-            loss += criterion[name(logits, targets)]
+            logits = outputs[name]
+            targets = labels[name][:, -1]
+            loss += criterion[name](logits, targets)
         loss.backward()
         optimizer.step()
 
         total_loss += loss.item()
 
+        end_time = time.time()
+        batch_time = end_time - start_time
         if batch_idx % 10 == 0:
-            print(f"Batch {batch_idx}, Loss: {loss.item():.4f}")
+            print(f"Batch {batch_idx}, Loss: {loss.item():.4f}, Time: {batch_time:.3f} sec")
 
     avg_loss = total_loss / len(dataloader)
     print(f"Average Loss: {avg_loss:.4f}")
@@ -92,9 +98,9 @@ def validate_one_epoch(model, dataloader, criterion, device):
             outputs = model(images, motions)
             batch_loss = 0
             for name in outputs:
-                logits = outputs[name].reshape(-1, outputs[name].shape[-1]) # Flatten for loss computation
-                targets = labels[name].reshape(-1) # Flatten targets
-                loss += criterion[name(logits, targets)]
+                logits = outputs[name]
+                targets = labels[name][:, -1]
+                loss += criterion[name](logits, targets)
                 batch_loss += loss.item()
 
                 _, preds = torch.max(outputs[name], 1)
@@ -123,9 +129,10 @@ def main():
     # Hyperparameters
     embedding_dim = 128
     learning_rate = 5e-5
-    batch_size = 16
+    batch_size = 64
     sequence_length = 20
     num_epochs = 10
+    num_workers = 4
 
     # Image transform
     transform = transforms.Compose([
@@ -141,15 +148,25 @@ def main():
     train_dataset = PIESequenceDataset(train_sequences, transform=transform, crop=True)
     val_dataset = PIESequenceDataset(val_sequences, transform=transform, crop=True)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=collate_fn)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, 
+                              batch_size=batch_size, 
+                              shuffle=True, 
+                              num_workers=num_workers, 
+                              collate_fn=collate_fn, 
+                              pin_memory=True)
+    val_loader = DataLoader(val_dataset, 
+                            batch_size=batch_size, 
+                            shuffle=False, 
+                            num_workers=num_workers, 
+                            collate_fn=collate_fn, 
+                            pin_memory=True)
 
     # Number of classes per head (adjust as needed)
     num_classes_dict = {
         'actions': 2,
         'looks': 2,
         'crosses': 3,
-        'gestures': 5
+        'gestures': 6
     }
 
     # Model
