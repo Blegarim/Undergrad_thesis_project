@@ -4,6 +4,7 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from torchvision.transforms import ToTensor
 from pathlib import Path
+from tqdm import tqdm
 import numpy as np
 
 def load_sequences_from_pkl(pkl_path):
@@ -24,9 +25,7 @@ class PIESequenceDataset(Dataset):
         if self.preload:
             print("Preloading images into memory...")
             self.data = []
-            for i, seq in enumerate(sequences):
-                if i % 1000 == 0 and i > 0:
-                    print(f"  Preloaded {i} / {len(sequences)}")
+            for i, seq in enumerate(tqdm(sequences, desc="Preloading")):
                 self.data.append(self._process_sequence(seq))
             print(f"Finished preloading {len(self.data)} sequences.")
         else:
