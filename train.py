@@ -145,9 +145,9 @@ def main():
     val_sequences = load_sequences_from_pkl('sequences_val.pkl')
     print(f"Loaded {len(train_sequences)} train and {len(val_sequences)} val sequences.")
 
+    # Building Dataloader
     train_dataset = PIESequenceDataset(train_sequences, transform=transform, crop=True)
     val_dataset = PIESequenceDataset(val_sequences, transform=transform, crop=True)
-
     train_loader = DataLoader(train_dataset, 
                               batch_size=batch_size, 
                               shuffle=True, 
@@ -161,7 +161,7 @@ def main():
                             collate_fn=collate_fn, 
                             pin_memory=True)
 
-    # Number of classes per head (adjust as needed)
+    # Number of prediction classes per head
     num_classes_dict = {
         'actions': 2,
         'looks': 2,
