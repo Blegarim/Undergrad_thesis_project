@@ -13,20 +13,26 @@ def load_sequences_from_pkl(pkl_path):
     print("Available keys in one sample:", sequences[0].keys())
     return sequences
 
-
 class PIESequenceDataset(Dataset):
     def __init__(self, sequences, transform=None, crop=True, 
-                 return_metadata=False):
-        self.sequences = sequences
+                 return_metadata=False, preload=True):
         self.transform = transform
         self.crop = crop
         self.return_metadata = return_metadata
+        self.preload = preload
+        
+        if self.preload:
+            print("Preloading images into memory...")
+            self.data = []
+            for i, seq in enumerate(sequences):
+                if i % 1000 == 0 and i > 0:
+                    print(f"  Preloaded {i} / {len(sequences)}")
+                self.data.append(self._process_sequence(seq))
+            print(f"Finished preloading {len(self.data)} sequences.")
+        else:
+            self.sequences = sequences
 
-    def __len__(self):
-        return len(self.sequences)
-    
-    def __getitem__(self, idx):
-        seq = self.sequences[idx]
+    def _process_sequence(self, seq):
         images = []
         for img_path, bbox in zip(seq['images'], seq['bboxes']):
             img_path = Path(img_path)
@@ -36,14 +42,14 @@ class PIESequenceDataset(Dataset):
                     img_path = alt_path
                 else:
                     raise FileNotFoundError(f"Image not found: {img_path} or {alt_path}")
-            img = Image.open(img_path).convert('RGB')
-            if self.crop:
-                x1, y1, x2, y2 = map(int, bbox)
-                img = img.crop((x1, y1, x2, y2))
-            if self.transform:
-                img = self.transform(img)
-            images.append(img)
-        
+            with Image.open(img_path) as img:
+                img = img.convert('RGB')
+                if self.crop:
+                    x1, y1, x2, y2 = map(int, bbox)
+                    img = img.crop((x1, y1, x2, y2))
+                if self.transform:
+                    img = self.transform(img)
+                images.append(img)
         images = torch.stack(images, dim=0)
 
         # Extract labels
@@ -81,7 +87,19 @@ class PIESequenceDataset(Dataset):
             }
 
         return sample
+
+    def __len__(self):
+        if self.preload:
+            return len(self.data)
+        else:
+            return len(self.sequences)
     
+    def __getitem__(self, idx):
+        if self.preload:
+            return self.data[idx]
+        else:
+            return self._process_sequence(self.sequences[idx])
+
 def pad_sequence_tensor(tensor_list, pad_value=0):
     """
     Pads a list of tensors [T_i, ...] into [B, T_max, ...] along the first dimension.
@@ -93,7 +111,7 @@ def pad_sequence_tensor(tensor_list, pad_value=0):
         pad_len = max_len - t.shape[0]
         if pad_len > 0:
             pad_shape = (pad_len,) + t.shape[1:]
-            pad = torch.full(pad_shape, pad_value, dtype=t.dtype, device=t.device)
+            pad = torch.full(pad_shape, pad_value, dtype=t.dtype)
             t_padded = torch.cat([t, pad], dim=0)
         else:
             t_padded = t
@@ -126,16 +144,18 @@ def collate_with_padding(batch):
         out['meta'] = meta
     return out   
 
-def build_dataloader(sequences, batch_size=32, shuffle=True, transform=None, crop=True, pad=False):
+def build_dataloader(sequences, batch_size=32, shuffle=True, transform=None, crop=True, pad=False, preload=False):
     """
     sequences: list of dicts loaded from your PKL
     batch_size: number of sequences per batch
     shuffle: shuffle dataset each epoch
     transform: torchvision transform to apply to each image (optional)
     crop: whether to crop images to bbox (default True)
+    pad: whether to pad variable-length sequences
+    preload: whether to preload all data into RAM
     Returns: PyTorch DataLoader
     """
-    dataset = PIESequenceDataset(sequences, transform=transform, crop=crop)
+    dataset = PIESequenceDataset(sequences, transform=transform, crop=crop, preload=preload)
     collate_fn = collate_with_padding if pad else (lambda x: x)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn)
     return dataloader

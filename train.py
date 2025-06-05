@@ -14,7 +14,12 @@ from scripts.PIE_sequence_Dataset_1 import load_sequences_from_pkl, PIESequenceD
 
 import time
 
+'''
+Training script for the PIE dataset using a multimodal model with CNN, Transformer, and Cross-Attention.
+'''
+
 # --- Collate function ---
+# Collate a batch of data from the PIESequenceDataset.
 def collate_fn(batch):
     images = torch.stack([item['images'] for item in batch], dim=0)  # [B, T, 3, H, W]
     motions = torch.stack([item['motions'] for item in batch], dim=0)[..., :3]  # [B, T, 3]
@@ -146,20 +151,22 @@ def main():
     print(f"Loaded {len(train_sequences)} train and {len(val_sequences)} val sequences.")
 
     # Building Dataloader
-    train_dataset = PIESequenceDataset(train_sequences, transform=transform, crop=True)
-    val_dataset = PIESequenceDataset(val_sequences, transform=transform, crop=True)
+    train_dataset = PIESequenceDataset(train_sequences, transform=transform, crop=True, preload=True)
+    val_dataset = PIESequenceDataset(val_sequences, transform=transform, crop=True, preload=False)
     train_loader = DataLoader(train_dataset, 
                               batch_size=batch_size, 
                               shuffle=True, 
                               num_workers=num_workers, 
                               collate_fn=collate_fn, 
-                              pin_memory=True)
+                              pin_memory=True
+                              )
     val_loader = DataLoader(val_dataset, 
                             batch_size=batch_size, 
                             shuffle=False, 
                             num_workers=num_workers, 
                             collate_fn=collate_fn, 
-                            pin_memory=True)
+                            pin_memory=True
+                            )
 
     # Number of prediction classes per head
     num_classes_dict = {
