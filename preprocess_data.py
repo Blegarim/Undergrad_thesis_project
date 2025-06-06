@@ -19,6 +19,7 @@ def main():
 
     # Save to disk
     torch.save(train_dataset.data, 'preprocessed_train.pt')
+
     torch.save(val_dataset.data, 'preprocessed_val.pt')
     print("Precomputed and saved datasets.")
 
