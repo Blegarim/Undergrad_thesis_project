@@ -2,6 +2,8 @@ import pickle
 import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
+from turbojpeg import TurboJPEG, TJPF_RGB
+jpeg = TurboJPEG()
 from torchvision.transforms import ToTensor
 from pathlib import Path
 from tqdm import tqdm
@@ -41,23 +43,27 @@ class PIESequenceDataset(Dataset):
                     img_path = alt_path
                 else:
                     raise FileNotFoundError(f"Image not found: {img_path} or {alt_path}")
-            with Image.open(img_path) as img:
-                img = img.convert('RGB')
-                if self.crop:
-                    x1, y1, x2, y2 = map(int, bbox)
-                    img = img.crop((x1, y1, x2, y2))
-                if self.transform:
-                    img = self.transform(img)
-                images.append(img)
+            with open(img_path, 'rb') as in_file:
+                buff = in_file.read()
+            try:
+                img_array = jpeg.decode(buff, pixel_format=TJPF_RGB)
+                img = Image.fromarray(img_array)
+            except Exception:
+                img = Image.open(img_path).convert('RGB')
+
+            if self.crop:
+                x1, y1, x2, y2 = map(int, bbox)
+                img = img.crop((x1, y1, x2, y2))
+            if self.transform:
+                img = self.transform(img)
+            images.append(img)
         images = torch.stack(images, dim=0)
 
-        # Extract labels
         actions = seq['actions']
         looks = seq['looks']
         crosses = seq['crosses']
         gestures = seq['gestures']
 
-        # Compute motions (center coordinates + deltas)
         centers = []
         for bbox in seq['bboxes']:
             x1, y1, x2, y2 = bbox
@@ -81,8 +87,8 @@ class PIESequenceDataset(Dataset):
 
         if self.return_metadata:
             sample['meta'] = {
-               'ped_id': seq.get('ped_id', None),
-               'video_id': seq.get('video_id', None) 
+            'ped_id': seq.get('ped_id', None),
+            'video_id': seq.get('video_id', None)
             }
 
         return sample
