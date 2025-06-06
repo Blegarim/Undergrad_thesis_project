@@ -2,7 +2,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
 from models.CNN_Feature_Extractor import CNNFeatureExtractor
@@ -43,6 +43,32 @@ class EarlyStopping:
             self.counter += 1
             if self.counter >= self.patience:
                 self.early_stop = True
+
+class ChunkedPIEDataset(Dataset):
+    def __init__(self, chunk_folder):
+        self.chunk_paths = sorted([
+            os.path.join(chunk_folder, f)
+            for f in os.listdir(chunk_folder) if f.endswith('.pt')
+        ])
+        self.index_map = []  # (chunk_id, index_within_chunk)
+        self.chunk_cache = {}
+
+        for chunk_id, path in enumerate(self.chunk_paths):
+            chunk_data = torch.load(path, map_location='cpu')
+            self.index_map.extend([(chunk_id, i) for i in range(len(chunk_data))])
+            self.chunk_cache[chunk_id] = None  # Lazy loading
+
+    def __len__(self):
+        return len(self.index_map)
+
+    def __getitem__(self, idx):
+        chunk_id, item_idx = self.index_map[idx]
+
+        if self.chunk_cache[chunk_id] is None:
+            self.chunk_cache[chunk_id] = torch.load(self.chunk_paths[chunk_id], map_location='cpu')
+        chunk = self.chunk_cache[chunk_id]
+
+        return chunk[item_idx]
 
 def remap_cross_labels(labels):
     # Map only: -1 → 2 (irrelevant)
@@ -105,11 +131,11 @@ def validate_one_epoch(model, dataloader, criterion, device):
             for name in outputs:
                 logits = outputs[name]
                 targets = labels[name][:, -1]
-                loss += criterion[name](logits, targets)
-                batch_loss += loss.item()
+                loss_i = criterion[name](logits, targets)
+                batch_loss += loss_i.item()
 
                 _, preds = torch.max(outputs[name], 1)
-                correct[name] = correct.get(name, 0) + (preds == labels[name]).sum().item()
+                correct[name] = correct.get(name, 0) + (preds == labels[name][:, -1]).sum().item()
                 total[name] = total.get(name, 0) + labels[name].size(0)
 
             running_loss += batch_loss
@@ -126,11 +152,10 @@ def validate_one_epoch(model, dataloader, criterion, device):
     return epoch_loss, overall_acc
 
 def get_dataset(split):
-    pt_path = f'preprocessed_{split}.pt'
-    if os.path.exists(pt_path):
-        print(f"Loading preprocessed {split} set from {pt_path}")
-        data = torch.load(pt_path)
-        dataset = PIESequenceDataset(data, preload=False)
+    folder_path = f'preprocessed_{split}'
+    if os.path.exists(folder_path) and os.path.isdir(folder_path):
+        print(f"Using lazy chunked loader from {folder_path}")
+        return ChunkedPIEDataset(folder_path)
     else:
         print(f"Loading raw {split} set from PKL")
         sequences = load_sequences_from_pkl(f'sequences_{split}.pkl')
@@ -138,8 +163,8 @@ def get_dataset(split):
             transforms.Resize((128, 128)),
             transforms.ToTensor(),
         ])
-        dataset = PIESequenceDataset(sequences, transform=transform, crop=True, preload=True)
-    return dataset
+        return PIESequenceDataset(sequences, transform=transform, crop=True, preload=True)
+
 
 # --- Main training function ---
 def main():

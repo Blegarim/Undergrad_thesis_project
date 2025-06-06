@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from turbojpeg import TurboJPEG, TJPF_RGB
-jpeg = TurboJPEG()
+jpeg = TurboJPEG(lib_path="C:\\libjpeg-turbo64\\bin\\turbojpeg.dll")
 from torchvision.transforms import ToTensor
 from pathlib import Path
 from tqdm import tqdm
@@ -48,9 +48,8 @@ class PIESequenceDataset(Dataset):
             try:
                 img_array = jpeg.decode(buff, pixel_format=TJPF_RGB)
                 img = Image.fromarray(img_array)
-            except Exception:
+            except Exception as e:
                 img = Image.open(img_path).convert('RGB')
-
             if self.crop:
                 x1, y1, x2, y2 = map(int, bbox)
                 img = img.crop((x1, y1, x2, y2))
@@ -162,5 +161,5 @@ def build_dataloader(sequences, batch_size=32, shuffle=True, transform=None, cro
     """
     dataset = PIESequenceDataset(sequences, transform=transform, crop=crop, preload=preload)
     collate_fn = collate_with_padding if pad else (lambda x: x)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4, collate_fn=collate_fn)
     return dataloader
