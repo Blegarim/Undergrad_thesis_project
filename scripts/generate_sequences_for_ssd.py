@@ -6,13 +6,19 @@ from PIE.utilities.pie_data import PIE
 
 import pickle
 
-SSD_ROOT = 'ssd'  # Adjust this path as needed
+SSD_ROOT = '/mnt/ssd/pie_images'  # Adjust this path as needed
 
 def redirect_image_paths(img_path):
     """
-    Redirects image paths to the SSD directory.
+    Redirects image paths to start from SSD_ROOT, keeping the subdirectory structure after 'data'.
     """
-    return img_path.replace(ROOT_DIR / 'data', SSD_ROOT) 
+    img_path = str(img_path)
+    data_str = str(ROOT_DIR / 'data')
+    if img_path.startswith(data_str):
+        rel_path = img_path[len(data_str):].lstrip('/')
+        return str(Path(SSD_ROOT) / rel_path)
+    else:
+        return img_path
 
 def generate_sequences(
         imdb, 
