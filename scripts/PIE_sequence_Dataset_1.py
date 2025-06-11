@@ -7,7 +7,6 @@ jpeg = TurboJPEG(lib_path="C:\\libjpeg-turbo64\\bin\\turbojpeg.dll")
 from torchvision.transforms import ToTensor
 from pathlib import Path
 from tqdm import tqdm
-import numpy as np
 
 def load_sequences_from_pkl(pkl_path):
     with open(pkl_path, 'rb') as f:
