@@ -3,6 +3,7 @@ from torchvision import transforms
 from scripts.PIE_sequence_Dataset_1 import load_sequences_from_pkl, PIESequenceDataset
 import os
 from tqdm import tqdm
+import gc
 
 def save_dataset_in_chunks(sequences, out_dir, chunk_size=10000, transform=None):
     os.makedirs(out_dir, exist_ok=True)
@@ -16,7 +17,7 @@ def save_dataset_in_chunks(sequences, out_dir, chunk_size=10000, transform=None)
 
         print(f"Saved chunk {i}–{i + len(chunk) - 1} to {out_dir}/chunk_{i:06d}.pt")
         del dataset  # Free memory
-        torch.cuda.empty_cache()
+        gc.collect() # Force garbage collection
 
 def main():
     transform = transforms.Compose([
