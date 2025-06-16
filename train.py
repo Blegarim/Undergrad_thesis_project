@@ -140,7 +140,7 @@ def main():
 
     embedding_dim = 128
     learning_rate = 5e-5
-    batch_size = 64
+    batch_size = 32
     sequence_length = 20
     num_epochs = 10
     num_workers = 0
@@ -203,7 +203,7 @@ def main():
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
 
         # Optional: Shuffle chunk order each epoch for extra randomness
-        # import random; random.shuffle(chunk_files)
+        import random; random.shuffle(chunk_files)
 
         for chunk_idx, chunk_path in enumerate(chunk_files):
             print(f"Loading chunk {chunk_idx + 1}/{len(chunk_files)}: {chunk_path}")

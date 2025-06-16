@@ -25,11 +25,11 @@ def main():
         transforms.ToTensor(),
     ])
 
-    train_sequences = load_sequences_from_pkl('sequences_train.pkl')
+    # train_sequences = load_sequences_from_pkl('sequences_train.pkl')
     val_sequences = load_sequences_from_pkl('sequences_val.pkl')
 
     # Save in chunks
-    save_dataset_in_chunks(train_sequences, out_dir='preprocessed_train', chunk_size=10000, transform=transform)
+    # save_dataset_in_chunks(train_sequences, out_dir='preprocessed_train', chunk_size=10000, transform=transform)
     save_dataset_in_chunks(val_sequences, out_dir='preprocessed_val', chunk_size=10000, transform=transform)
 
     print("All dataset chunks saved successfully.")
