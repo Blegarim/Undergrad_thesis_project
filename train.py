@@ -213,6 +213,9 @@ def main():
         val_loss, val_acc = validate_one_epoch(model, val_loader, criterion, device)
         print(f"Validation Loss: {val_loss:.4f}, Overall Accuracy: {val_acc:.4f}")
 
+        del val_data, val_dataset, val_loader
+        gc.collect()
+
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             print(f"New best validation loss: {best_val_loss:.4f}. Saving model...")
