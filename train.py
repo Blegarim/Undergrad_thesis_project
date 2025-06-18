@@ -114,7 +114,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
     return epoch_loss, overall_acc
 
 def get_dataset(split):
-    folder_path = f'preprocessed_{split}_split'
+    folder_path = f'preprocessed_{split}'
     if os.path.exists(folder_path) and os.path.isdir(folder_path):
         print(f"Using lazy chunked loader from {folder_path}")
         # Not used in this script, but kept for completeness
@@ -140,10 +140,10 @@ def main():
 
     embedding_dim = 128
     learning_rate = 5e-5
-    batch_size = 64
+    batch_size = 32
     sequence_length = 20
     num_epochs = 10
-    num_workers = 4
+    num_workers = 0
 
     # Number of prediction classes per head
     num_classes_dict = {
@@ -169,17 +169,19 @@ def main():
 
 
     # --- Training loop ---
-    chunk_folder = 'preprocessed_train_split'
-    chunk_files = sorted([os.path.join(chunk_folder, f) for f in os.listdir(chunk_folder) if f.endswith('.pt')])
+    train_chunk_folder = 'preprocessed_train_split'
+    train_chunk_files = sorted([os.path.join(train_chunk_folder, f) for f in os.listdir(train_chunk_folder) if f.endswith('.pt')])
+
+    val_chunk_folder = 'preprocessed_val_split'
+    val_chunk_files = sorted([os.path.join(val_chunk_folder, f) for f in os.listdir(val_chunk_folder) if f.endswith('.pt')])
 
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
 
-        # Optional: Shuffle chunk order each epoch for extra randomness
-        import random; random.shuffle(chunk_files)
+        import random; random.shuffle(train_chunk_files)
 
-        for chunk_idx, chunk_path in enumerate(chunk_files):
-            print(f"Loading chunk {chunk_idx + 1}/{len(chunk_files)}: {chunk_path}")
+        for chunk_idx, chunk_path in enumerate(train_chunk_files):
+            print(f"Loading chunk {chunk_idx + 1}/{len(train_chunk_files)}: {chunk_path}")
             chunk_data = torch.load(chunk_path, map_location='cpu')
             dataset = PTChunkDataset(chunk_data)
             loader = DataLoader(
@@ -193,34 +195,20 @@ def main():
             train_one_epoch(model, loader, criterion, optimizer, device)
             del chunk_data, dataset, loader
             gc.collect()
-        
-        # Load all val data ONCE
-        val_dataset = get_dataset('val')
-        if val_dataset is not None:
-            val_loader = DataLoader(
-                val_dataset,
-                batch_size=batch_size,
-                shuffle=False,
-                num_workers=num_workers,
-                collate_fn=collate_fn,
-                pin_memory=True
-            )
-        else:
-            # If val is chunked, load all chunks into a single dataset for validation
-            chunk_folder = 'preprocessed_val_split'
-            chunk_files = sorted([os.path.join(chunk_folder, f) for f in os.listdir(chunk_folder) if f.endswith('.pt')])
-            val_data = []
-            for chunk_path in chunk_files:
-                val_data.extend(torch.load(chunk_path, map_location='cpu'))
-            val_dataset = PTChunkDataset(val_data)
-            val_loader = DataLoader(
-                val_dataset,
-                batch_size=batch_size,
-                shuffle=False,
-                num_workers=num_workers,
-                collate_fn=collate_fn,
-                pin_memory=True
-            )
+
+        # Validation (load all val data once per epoch)
+        val_data = []
+        for chunk_path in val_chunk_files:
+            val_data.extend(torch.load(chunk_path, map_location='cpu'))
+        val_dataset = PTChunkDataset(val_data)
+        val_loader = DataLoader(
+            val_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            collate_fn=collate_fn,
+            pin_memory=True
+        )
 
         val_loss, val_acc = validate_one_epoch(model, val_loader, criterion, device)
         print(f"Validation Loss: {val_loss:.4f}, Overall Accuracy: {val_acc:.4f}")
