@@ -11,7 +11,6 @@ def build_label_vocab(sequences, behavior_keys=['cross']):
     Returns:
         A dictionary mapping each behavior key to its label vocab: {label_str: index}
     """
-    from collections import defaultdict
 
     vocab = {key: set() for key in behavior_keys}
 
