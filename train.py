@@ -114,7 +114,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
     return epoch_loss, overall_acc
 
 def get_dataset(split):
-    folder_path = f'preprocessed_{split}'
+    folder_path = f'preprocessed_{split}_split'
     if os.path.exists(folder_path) and os.path.isdir(folder_path):
         print(f"Using lazy chunked loader from {folder_path}")
         # Not used in this script, but kept for completeness
@@ -140,10 +140,10 @@ def main():
 
     embedding_dim = 128
     learning_rate = 5e-5
-    batch_size = 32
+    batch_size = 64
     sequence_length = 20
     num_epochs = 10
-    num_workers = 0
+    num_workers = 4
 
     # Number of prediction classes per head
     num_classes_dict = {
@@ -169,8 +169,8 @@ def main():
 
 
     # --- Training loop ---
-    train_chunk_folder = 'preprocessed_train'
-    chunk_files = sorted([os.path.join(train_chunk_folder, f) for f in os.listdir(train_chunk_folder) if f.endswith('.pt')])
+    chunk_folder = 'preprocessed_train_split'
+    chunk_files = sorted([os.path.join(chunk_folder, f) for f in os.listdir(chunk_folder) if f.endswith('.pt')])
 
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
@@ -207,7 +207,7 @@ def main():
             )
         else:
             # If val is chunked, load all chunks into a single dataset for validation
-            chunk_folder = 'preprocessed_val'
+            chunk_folder = 'preprocessed_val_split'
             chunk_files = sorted([os.path.join(chunk_folder, f) for f in os.listdir(chunk_folder) if f.endswith('.pt')])
             val_data = []
             for chunk_path in chunk_files:

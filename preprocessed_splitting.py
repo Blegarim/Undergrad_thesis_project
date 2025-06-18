@@ -2,9 +2,9 @@ import os
 import torch
 
 # ====== CONFIGURATION ======
-INPUT_DIR = 'preprocessed_train'           # Where your big .pt files live
-OUTPUT_DIR = 'preprocessed_train_split'    # Where new, smaller chunks will go
-CHUNK_SIZE = 2000                          # Number of sequences per split chunk
+INPUT_DIR = 'preprocessed_val'           # Where your big .pt files live
+OUTPUT_DIR = 'preprocessed_val_split'    # Where new, smaller chunks will go
+CHUNK_SIZE = 5000                          # Number of sequences per split chunk
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
