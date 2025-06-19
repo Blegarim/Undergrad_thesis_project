@@ -5,12 +5,13 @@ from collections import defaultdict
 
 import torch
 from torchvision import transforms
+import numpy as np
 
 # Load model
-model = YOLO('yolov8n.pt')
+model = YOLO('yolo11n.pt')
 
 # Open video
-video_path = 'videohaha.mp4'
+video_path = 'test_clip.mp4'
 cap = cv2.VideoCapture(video_path)
 
 # Output structure: {track_id: list of (frame_idx, bbox, frame)}
@@ -47,6 +48,10 @@ while True:
     if cv2.waitKey(1) == 27:  # ESC to quit
         break
 
+    cv2.putText(frame, f'ID {track_id}', (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+    cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 1)
+    cv2.imshow("Tracking", frame)
+
     frame_idx += 1
 
 print(f"\nTotal pedestrian tracks: {len(tracks)}\n")
@@ -56,6 +61,18 @@ img_transform = transforms.Compose([
     transforms.Resize((128, 128)),
     transforms.ToTensor(),  # [0,1]
 ])
+
+def smooth_track(track_data, window=3):
+    smoothed = []
+    for i in range(len(track_data)):
+        start = max(0, i - window)
+        end = min(len(track_data), i + window + 1)
+        x = np.mean([track_data[j]['cx'] for j in range(start, end)])
+        y = np.mean([track_data[j]['cy'] for j in range(start, end)])
+        frame_idx = track_data[i]['frame_idx']
+        img = track_data[i]['image']
+        smoothed.append({'cx': x, 'cy': y, 'dt': 0, 'frame_idx': frame_idx, 'image': img})
+    return smoothed
 
 def extract_sequences_from_track(track_data, T=20):
     sequences = []
@@ -88,8 +105,16 @@ def extract_sequences_from_track(track_data, T=20):
 
     return sequences
 
-sequences = extract_sequences_from_track(tracks[3], T=10)
-print(f"Generated {len(sequences)} sequences from Track 3")
+total_sequences = 0
+for track_id, track_data in tracks.items():
+    track_data = smooth_track(track_data=track_data)
+    sequences = extract_sequences_from_track(track_data, T=20)
+    if len(sequences) == 0:
+        continue
+    print(f"Generated {len(sequences)} sequences from Track {track_id}")
+    total_sequences += len(sequences)
+
+print(f"\nTotal sequences extracted: {total_sequences}")
 
 cap.release()
 
