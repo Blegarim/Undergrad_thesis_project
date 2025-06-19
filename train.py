@@ -113,21 +113,6 @@ def validate_one_epoch(model, dataloader, criterion, device):
     overall_acc = sum(correct.values()) / sum(total.values()) if sum(total.values()) > 0 else 0.0
     return epoch_loss, overall_acc
 
-def get_dataset(split):
-    folder_path = f'preprocessed_{split}'
-    if os.path.exists(folder_path) and os.path.isdir(folder_path):
-        print(f"Using lazy chunked loader from {folder_path}")
-        # Not used in this script, but kept for completeness
-        return None
-    else:
-        print(f"Loading raw {split} set from PKL")
-        sequences = load_sequences_from_pkl(f'sequences_{split}.pkl')
-        transform = transforms.Compose([
-            transforms.Resize((128, 128)),
-            transforms.ToTensor(),
-        ])
-        return PIESequenceDataset(sequences, transform=transform, crop=True, preload=True)
-
 # Define PTChunkDataset once
 class PTChunkDataset(torch.utils.data.Dataset):
     def __init__(self, data): self.data = data
