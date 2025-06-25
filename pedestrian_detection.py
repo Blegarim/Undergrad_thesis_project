@@ -75,7 +75,8 @@ def smooth_track(track_data, window=3):
         y = np.mean([track_data[j]['cy'] for j in range(start, end)])
         frame_idx = track_data[i]['frame_idx']
         img = track_data[i]['image']
-        smoothed.append({'cx': x, 'cy': y, 'dt': 0, 'frame_idx': frame_idx, 'image': img})
+        bbox = track_data[i]['bbox']
+        smoothed.append({'cx': x, 'cy': y, 'dt': 0, 'frame_idx': frame_idx, 'image': img, 'bbox': bbox})
     return smoothed
 
 def extract_sequences_from_track(track_data, T=20, img_transform=default_img_transform):
