@@ -21,7 +21,7 @@ class CrossAttentionModule(nn.Module):
                 nn.ReLU(),
                 nn.Dropout(dropout),
                 nn.Linear(d_model, num_classes)
-            ) for name, num_classes in num_classes_dict.items()          
+            ) for name, num_classes in num_classes_dict.items()   
         })
 
     def forward(self, motion_feats, image_feats):

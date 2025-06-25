@@ -51,6 +51,8 @@ while True:
         cv2.putText(frame, f'ID {track_id}', (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
 
     cv2.imshow("Tracking", frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
     frame_idx += 1
 
@@ -117,5 +119,6 @@ for track_id, track_data in tracks.items():
 print(f"\nTotal sequences extracted: {total_sequences}")
 
 cap.release()
+cv2.destroyAllWindows()
 
 
