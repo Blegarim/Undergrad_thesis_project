@@ -96,10 +96,18 @@ for idx, meta in enumerate(all_seq_meta):
             'gesture': gesture
         })
 
+# Save the results to a video file with predictions
 cap = cv2.VideoCapture('test_clip.mp4')
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 out = cv2.VideoWriter('output_with_predictions.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS),
                       (int(cap.get(3)), int(cap.get(4))))
+
+LABEL_COLORS = {
+    'action': (0, 255, 255),   # Yellow
+    'look':   (255, 0, 255),   # Magenta
+    'cross':  (255, 255, 0),   # Cyan
+    'gesture':(0, 165, 255),   # Orange
+}
 
 frame_idx = 0
 while True:
@@ -107,11 +115,30 @@ while True:
     if not ret:
         break
     results = frame_results.get(frame_idx, [])
-    for results in results:
-        x1, y1, x2, y2 = results['bbox']
+    for res in results:
+        x1, y1, x2, y2 = res['bbox']
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2) # Draw bounding box
-        label = f'ID {results["track_id"]} | Action: {results["action"]}, Look: {results["look"]}, Cross: {results["cross"]}, Gesture: {results["gesture"]}'
-        cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 225), 2)
+        text = f'ID {results["track_id"]} | Action: {res["action"]}, Look: {res["look"]}, Cross: {res["cross"]}, Gesture: {res["gesture"]}'
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.5
+        thickness = 2
+        text_size, _ = cv2.getTextSize(text, font, font_scale, thickness)
+
+        color_bg = LABEL_COLORS['gesture']
+        # Ensure text fits within the frame
+        x2_label = min(x1 + text_size[0], frame.shape[1]-1)
+        y1_label = max(y1 - 22, 0)
+        cv2.rectangle(frame, (x1, y1 - 22), (x1 + text_size[0], y1), color_bg, -1)
+        cv2.putText(frame, text, (x1, y1 - 7), font, font_scale, (0, 0, 0), 2)
+
+        color_list = [
+            LABEL_COLORS['action'] if res['action'] else (50, 50, 50),
+            LABEL_COLORS['look']   if res['look']   else (50, 50, 50),
+            LABEL_COLORS['cross']  if res['cross']  else (50, 50, 50),
+            LABEL_COLORS['gesture']if res['gesture']else (50, 50, 50),
+        ]
+        for i, color in enumerate(color_list):
+            cv2.rectangle(frame, (x1 + i*15, y2+5), (x1 + (i+1)*15, y2+20), color, -1)
     out.write(frame)
     frame_idx += 1
 
