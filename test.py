@@ -28,28 +28,28 @@ while True:
 
     for box in results.boxes:
         if box.id is None:
-            continue  # skip untracked objects
+            continue
 
         track_id = int(box.id.item())
         x1, y1, x2, y2 = map(int, box.xyxy[0])
-        bbox = (x1, y1, x2, y2)
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = min(frame.shape[1] - 1, x2)
+        y2 = min(frame.shape[0] - 1, y2)
 
-        # Optionally store the cropped image too
         cropped = frame[y1:y2, x1:x2].copy()
 
         tracks[track_id].append({
             "frame_idx": frame_idx,
-            "bbox": bbox,
+            "bbox": (x1, y1, x2, y2),
             "cx": (x1 + x2) / 2,
             "cy": (y1 + y2) / 2,
-            "image": cropped  # you can save or process later
+            "image": cropped
         })
 
-    if cv2.waitKey(1) == 27:  # ESC to quit
-        break
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.putText(frame, f'ID {track_id}', (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
 
-    cv2.putText(frame, f'ID {track_id}', (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
-    cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 1)
     cv2.imshow("Tracking", frame)
 
     frame_idx += 1
