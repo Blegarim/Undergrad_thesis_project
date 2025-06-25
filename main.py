@@ -57,11 +57,15 @@ images = torch.stack([seq[0] for seq in all_sequences]).to(device)  # [N, T, 3, 
 motions = torch.stack([seq[1] for seq in all_sequences]).to(device)  # [N, T, 3]
 
 batch_size = 32
+all_preds = {k: [] for k in num_classes_dict.keys()}
 for i in range(0, len(images), batch_size):
     img_batch = images[i:i+batch_size]
     motion_batch = motions[i:i+batch_size]
     with torch.no_grad():
         outputs = model(img_batch, motion_batch)
+    for k in outputs:
+        batch_preds = outputs[k].argmax(dim=1).cpu().tolist()
+        all_preds[k].extend(batch_preds)
 
-preds = {k: v.argmax(dim=1) for k, v in outputs.items()}
-print(preds)
+for k in all_preds:
+    print(f'{k}: {all_preds[k]} ... (total {len(all_preds[k])})')
