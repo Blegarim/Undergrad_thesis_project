@@ -1,6 +1,6 @@
 import torch
 from torchvision import transforms
-from ultralytics import YOLO
+import cv2
 
 from models.CNN_Feature_Extractor import CNNFeatureExtractor
 from models.Motion_Transformer import MotionTransformer
@@ -46,10 +46,19 @@ tracks = extract_tracks_from_video(
 print(f"\nTotal pedestrian tracks: {len(tracks)}\n")
     
 all_sequences = []
+all_seq_meta = []
+
 for track_id, track_data in tracks.items():
     smoothed_track = smooth_track(track_data)
     sequences = extract_sequences_from_track(smoothed_track, T=20)
-    all_sequences.extend(sequences)
+    for i, (imgs, motions) in enumerate(sequences):
+        meta = {
+            'track_id': track_id,
+            'frame_idxs': [item['frame_idx'] for item in smoothed_track[i:i+20]],
+            'bboxes': [item['bbox'] for item in smoothed_track[i:i+20]]
+        }
+        all_sequences.append((imgs, motions))
+        all_seq_meta.append(meta)
 
 print(f"Extracted {len(all_sequences)} sequences from all tracks.")
 
@@ -67,5 +76,45 @@ for i in range(0, len(images), batch_size):
         batch_preds = outputs[k].argmax(dim=1).cpu().tolist()
         all_preds[k].extend(batch_preds)
 
-for k in all_preds:
-    print(f'{k}: {all_preds[k]} ... (total {len(all_preds[k])})')
+# {frame_idx: [ (bbox, track_id, action, cross, gesture, ...), ... ]}
+frame_results = {}
+
+for idx, meta in enumerate(all_seq_meta):
+    action = all_preds['actions'][idx]
+    look = all_preds['looks'][idx]
+    cross = all_preds['crosses'][idx]
+    gesture = all_preds['gestures'][idx]
+    for f, bbox in zip(meta['frame_idxs'], meta['bboxes']):
+        if f not in frame_results:
+            frame_results[f] = []
+        frame_results[f].append({
+            'bbox': bbox,
+            'track_id': meta['track_id'],
+            'action': action,
+            'look': look,
+            'cross': cross,
+            'gesture': gesture
+        })
+
+cap = cv2.VideoCapture('test_clip.mp4')
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+out = cv2.VideoWriter('output_with_predictions.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS),
+                      (int(cap.get(3)), int(cap.get(4))))
+
+frame_idx = 0
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    results = frame_results.get(frame_idx, [])
+    for results in results:
+        x1, y1, x2, y2 = results['bbox']
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2) # Draw bounding box
+        label = f'ID {results["track_id"]} | Action: {results["action"]}, Look: {results["look"]}, Cross: {results["cross"]}, Gesture: {results["gesture"]}'
+        cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 225), 2)
+    out.write(frame)
+    frame_idx += 1
+
+cap.release()
+out.release()
+print("Video processing complete! Output saved as 'output_with_predictions.mp4'.")
