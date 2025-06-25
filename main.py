@@ -118,7 +118,7 @@ while True:
     for res in results:
         x1, y1, x2, y2 = res['bbox']
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2) # Draw bounding box
-        text = f'ID {results["track_id"]} | Action: {res["action"]}, Look: {res["look"]}, Cross: {res["cross"]}, Gesture: {res["gesture"]}'
+        text = f'ID {res["track_id"]} | Action: {res["action"]}, Look: {res["look"]}, Cross: {res["cross"]}, Gesture: {res["gesture"]}'
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = 0.5
         thickness = 2
