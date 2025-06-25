@@ -13,7 +13,7 @@ from pedestrian_detection import extract_tracks_from_video, smooth_track, extrac
 default_img_transform = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize((128, 128)),
-    transforms.ToTensor(),  # [0,1]
+    transforms.ToTensor(),  
 ])
 embedding_dim = 128
 sequence_length = 20
@@ -33,8 +33,8 @@ model = MultimodalModel(
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
     ).to(device)
 
-#model.load_state_dict(torch.load('meduka.pth', map_location=device))
-#model.eval()  # Set model to evaluation mode
+model.load_state_dict(torch.load('meduka.pth', map_location=device))
+model.eval()  # Set model to evaluation mode
 
 tracks = extract_tracks_from_video(
     video_path='test_clip.mp4',
@@ -53,4 +53,11 @@ for track_id, track_data in tracks.items():
 
 print(f"Extracted {len(all_sequences)} sequences from all tracks.")
 
-print(all_sequences[0])
+images = torch.stack([seq[0] for seq in all_sequences]).to(device)  # [N, T, 3, 128, 128]
+motions = torch.stack([seq[1] for seq in all_sequences]).to(device)  # [N, T, 3]
+
+with torch.no_grad():
+    outputs = model(images, motions)
+
+preds = {k: v.argmax(dim=1) for k, v in outputs.items()}
+print(preds)
