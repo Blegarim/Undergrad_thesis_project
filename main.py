@@ -33,7 +33,7 @@ model = MultimodalModel(
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
     ).to(device)
 
-model.load_state_dict(torch.load('meduka.pth', map_location=device))
+model.load_state_dict(torch.load('outputs/final_model_epoch5.pth', map_location=device))
 model.eval()  # Set model to evaluation mode
 
 tracks = extract_tracks_from_video(
@@ -56,8 +56,12 @@ print(f"Extracted {len(all_sequences)} sequences from all tracks.")
 images = torch.stack([seq[0] for seq in all_sequences]).to(device)  # [N, T, 3, 128, 128]
 motions = torch.stack([seq[1] for seq in all_sequences]).to(device)  # [N, T, 3]
 
-with torch.no_grad():
-    outputs = model(images, motions)
+batch_size = 32
+for i in range(0, len(images), batch_size):
+    img_batch = images[i:i+batch_size]
+    motion_batch = motions[i:i+batch_size]
+    with torch.no_grad():
+        outputs = model(img_batch, motion_batch)
 
 preds = {k: v.argmax(dim=1) for k, v in outputs.items()}
 print(preds)
