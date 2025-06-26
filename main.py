@@ -8,7 +8,8 @@ from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import MultimodalModel
 
 from pedestrian_detection import extract_tracks_from_video, smooth_track, extract_sequences_from_track
-
+from PIE.utilities.pie_data import PIE
+pie = PIE(data_path='PIE')
 
 default_img_transform = transforms.Compose([
     transforms.ToPILImage(),
@@ -102,12 +103,15 @@ fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 out = cv2.VideoWriter('output_with_predictions.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS),
                       (int(cap.get(3)), int(cap.get(4))))
 
+
+
 LABEL_COLORS = {
     'action': (0, 255, 255),   # Yellow
     'look':   (255, 0, 255),   # Magenta
     'cross':  (255, 255, 0),   # Cyan
     'gesture':(0, 165, 255),   # Orange
 }
+TEXT_COLOR = (0, 0, 0)  # Black for text
 
 frame_idx = 0
 while True:
@@ -118,19 +122,52 @@ while True:
     for res in results:
         x1, y1, x2, y2 = res['bbox']
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2) # Draw bounding box
-        text = f'ID {res["track_id"]} | Action: {res["action"]}, Look: {res["look"]}, Cross: {res["cross"]}, Gesture: {res["gesture"]}'
+
+        # Draw ID label above all attribute labels
+        id_text = f'ID {res["track_id"]}'
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = 0.5
         thickness = 2
-        text_size, _ = cv2.getTextSize(text, font, font_scale, thickness)
-
-        color_bg = LABEL_COLORS['gesture']
-        # Ensure text fits within the frame
-        x2_label = min(x1 + text_size[0], frame.shape[1]-1)
+        text_size, _ = cv2.getTextSize(id_text, font, font_scale, thickness)
         y1_label = max(y1 - 22, 0)
-        cv2.rectangle(frame, (x1, y1 - 22), (x1 + text_size[0], y1), color_bg, -1)
-        cv2.putText(frame, text, (x1, y1 - 7), font, font_scale, (0, 0, 0), 2)
+        cv2.rectangle(frame, (x1, y1_label), (x1 + text_size[0], y1), (200, 200, 200), -1)
+        cv2.putText(frame, id_text, (x1, y1 - 7), font, font_scale, TEXT_COLOR, 2)
 
+        action_text = pie._map_scalar_to_text('action', res['action'])
+        look_text = pie._map_scalar_to_text('look', res['look'])
+        cross_text = pie._map_scalar_to_text('cross', res['cross'])
+        gesture_text = pie._map_scalar_to_text('hand_gesture', res['gesture'])
+
+        # Draw each attribute label in its color, side by side above the box
+        label_names = ['action', 'look', 'cross', 'gesture']
+        label_texts = [
+            f'{action_text}',
+            f'{look_text}',
+            f'{cross_text}',
+            f'{gesture_text}',
+        ]
+        x_offset = x1
+        y_offset = y1_label - 22  # Stack labels above ID label
+        for label, text in zip(label_names, label_texts):
+            color_bg = LABEL_COLORS[label]
+            text_size, _ = cv2.getTextSize(text, font, font_scale, thickness)
+            # Draw background rectangle for each label
+            cv2.rectangle(
+                frame,
+                (x_offset, y_offset),
+                (x_offset + text_size[0] + 6, y_offset + text_size[1] + 8),
+                color_bg, -1
+            )
+            # Put label text
+            cv2.putText(
+                frame,
+                text,
+                (x_offset + 3, y_offset + text_size[1] + 3),
+                font, font_scale, TEXT_COLOR, 2
+            )
+            x_offset += text_size[0] + 10  # Add spacing between labels
+
+        # Draw color indicators below the box (as before)
         color_list = [
             LABEL_COLORS['action'] if res['action'] else (50, 50, 50),
             LABEL_COLORS['look']   if res['look']   else (50, 50, 50),

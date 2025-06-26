@@ -119,6 +119,9 @@ class PTChunkDataset(torch.utils.data.Dataset):
     def __len__(self): return len(self.data)
     def __getitem__(self, idx): return self.data[idx]
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -144,6 +147,14 @@ def main():
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
     ).to(device)
 
+    checkpoint_path = 'outputs/final_model_epoch5.pth'
+    if os.path.exists(checkpoint_path):
+        print(f'Loading model from {checkpoint_path}')
+        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    else:
+        print(f'Checkpoint {checkpoint_path} not found. Starting from scratch.')
+
+
     criterion = {name: nn.CrossEntropyLoss() for name in num_classes_dict}
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
@@ -152,13 +163,14 @@ def main():
 
     os.makedirs('outputs', exist_ok=True)
 
-
     # --- Training loop ---
-    train_chunk_folder = 'preprocessed_train_split'
+    train_chunk_folder = 'preprocessed_train'
     train_chunk_files = sorted([os.path.join(train_chunk_folder, f) for f in os.listdir(train_chunk_folder) if f.endswith('.pt')])
 
-    val_chunk_folder = 'preprocessed_val_split'
+    val_chunk_folder = 'preprocessed_val'
     val_chunk_files = sorted([os.path.join(val_chunk_folder, f) for f in os.listdir(val_chunk_folder) if f.endswith('.pt')])
+
+    print(f'Total trainable parameters: {count_parameters(model)}')
 
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
