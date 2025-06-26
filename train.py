@@ -143,7 +143,7 @@ def main():
 
     model = MultimodalModel(
         cnn_backbone=CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=embedding_dim),
-        motion_transformer=MotionTransformer(d_model=embedding_dim, max_len=sequence_length, num_heads=8, num_layers=2),
+        motion_transformer=MotionTransformer(d_model=embedding_dim, max_len=sequence_length, num_heads=8, num_layers=2, dropout=0.3),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
     ).to(device)
 
@@ -154,11 +154,10 @@ def main():
     else:
         print(f'Checkpoint {checkpoint_path} not found. Starting from scratch.')
 
-
     criterion = {name: nn.CrossEntropyLoss() for name in num_classes_dict}
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
-    early_stopping = EarlyStopping(patience=2, min_delta=0.01)
+    early_stopping = EarlyStopping(patience=4, min_delta=0.001)
     best_val_loss = float('inf')
 
     os.makedirs('outputs', exist_ok=True)

@@ -34,11 +34,13 @@ model = MultimodalModel(
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
     ).to(device)
 
-model.load_state_dict(torch.load('outputs/final_model_epoch5.pth', map_location=device))
+model.load_state_dict(torch.load('outputs/final_model_epoch3.pth', map_location=device))
 model.eval()  # Set model to evaluation mode
 
+video_path = 'test_clip2.mp4'
+
 tracks = extract_tracks_from_video(
-    video_path='test_clip.mp4',
+    video_path=video_path,
     model_path='yolo11n.pt',
     class_idx=0, 
     conf=0.3,
@@ -98,7 +100,7 @@ for idx, meta in enumerate(all_seq_meta):
         })
 
 # Save the results to a video file with predictions
-cap = cv2.VideoCapture('test_clip.mp4')
+cap = cv2.VideoCapture(video_path)
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 out = cv2.VideoWriter('output_with_predictions.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS),
                       (int(cap.get(3)), int(cap.get(4))))
@@ -133,9 +135,13 @@ while True:
         cv2.rectangle(frame, (x1, y1_label), (x1 + text_size[0], y1), (200, 200, 200), -1)
         cv2.putText(frame, id_text, (x1, y1 - 7), font, font_scale, TEXT_COLOR, 2)
 
+        cross_value = res['cross']
+        if cross_value == 2:
+            cross_value = -1
+
         action_text = pie._map_scalar_to_text('action', res['action'])
         look_text = pie._map_scalar_to_text('look', res['look'])
-        cross_text = pie._map_scalar_to_text('cross', res['cross'])
+        cross_text = pie._map_scalar_to_text('cross', cross_value)
         gesture_text = pie._map_scalar_to_text('hand_gesture', res['gesture'])
 
         # Draw each attribute label in its color, side by side above the box
