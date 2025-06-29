@@ -57,11 +57,6 @@ class PIESequenceDataset(Dataset):
             images.append(img)
         images = torch.stack(images, dim=0)
 
-        actions = seq['actions']
-        looks = seq['looks']
-        crosses = seq['crosses']
-        gestures = seq['gestures']
-
         centers = []
         for bbox in seq['bboxes']:
             x1, y1, x2, y2 = bbox
@@ -77,10 +72,9 @@ class PIESequenceDataset(Dataset):
             'images': images,   # Tensor [T, C, H, W]
             'motions': motions, # Tensor [T, 4] (cx, cy, dx, dy)
             'bboxes': seq['bboxes'],
-            'actions': torch.tensor(actions, dtype=torch.long),
-            'looks': torch.tensor(looks, dtype=torch.long),
-            'crosses': torch.tensor(crosses, dtype=torch.long),
-            'gestures': torch.tensor(gestures, dtype=torch.long),
+            'actions': torch.tensor(seq['actions'], dtype=torch.long),
+            'looks': torch.tensor(seq['looks'], dtype=torch.long),
+            'crosses': torch.tensor(seq['crosses'], dtype=torch.long),
         }
 
         if self.return_metadata:
@@ -127,20 +121,18 @@ def collate_with_padding(batch):
     """
     images = pad_sequence_tensor([item['images'] for item in batch])
     motions = pad_sequence_tensor([item['motions'] for item in batch])
-    actions = pad_sequence_tensor([item['actions'] for item in batch])
-    looks = pad_sequence_tensor([item['looks'] for item in batch])
-    crosses = pad_sequence_tensor([item['crosses'] for item in batch])
-    gestures = pad_sequence_tensor([item['gestures'] for item in batch])
+    actions = torch.stack([item['actions'] for item in batch])
+    looks = torch.stack([item['looks'] for item in batch])
+    crosses = torch.stack([item['crosses'] for item in batch])
     bboxes = [item['bboxes'] for item in batch]  # Leave bboxes unpadded
     meta = [item['meta'] for item in batch] if 'meta' in batch[0] else None
 
     out = {
         'images': images,     # [B, T, C, H, W]
         'motions': motions,  # [B, T, 4] (cx, cy, dx, dy)
-        'actions': actions,   # [B, T]
-        'looks': looks,
-        'crosses': crosses,
-        'gestures': gestures,
+        'actions': actions,  # [B, 1]
+        'looks': looks,      # [B, 1]
+        'crosses': crosses,  # [B, 1]
         'bboxes': bboxes,
     }
     if meta:

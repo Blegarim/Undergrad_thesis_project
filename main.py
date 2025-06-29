@@ -22,7 +22,6 @@ num_classes_dict = {
         'actions': 2,
         'looks': 2,
         'crosses': 3,
-        'gestures': 6
     }
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -86,7 +85,6 @@ for idx, meta in enumerate(all_seq_meta):
     action = all_preds['actions'][idx]
     look = all_preds['looks'][idx]
     cross = all_preds['crosses'][idx]
-    gesture = all_preds['gestures'][idx]
     for f, bbox in zip(meta['frame_idxs'], meta['bboxes']):
         if f not in frame_results:
             frame_results[f] = []
@@ -96,7 +94,6 @@ for idx, meta in enumerate(all_seq_meta):
             'action': action,
             'look': look,
             'cross': cross,
-            'gesture': gesture
         })
 
 # Save the results to a video file with predictions
@@ -111,7 +108,6 @@ LABEL_COLORS = {
     'action': (0, 255, 255),   # Yellow
     'look':   (255, 0, 255),   # Magenta
     'cross':  (255, 255, 0),   # Cyan
-    'gesture':(0, 165, 255),   # Orange
 }
 TEXT_COLOR = (0, 0, 0)  # Black for text
 
@@ -142,15 +138,13 @@ while True:
         action_text = pie._map_scalar_to_text('action', res['action'])
         look_text = pie._map_scalar_to_text('look', res['look'])
         cross_text = pie._map_scalar_to_text('cross', cross_value)
-        gesture_text = pie._map_scalar_to_text('hand_gesture', res['gesture'])
 
         # Draw each attribute label in its color, side by side above the box
-        label_names = ['action', 'look', 'cross', 'gesture']
+        label_names = ['action', 'look', 'cross']
         label_texts = [
             f'{action_text}',
             f'{look_text}',
             f'{cross_text}',
-            f'{gesture_text}',
         ]
         x_offset = x1
         y_offset = y1_label - 22  # Stack labels above ID label
@@ -178,7 +172,6 @@ while True:
             LABEL_COLORS['action'] if res['action'] else (50, 50, 50),
             LABEL_COLORS['look']   if res['look']   else (50, 50, 50),
             LABEL_COLORS['cross']  if res['cross']  else (50, 50, 50),
-            LABEL_COLORS['gesture']if res['gesture']else (50, 50, 50),
         ]
         for i, color in enumerate(color_list):
             cv2.rectangle(frame, (x1 + i*15, y2+5), (x1 + (i+1)*15, y2+20), color, -1)

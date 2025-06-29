@@ -13,7 +13,8 @@ def generate_sequences(
         min_track_size=10, 
         out_path='sequences.pkl',
         seq_len=20,           # <<< new: desired subsequence length
-        stride=1              # <<< new: sliding window stride
+        stride=1,              # <<< new: sliding window stride
+        future_offset = 30
     ):
     """
     imdb: PIE instance
@@ -37,7 +38,6 @@ def generate_sequences(
     sequences = imdb.generate_data_trajectory_sequence(split, **data_opts)
     num_sequences = len(sequences['image'])
     dataset = []
-    print("Available sequence keys:", sequences.keys())
 
     for i in range(num_sequences):
         images = sequences['image'][i]
@@ -45,22 +45,21 @@ def generate_sequences(
         actions = [a[0] for a in sequences['actions'][i]] 
         looks = [l[0] for l in sequences['looks'][i]]
         crosses = [c[0] for c in sequences['cross'][i]]
-        gestures = [g[0] for g in sequences['gesture'][i]]
 
         n = len(images)
         if n < seq_len:
             continue  # skip too-short tracks
 
         # Sliding window: create many fixed-length sub-sequences
-        for start in range(0, n - seq_len + 1, stride):
+        for start in range(0, n - seq_len - future_offset + 1, stride):
             end = start + seq_len
+            target_index = end + future_offset - 1
             dataset.append({
                 'images': images[start:end],
                 'bboxes': bboxes[start:end],
-                'actions': actions[start:end],
-                'looks': looks[start:end],
-                'crosses': crosses[start:end],
-                'gestures': gestures[start:end]
+                'actions': actions[target_index],
+                'looks': looks[target_index],
+                'crosses': crosses[target_index]
             })
 
     # Save the dataset to a pickle file

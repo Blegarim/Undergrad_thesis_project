@@ -22,7 +22,7 @@ Training script for the PIE dataset using a multimodal model with CNN, Transform
 def collate_fn(batch):
     images = torch.stack([item['images'] for item in batch], dim=0)
     motions = torch.stack([item['motions'] for item in batch], dim=0)[..., :3]
-    labels = {k: torch.stack([item[k] for item in batch], dim=0) for k in ['actions', 'looks', 'crosses', 'gestures']}
+    labels = {k: torch.stack([item[k] for item in batch], dim=0) for k in ['actions', 'looks', 'crosses']}
     return images, motions, labels
 
 class EarlyStopping:
@@ -64,7 +64,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device):
         loss = 0
         for name in outputs:
             logits = outputs[name]
-            targets = labels[name][:, -1]
+            targets = labels[name]
             loss += criterion[name](logits, targets)
         loss.backward()
         optimizer.step()
@@ -95,7 +95,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
             batch_loss = 0
             for name in outputs:
                 logits = outputs[name]
-                targets = labels[name][:, -1]
+                targets = labels[name]
                 loss_i = criterion[name](logits, targets)
                 batch_loss += loss_i.item()
                 _, preds = torch.max(outputs[name], 1)
@@ -137,8 +137,7 @@ def main():
     num_classes_dict = {
         'actions': 2,
         'looks': 2,
-        'crosses': 3,
-        'gestures': 6
+        'crosses': 3
     }
 
     model = MultimodalModel(
