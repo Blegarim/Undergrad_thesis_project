@@ -13,7 +13,7 @@ def generate_sequences(
         min_track_size=10, 
         out_path='sequences.pkl',
         seq_len=20,           # <<< new: desired subsequence length
-        stride=1,              # <<< new: sliding window stride
+        stride=5,              # <<< new: sliding window stride
         future_offset = 30
     ):
     """
@@ -73,6 +73,6 @@ if __name__ == '__main__':
     pie_path = ROOT_DIR / 'data'
     imdb = PIE(data_path=pie_path)
 
-    generate_sequences(imdb, split='train', seq_type='all', out_path='sequences_train.pkl', seq_len=20, stride=1)
-    generate_sequences(imdb, split='val', seq_type='all', out_path='sequences_val.pkl', seq_len=20, stride=1)
-    generate_sequences(imdb, split='test', seq_type='all', out_path='sequences_test.pkl', seq_len=20, stride=1)
+    generate_sequences(imdb, split='train', seq_type='all', out_path='sequences_train.pkl')
+    generate_sequences(imdb, split='val', seq_type='all', out_path='sequences_val.pkl')
+    generate_sequences(imdb, split='test', seq_type='all', out_path='sequences_test.pkl')

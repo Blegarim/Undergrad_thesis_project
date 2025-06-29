@@ -30,9 +30,9 @@ def main():
     train_sequences = load_sequences_from_pkl('sequences_train.pkl')
     val_sequences = load_sequences_from_pkl('sequences_val.pkl')
 
-    train_start_idx = 60000
+    train_start_idx = 0
     train_end_idx = len(train_sequences)
-    val_start_idx = 60000
+    val_start_idx = 5000
     val_end_idx = len(train_sequences)
 
     # Save in chunks
@@ -44,7 +44,7 @@ def main():
                            end_idx=train_end_idx)
     save_dataset_in_chunks(val_sequences, 
                            out_dir='preprocessed_val', 
-                           chunk_size=5000, 
+                           chunk_size=7500, 
                            transform=transform,
                            start_idx=val_start_idx,
                            end_idx=val_end_idx)

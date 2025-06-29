@@ -99,7 +99,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
                 loss_i = criterion[name](logits, targets)
                 batch_loss += loss_i.item()
                 _, preds = torch.max(outputs[name], 1)
-                correct[name] = correct.get(name, 0) + (preds == labels[name][:, -1]).sum().item()
+                correct[name] = correct.get(name, 0) + (preds == labels[name]).sum().item()
                 total[name] = total.get(name, 0) + labels[name].size(0)
             running_loss += batch_loss
 
