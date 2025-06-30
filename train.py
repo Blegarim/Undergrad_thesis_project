@@ -146,7 +146,7 @@ def main():
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
     ).to(device)
 
-    checkpoint_path = 'outputs/final_model_epoch5.pth'
+    checkpoint_path = 'outputs/best_model_epoch1.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))

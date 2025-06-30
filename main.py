@@ -33,7 +33,7 @@ model = MultimodalModel(
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
     ).to(device)
 
-model.load_state_dict(torch.load('outputs/final_model_epoch3.pth', map_location=device))
+model.load_state_dict(torch.load('outputs/final_model_epoch5.pth', map_location=device))
 model.eval()  # Set model to evaluation mode
 
 video_path = 'test_clip2.mp4'
@@ -99,7 +99,8 @@ for idx, meta in enumerate(all_seq_meta):
 # Save the results to a video file with predictions
 cap = cv2.VideoCapture(video_path)
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out = cv2.VideoWriter('output_with_predictions.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS),
+out_video = 'output_with_predictions_2.mp4'
+out = cv2.VideoWriter(out_video, fourcc, cap.get(cv2.CAP_PROP_FPS),
                       (int(cap.get(3)), int(cap.get(4))))
 
 
@@ -180,4 +181,4 @@ while True:
 
 cap.release()
 out.release()
-print("Video processing complete! Output saved as 'output_with_predictions.mp4'.")
+print(f"Video processing complete! Output saved as {out_video}.")
