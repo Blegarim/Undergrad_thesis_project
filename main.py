@@ -11,6 +11,13 @@ from pedestrian_detection import extract_tracks_from_video, smooth_track, extrac
 from PIE.utilities.pie_data import PIE
 pie = PIE(data_path='PIE')
 
+# Configuration
+video_path = 'test_clip2.mp4'
+out_video = 'output_with_predictions_1.mp4'
+model_path = 'outputs/best_model_epoch1.pth'
+
+
+
 default_img_transform = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize((128, 128)),
@@ -33,10 +40,10 @@ model = MultimodalModel(
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
     ).to(device)
 
-model.load_state_dict(torch.load('outputs/final_model_epoch5.pth', map_location=device))
+model.load_state_dict(torch.load(model_path, map_location=device))
 model.eval()  # Set model to evaluation mode
 
-video_path = 'test_clip2.mp4'
+
 
 tracks = extract_tracks_from_video(
     video_path=video_path,
@@ -99,7 +106,7 @@ for idx, meta in enumerate(all_seq_meta):
 # Save the results to a video file with predictions
 cap = cv2.VideoCapture(video_path)
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out_video = 'output_with_predictions_2.mp4'
+
 out = cv2.VideoWriter(out_video, fourcc, cap.get(cv2.CAP_PROP_FPS),
                       (int(cap.get(3)), int(cap.get(4))))
 
