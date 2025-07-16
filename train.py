@@ -2,15 +2,12 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
+from torch.utils.data import DataLoader
 
 from models.CNN_Feature_Extractor import CNNFeatureExtractor
 from models.Motion_Transformer import MotionTransformer
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import MultimodalModel
-
-from scripts.PIE_sequence_Dataset_1 import load_sequences_from_pkl, PIESequenceDataset
 
 import time
 import gc
@@ -141,9 +138,9 @@ def main():
     }
 
     model = MultimodalModel(
-        cnn_backbone=CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=embedding_dim),
-        motion_transformer=MotionTransformer(d_model=embedding_dim, max_len=sequence_length, num_heads=8, num_layers=2, dropout=0.3),
-        cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=8, num_classes_dict=num_classes_dict)
+        cnn_backbone=CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=embedding_dim, pretrained=True, freeze_backbone=True),
+        motion_transformer=MotionTransformer(d_model=embedding_dim, max_len=sequence_length, num_heads=4, num_layers=2, dropout=0.3),
+        cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 
     checkpoint_path = 'outputs/best_model_epoch1.pth'
