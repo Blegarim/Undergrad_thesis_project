@@ -12,8 +12,8 @@ from PIE.utilities.pie_data import PIE
 pie = PIE(data_path='PIE')
 
 # Configuration
-video_path = 'test_clip2.mp4'
-out_video = 'output_with_predictions_1.mp4'
+video_path = 'test_clip.mp4'
+out_video = 'output_with_predictions_2.mp4'
 model_path = 'outputs/best_model_epoch1.pth'
 
 

@@ -128,7 +128,7 @@ def main():
     batch_size = 32
     sequence_length = 20
     num_epochs = 10
-    num_workers = 0
+    num_workers = 4
 
     # Number of prediction classes per head
     num_classes_dict = {
@@ -143,7 +143,7 @@ def main():
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 
-    checkpoint_path = 'outputs/best_model_epoch1.pth'
+    checkpoint_path = 'outputs/best_model_epoch.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
