@@ -11,6 +11,7 @@ from models.Unified_Module import MultimodalModel
 
 import time
 import gc
+import matplotlib.pyplot as plt
 
 '''
 Training script for the PIE dataset using a multimodal model with CNN, Transformer, and Cross-Attention.
@@ -45,7 +46,7 @@ def remap_cross_labels(labels):
     crosses[crosses == -1] = 2
     labels['crosses'] = crosses
 
-def train_one_epoch(model, dataloader, criterion, optimizer, device):
+def train_one_chunk(model, dataloader, criterion, optimizer, device):
     model.train()
     total_loss = 0
 
@@ -73,7 +74,8 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device):
             print(f"Batch {batch_idx}, Loss: {loss.item():.4f}, Time: {batch_time:.3f} sec")
 
     avg_loss = total_loss / len(dataloader)
-    print(f"Average Loss: {avg_loss:.4f}")
+    print(f"Average chunk Loss: {avg_loss:.4f}")
+    return avg_loss
 
 def validate_one_epoch(model, dataloader, criterion, device):
     model.eval()
@@ -171,6 +173,7 @@ def main():
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
 
         import random; random.shuffle(train_chunk_files)
+        epoch_loss = []
 
         for chunk_idx, chunk_path in enumerate(train_chunk_files):
             print(f"Loading chunk {chunk_idx + 1}/{len(train_chunk_files)}: {chunk_path}")
@@ -184,9 +187,17 @@ def main():
                 collate_fn=collate_fn,
                 pin_memory=True
             )
-            train_one_epoch(model, loader, criterion, optimizer, device)
+            avg_loss = train_one_chunk(model, loader, criterion, optimizer, device)
+            epoch_loss.append(avg_loss)
             del chunk_data, dataset, loader
             gc.collect()
+        
+        print(f"Epoch {epoch + 1} average loss: {sum(epoch_loss) / len(epoch_loss):.4f}")
+
+        plt.plot(range(len(epoch_loss)), epoch_loss, label=f'Epoch {epoch + 1}')
+        plt.xlabel('Chunk Index')
+        plt.ylabel('Loss')
+        plt.savefig(f'training_log/ epoch_{epoch + 1}_loss.png')
 
         # Validation (load all val data once per epoch)
         val_data = []
