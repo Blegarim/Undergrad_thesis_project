@@ -3,6 +3,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class GEGLU(nn.Module):
+    def __init__(self, d_model, d_ff, dropout=0.1):
+        super().__init__()
+        self.fc1 = nn.Linear(d_model, d_ff * 2)
+        self.fc2 = nn.Linear(d_ff, d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x1, x2 = x.chunk(2, dim=-1)
+        return self.dropout(self.fc2(F.gelu(x1) * x2))
+
 class TransformerEncoderBlock(nn.Module):
     def __init__(self, d_model=128, num_heads=8, dim_feedforward=512, dropout=0.1):
         super().__init__()
@@ -10,14 +22,7 @@ class TransformerEncoderBlock(nn.Module):
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
-
-        self.ffn = nn.Sequential(
-            nn.Linear(d_model, dim_feedforward),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(dim_feedforward, d_model),
-            nn.Dropout(dropout)
-        )
+        self.ffn = GEGLU(d_model, dim_feedforward, dropout)
     
     def forward(self, x, mask=None):
         """
@@ -67,20 +72,3 @@ class MotionTransformer(nn.Module):
 
         return x
     
-def test_motion_transformer():
-    batch_size = 4
-    seq_len = 20
-    input_dim = 3
-    d_model = 128
-
-    motions = torch.randn(batch_size, seq_len, input_dim)
-    model = MotionTransformer(d_model=d_model, max_len=100, num_heads=8, num_layers=2)
-    
-    out = model(motions)
-
-    print("Input shape:", motions.shape)         # Should be [4, 20, 3]
-    print("Output shape:", out.shape)            # Should be [4, 128]
-    print("Output sample:", out[0, :5])          # First 5 values from first sample
-
-if __name__ == "__main__":
-    test_motion_transformer()
