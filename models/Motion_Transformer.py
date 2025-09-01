@@ -40,6 +40,14 @@ class TransformerEncoderBlock(nn.Module):
     
 class MotionTransformer(nn.Module):
     def __init__(self, d_model=128, max_len=100, num_heads=8, num_layers=2, dim_feedforward=512, dropout=0.1):
+        '''
+        d_model: Dimension of the model
+        max_len: Maximum length of the input sequence
+        num_heads: Number of attention heads
+        num_layers: Number of transformer encoder layers
+        dim_feedforward: Dimension of the feedforward network
+        dropout: Dropout rate
+        '''
         super().__init__()
         self.input_proj = nn.Linear(3, d_model)  # Input: [batch_size, seq_len, 3] → Output: [batch_size, seq_len, d_model]
         self.positional_encoding = nn.Embedding(max_len, d_model) # Positional encoding for sequence length
