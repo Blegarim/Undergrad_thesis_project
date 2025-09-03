@@ -39,7 +39,10 @@ class TransformerEncoderBlock(nn.Module):
         return x
     
 class MotionTransformer(nn.Module):
-    def __init__(self, d_model=128, max_len=100, num_heads=8, num_layers=2, dim_feedforward=512, dropout=0.1):
+    def __init__(self, d_model=128, max_len=100, 
+                 num_heads=8, num_layers=2, 
+                 dim_feedforward=512, dropout=0.1,
+                 conv_k=3, conv_out=128):
         '''
         d_model: Dimension of the model
         max_len: Maximum length of the input sequence
@@ -47,10 +50,19 @@ class MotionTransformer(nn.Module):
         num_layers: Number of transformer encoder layers
         dim_feedforward: Dimension of the feedforward network
         dropout: Dropout rate
+        conv_k: Kernel size for convolutional layer
+        conv_out: Output channels for convolutional layer
         '''
         super().__init__()
-        self.input_proj = nn.Linear(3, d_model)  # Input: [batch_size, seq_len, 3] → Output: [batch_size, seq_len, d_model]
-        self.positional_encoding = nn.Embedding(max_len, d_model) # Positional encoding for sequence length
+        # pre_conv for motion smoothing: input C=3 (cx, cy, dt) to conv_out
+        conv_out = d_model  # Ensure conv_out matches d_model for consistency
+        self.pre_conv = nn.Conv1d(in_channels=3, out_channels=conv_out, kernel_size=conv_k, padding=(conv_k - 1) // 2, bias=True)
+        self.pre_norm = nn.LayerNorm(conv_out)
+        self.pre_activation = nn.GELU()
+
+        self.pos_embedding = nn.Embedding(max_len+1, d_model) # Positional encoding for CLS token
+
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
 
         self.encoder_layers = nn.ModuleList([
             TransformerEncoderBlock(d_model=d_model, num_heads=num_heads, dim_feedforward=dim_feedforward, dropout=dropout)
@@ -63,20 +75,34 @@ class MotionTransformer(nn.Module):
         """
         motions: Tensor of shape [batch_size, seq_len, 3] (cx, cy, dt)
         """
-        B, T, _ = motions.shape
-        T = min(T, self.positional_encoding.num_embeddings)
-        x = self.input_proj(motions) # Shape: [batch_size, seq_len, d_model]
+        B, T, C = motions.shape 
+        assert C == 3 # Ensure input has 3 channels
 
-        positions = torch.arange(T, device=motions.device).unsqueeze(0).expand(B, T) # Shape: [batch_size, seq_len]
-        pos_embed = self.positional_encoding(positions) # Shape: [batch_size, seq_len, d_model]
+        x = motions.permute(0, 2, 1) # Shape: [batch_size, 3, seq_len]
+        x = self.pre_conv(x) # Shape: [batch_size, conv_out==d_model, seq_len]
+        x = x.permute(0, 2, 1) #Shape: [batch_size, seq_len, d_model]   
+        x = self.pre_activation(x)
+        x = self.pre_norm(x)
+
+        #Append CLS token
+        cls_tokens = self.cls_token.expand(B, -1, -1)
+        x = torch.cat((cls_tokens, x), dim=1) # Shape: [batch_size, seq_len+1, d_model]
+        seq_len = x.shape[1]
+        assert seq_len <= self.pos_embedding.num_embeddings, f"Sequence length {seq_len} exceeds maximum {self.pos_embedding.num_embeddings}, increase max_len."
+
+        # Add positional encoding
+        positions = torch.arange(seq_len, device=motions.device).unsqueeze(0).expand(B, seq_len) # Shape: [batch_size, seq_len]
+        pos_embed = self.pos_embedding(positions) # Shape: [batch_size, seq_len, d_model]
         x = x + pos_embed # Add positional encoding
 
-        x = x.permute(1, 0, 2) # Shape: [seq_len, batch_size, d_model] for nn.MultiheadAttention
+        # Permute for MultiheadAttention
+        x = x.permute(1, 0, 2) # Shape: [seq_len, batch_size, d_model]
 
         for layer in self.encoder_layers:
             x = layer(x)
 
         x = x.permute(1, 0, 2) # Shape: [batch_size, seq_len, d_model]
 
-        return x
+        cls_out = x[:, 0, :] # Extract CLS token output: Shape: [batch_size, d_model]
+        return x, cls_out # Return all token outputs and CLS token output
     
