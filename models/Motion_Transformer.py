@@ -18,23 +18,25 @@ class GEGLU(nn.Module):
 class TransformerEncoderBlock(nn.Module):
     def __init__(self, d_model=128, num_heads=8, dim_feedforward=512, dropout=0.1):
         super().__init__()
-        self.self_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads, dropout = dropout)
+        self.self_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads, dropout = dropout, batch_first=True)
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
         self.ffn = GEGLU(d_model, dim_feedforward, dropout)
     
-    def forward(self, x, mask=None):
+    def forward(self, x, key_padding_mask=None):
         """
         x: Tensor of shape [batch_size, seq_len, d_model]
         mask: Optional mask tensor of shape [batch_size, 1, seq_len]
         """
         # Self-attention
-        attn_output, _ = self.self_attn(x, x, x, attn_mask=mask)
-        x = self.norm1(x + self.dropout(attn_output))
+        y = self.norm1(x)
+        attn_output, _ = self.self_attn(y, y, y, key_padding_mask=key_padding_mask)
+        x = x + self.dropout(attn_output)
 
-        ffn_output = self.ffn(x)
-        x = self.norm2(x + self.dropout(ffn_output))
+        y = self.norm2(x)
+        ffn_output = self.ffn(y)
+        x = x + self.dropout(ffn_output)
 
         return x
     
@@ -69,9 +71,7 @@ class MotionTransformer(nn.Module):
             for _ in range(num_layers)
         ])
 
-        self.pooling = nn.AdaptiveAvgPool1d(1) # Pooling layer to aggregate features
-
-    def forward(self, motions):
+    def forward(self, motions, key_padding_mask=None):
         """
         motions: Tensor of shape [batch_size, seq_len, 3] (cx, cy, dt)
         """
@@ -90,18 +90,18 @@ class MotionTransformer(nn.Module):
         seq_len = x.shape[1]
         assert seq_len <= self.pos_embedding.num_embeddings, f"Sequence length {seq_len} exceeds maximum {self.pos_embedding.num_embeddings}, increase max_len."
 
+        # Update mask to account for CLS (never masked)
+        if key_padding_mask is not None:
+            cls_pad = torch.zeros((B, 1), dtype=torch.bool, device=motions.device)
+            key_padding_mask = torch.cat((cls_pad, key_padding_mask), dim=1)
+
         # Add positional encoding
         positions = torch.arange(seq_len, device=motions.device).unsqueeze(0).expand(B, seq_len) # Shape: [batch_size, seq_len]
         pos_embed = self.pos_embedding(positions) # Shape: [batch_size, seq_len, d_model]
         x = x + pos_embed # Add positional encoding
 
-        # Permute for MultiheadAttention
-        x = x.permute(1, 0, 2) # Shape: [seq_len, batch_size, d_model]
-
         for layer in self.encoder_layers:
-            x = layer(x)
-
-        x = x.permute(1, 0, 2) # Shape: [batch_size, seq_len, d_model]
+            x = layer(x, key_padding_mask=key_padding_mask) # Shape: [batch_size, seq_len, d_model]
 
         cls_out = x[:, 0, :] # Extract CLS token output: Shape: [batch_size, d_model]
         return x, cls_out # Return all token outputs and CLS token output
