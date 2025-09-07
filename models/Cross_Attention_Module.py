@@ -24,7 +24,7 @@ class CrossAttentionModule(nn.Module):
             ) for name, num_classes in num_classes_dict.items()   
         })
 
-    def forward(self, motion_feats, image_feats):
+    def forward(self, motion_feats, image_feats, key_padding_mask=None):
         """
         motion_feats: Tensor of shape [batch_size, seq_len, d_model]
         image_feats: Tensor of shape [batch_size, seq_len, d_model]
@@ -34,21 +34,14 @@ class CrossAttentionModule(nn.Module):
             query = motion_feats,  # Shape: [batch_size, seq_len, d_model]
             key = image_feats,   # Shape: [batch_size, seq_len, d_model]
             value = image_feats, # Shape: [batch_size, seq_len, d_model]
+            key_padding_mask = key_padding_mask
         ) # Shape: [batch_size, seq_len, d_model]
 
-        # Pooling
-        pooled_output = self.pool(attn_output.transpose(1, 2)).squeeze(-1)
+        cls_output = attn_output[:, 0, :] # Extract CLS token output: Shape: [batch_size, d_model]
 
-        logits = {key: head(pooled_output) for key, head in self.classifier.items()}
+        logits = {key: head(cls_output) for key, head in self.classifier.items()}
         return logits
 
-if __name__ == "__main__":
-    B, T, D = 4, 10, 128
-    img_feats = torch.randn(B, T, D)
-    motion_feats = torch.randn(B, T, D)
 
-    model = CrossAttentionModule(d_model=D, num_heads=4)
-    out = model(img_feats, motion_feats)
-    print("Output:", {k: v.shape for k, v in out.items()})  # [4, 2]
 
 
