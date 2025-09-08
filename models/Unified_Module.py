@@ -13,8 +13,10 @@ class MultimodalModel(nn.Module):
         # Extract CNN features per frame sequence
         image_feats = self.norm(self.cnn_backbone(images)) # Shape: [batch_size, seq_len, d_model]
 
+        motion_out, motion_cls = self.motion_transformer(motions)
+
         # Extract motion features
-        motion_feats = self.norm(self.motion_transformer(motions))
+        motion_feats = self.norm(motion_out)
 
         # Cross-attention between image features and motion features
         logits = self.cross_attention(motion_feats, image_feats) # Shape: [batch_size, num_classes]

@@ -125,6 +125,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
+    # Configuration
     embedding_dim = 128
     learning_rate = 5e-5
     batch_size = 32
@@ -140,11 +141,12 @@ def main():
     }
 
     model = MultimodalModel(
-        cnn_backbone=CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=embedding_dim, pretrained=True, freeze_backbone=True),
+        cnn_backbone=CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=embedding_dim, pretrained=True, freeze_backbone=False),
         motion_transformer=MotionTransformer(d_model=embedding_dim, max_len=sequence_length, num_heads=4, num_layers=2, dropout=0.3),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 
+    # Load model
     checkpoint_path = 'outputs/best_model_epoch.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
@@ -208,7 +210,7 @@ def main():
             val_dataset,
             batch_size=batch_size,
             shuffle=False,
-            num_workers=num_workers,
+            num_workers=0,
             collate_fn=collate_fn,
             pin_memory=True
         )

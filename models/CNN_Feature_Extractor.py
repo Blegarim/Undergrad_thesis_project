@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from torchvision.models import MobileNet_V2_Weights, EfficientNet_B0_Weights
+from torchvision.models import MobileNet_V2_Weights, EfficientNet_B0_Weights, MobileNet_V3_Small_Weights
 
 class CNNFeatureExtractor(nn.Module):
     def __init__(self, backbone='mobilenetv2', embedding_dim=128, pretrained=True, freeze_backbone=False):
@@ -9,9 +9,9 @@ class CNNFeatureExtractor(nn.Module):
 
         self.embedding_dim = embedding_dim
 
-        if backbone == 'mobilenetv2':
-            weights = MobileNet_V2_Weights.DEFAULT if pretrained else None
-            base_model = models.mobilenet_v2(weights=weights)
+        if backbone == 'mobilenetv3small':
+            weights = MobileNet_V3_Small_Weights.DEFAULT if pretrained else None
+            base_model = models.mobilenet_v3_small(weights=weights)
             cnn_out_dim = base_model.classifier[1].in_features
             self.feature_extractor = base_model.features
         elif backbone == 'efficientnet_b0':

@@ -13,7 +13,7 @@ pie = PIE(data_path='PIE')
 
 # Configuration
 video_path = 'test_clip.mp4'
-out_video = 'output_with_predictions_2.mp4'
+out_video = 'output_with_predictions_3.mp4'
 model_path = 'outputs/best_model_epoch1.pth'
 
 
