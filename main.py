@@ -16,13 +16,12 @@ video_path = 'test_clip.mp4'
 out_video = 'output_with_predictions_3.mp4'
 model_path = 'outputs/best_model_epoch1.pth'
 
-
-
-default_img_transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize((128, 128)),
-    transforms.ToTensor(),  
-])
+# Image transformation
+# default_img_transform = transforms.Compose([
+#     transforms.ToPILImage(),
+#     transforms.Resize((128, 128)),
+#     transforms.ToTensor(),  
+# ])
 embedding_dim = 128
 sequence_length = 20
 num_classes_dict = {
@@ -40,10 +39,8 @@ model = MultimodalModel(
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 
-model.load_state_dict(torch.load(model_path, map_location=device))
+model.load_state_dict(torch.load(model_path, map_location=device)) # Load the trained model
 model.eval()  # Set model to evaluation mode
-
-
 
 tracks = extract_tracks_from_video(
     video_path=video_path,
