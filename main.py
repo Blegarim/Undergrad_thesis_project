@@ -2,8 +2,8 @@ import torch
 from torchvision import transforms
 import cv2
 
-from models.CNN_Feature_Extractor import CNNFeatureExtractor
-from models.Motion_Transformer import MotionTransformer
+from models.Vision_Transformer import VisionTransformer
+from models.Regression import TCNGRU
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
 
@@ -34,8 +34,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Initialize the multimodal model
 model = EnsembleModel(
-        cnn_backbone=CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=embedding_dim, pretrained=True, freeze_backbone=True),
-        motion_transformer=MotionTransformer(d_model=embedding_dim, max_len=sequence_length, num_heads=4, num_layers=2),
+        tcngru=TCNGRU(input_dim=3, num_layers=2, kernel_size=3, dropout=0.1),
+        vit=VisionTransformer(img_size=128, patch_size=16, in_channels=3, embedding_dim=embedding_dim, num_heads=4, num_layers=2),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 

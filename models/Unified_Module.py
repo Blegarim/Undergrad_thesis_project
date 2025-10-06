@@ -2,18 +2,18 @@ import torch
 import torch.nn as nn
 
 class EnsembleModel(nn.Module):
-    def __init__(self, cnn_backbone, motion_transformer, cross_attention, d_model=128):
+    def __init__(self, tcngru, vit, cross_attention, d_model=128):
         super().__init__()
-        self.cnn_backbone = cnn_backbone
-        self.motion_transformer = motion_transformer
+        self.tcngru = tcngru
+        self.vit = vit
         self.cross_attention = cross_attention
         self.norm = nn.LayerNorm(d_model)
 
     def forward(self, images, motions, return_feats=False):
         # Extract CNN features per frame sequence
-        image_feats = self.norm(self.cnn_backbone(images)) # Shape: [batch_size, seq_len, d_model]
+        image_feats = self.norm(self.tcngru(images)) # Shape: [batch_size, seq_len, d_model]
 
-        motion_out, motion_cls = self.motion_transformer(motions)
+        motion_out = self.vit(motions)
 
         # Extract motion features
         motion_feats = self.norm(motion_out)
