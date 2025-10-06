@@ -10,17 +10,19 @@ class EnsembleModel(nn.Module):
         self.norm = nn.LayerNorm(d_model)
 
     def forward(self, images, motions, return_feats=False):
-        # Extract CNN features per frame sequence
-        image_feats = self.norm(self.tcngru(images)) # Shape: [batch_size, seq_len, d_model]
+        # --- Vision Transformer branch ---
+        image_feats = self.vit(images)        # [B, T, D]
+        image_feats = self.norm(image_feats)
 
-        motion_out = self.vit(motions)
+        # --- Motion branch ---
+        motion_out = self.tcngru(motions)     # [B, T, D]
+        motion_feats = self.norm(motion_out)
 
-        # Extract motion features
-        motion_feats, motion_cls = self.norm(motion_out)
+        # --- Cross-attention fusion ---
+        logits = self.cross_attention(motion_feats, image_feats)  # dict of logits per task
 
-        # Cross-attention between image features and motion features
-        logits = self.cross_attention(motion_feats, image_feats) # Shape: [batch_size, num_classes]
         if return_feats:
             return logits, image_feats, motion_feats
         return logits
+
     
