@@ -94,3 +94,8 @@ class VisionTransformer(nn.Module):
         cls_output = x[:, 0] # Extract CLS token output
         return cls_output.view(B, T, -1) # Shape: [B, T, D]
     
+if __name__ == '__main__':
+    dummy_input = torch.randn(8, 10, 3, 128, 128)  # [B, T, C, H, W]
+    model = VisionTransformer(img_size=128, patch_size=16, in_channels=3, embedding_dim=128, num_heads=4, num_layers=2)
+    output = model(dummy_input)
+    print(output.shape)  # Expected: [8, 10, 128]
