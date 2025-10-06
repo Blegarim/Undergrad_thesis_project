@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-class MultimodalModel(nn.Module):
+class EnsembleModel(nn.Module):
     def __init__(self, cnn_backbone, motion_transformer, cross_attention, d_model=128):
         super().__init__()
         self.cnn_backbone = cnn_backbone

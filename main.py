@@ -5,7 +5,7 @@ import cv2
 from models.CNN_Feature_Extractor import CNNFeatureExtractor
 from models.Motion_Transformer import MotionTransformer
 from models.Cross_Attention_Module import CrossAttentionModule
-from models.Unified_Module import MultimodalModel
+from models.Unified_Module import EnsembleModel
 
 from pedestrian_detection import extract_tracks_from_video, smooth_track, extract_sequences_from_track
 from PIE.utilities.pie_data import PIE
@@ -33,7 +33,7 @@ num_classes_dict = {
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Initialize the multimodal model
-model = MultimodalModel(
+model = EnsembleModel(
         cnn_backbone=CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=embedding_dim, pretrained=True, freeze_backbone=True),
         motion_transformer=MotionTransformer(d_model=embedding_dim, max_len=sequence_length, num_heads=4, num_layers=2),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)

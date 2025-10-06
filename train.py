@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from models.CNN_Feature_Extractor import CNNFeatureExtractor
 from models.Motion_Transformer import MotionTransformer
 from models.Cross_Attention_Module import CrossAttentionModule
-from models.Unified_Module import MultimodalModel
+from models.Unified_Module import EnsembleModel
 
 import time
 import gc
@@ -140,7 +140,7 @@ def main():
         'crosses': 3
     }
 
-    model = MultimodalModel(
+    model = EnsembleModel(
         cnn_backbone=CNNFeatureExtractor(backbone='efficientnet_b0', embedding_dim=embedding_dim, pretrained=True, freeze_backbone=False),
         motion_transformer=MotionTransformer(d_model=embedding_dim, max_len=sequence_length, num_heads=4, num_layers=2, dropout=0.3),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
