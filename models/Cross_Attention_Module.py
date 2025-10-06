@@ -12,7 +12,11 @@ class CrossAttentionModule(nn.Module):
             batch_first = True
         )
 
-        self.pool = nn.AdaptiveAvgPool1d(1) # Pooling layer to aggregate features
+        self.pool_mlp = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.ReLU(),
+            nn.Linear(d_model // 2, 1)
+        )
 
         # Classifier: MLP head for prediction
         self.classifier = nn.ModuleDict({
@@ -37,9 +41,13 @@ class CrossAttentionModule(nn.Module):
             key_padding_mask = key_padding_mask
         ) # Shape: [batch_size, seq_len, d_model]
 
-        cls_output = attn_output[:, 0, :] # Extract CLS token output: Shape: [batch_size, d_model]
+        # Pooling: Weighted average pooling using learned weights
+        scores = self.pool_mlp(attn_output) # Shape: [batch_size, seq_len, 1]
+        weights = torch.softmax(scores, dim=1) # Shape: [batch_size, seq_len, 1]
 
-        logits = {key: head(cls_output) for key, head in self.classifier.items()}
+        pooled = (attn_output * weights).sum(dim=1) # Shape: [batch_size, d_model]
+
+        logits = {key: head(pooled) for key, head in self.classifier.items()}
         return logits
 
 

@@ -34,3 +34,14 @@ class TCNGRU(nn.Module):
         x, _ = self.gru(x) # Shape: [B, T, D]
         x = self.dropout(x)
         return x
+    
+if __name__ == "__main__":
+    # Test the TCNGRU module
+    batch_size = 8
+    seq_len = 50
+    input_dim = 4
+    x = torch.randn(batch_size, seq_len, input_dim) # Example input
+
+    model = TCNGRU(input_dim=input_dim, tcn_channels=(64, 128), d_model=128, num_layers=2, kernel_size=3, dropout=0.1)
+    out = model(x)
+    print("Output shape:", out.shape) # Expected: [batch_size, seq_len, d_model]

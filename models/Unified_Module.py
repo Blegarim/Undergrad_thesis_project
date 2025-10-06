@@ -16,7 +16,7 @@ class EnsembleModel(nn.Module):
         motion_out = self.vit(motions)
 
         # Extract motion features
-        motion_feats = self.norm(motion_out)
+        motion_feats, motion_cls = self.norm(motion_out)
 
         # Cross-attention between image features and motion features
         logits = self.cross_attention(motion_feats, image_feats) # Shape: [batch_size, num_classes]
