@@ -28,6 +28,8 @@ class TCNGRU(nn.Module):
     
     def forward(self, x):
         # x shape: [B, T, C]
+        B, T, C = x.shape
+        assert C == self.tcn[0].in_channels, f"Input feature dimension {C} does not match expected {self.tcn[0].in_channels}"
         x = x.transpose(1, 2) # Shape: [B, C, T]
         x = self.tcn(x)       # Shape: [B, D, T]
         x = x.transpose(1, 2) # Shape: [B, T, D]
