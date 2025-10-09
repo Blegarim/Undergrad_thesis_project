@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from models.Vision_Transformer import VisionTransformer
+from models.Vision_Transformer import ViT_Hierarchical
 from models.Regression import TCNGRU
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
@@ -142,7 +142,19 @@ def main():
 
     model = EnsembleModel(
         tcngru=TCNGRU(input_dim=3, num_layers=2, kernel_size=3, dropout=0.1),
-        vit=VisionTransformer(img_size=128, patch_size=16, in_channels=3, embedding_dim=embedding_dim, num_heads=4, num_layers=2),
+        vit=ViT_Hierarchical(
+            img_size=128,
+            in_channels=3,
+            stage_dims=[64, 128, 224],
+            layer_nums=[2, 4, 5],
+            head_nums=[2, 4, 7],
+            window_size=[8, 4, None],
+            mlp_ratio=[4, 4, 4],
+            drop_path=0.1,
+            attn_dropout=0.1,
+            proj_dropout=0.1,
+            dropout=0.1
+        ),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 

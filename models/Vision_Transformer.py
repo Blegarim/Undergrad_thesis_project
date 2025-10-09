@@ -326,32 +326,32 @@ class ViT_Hierarchical(nn.Module):
         # x shape: [B, T, C, H, W]
         B, T, C, H, W = x.shape
         x = x.view(B * T, C, H, W) # [B*T, C, H, W]
-        print(f"Input shape: {x.shape}")
+#        print(f"Input shape: {x.shape}")
         x = self.stem(x)           # [B*T, D, H/4, W/4]
-        print(f"[Stem] -> {x.shape}")
+#        print(f"[Stem] -> {x.shape}")
         for stage_idx, (stage, block_type) in enumerate(zip(self.stages, self.stage_types)):
             x = stage['down_sample'](x) # Downsampling
             B_T, D, H_s, W_s = x.shape
-            print(f"[Downsample] -> ({B_T}, {D}, {H_s}, {W_s}), Block type: {block_type}")
+#            print(f"[Downsample] -> ({B_T}, {D}, {H_s}, {W_s}), Block type: {block_type}")
 
             if block_type == 'window':
                 for blk_idx, block in enumerate(stage['block']):
                     x_window = x.flatten(2).transpose(1, 2) # [B*T, H_s*W_s, D]
-                    print(f" Stage {stage_idx} | Block {blk_idx} | Window in: {x_window.shape}")
+#                    print(f" Stage {stage_idx} | Block {blk_idx} | Window in: {x_window.shape}")
                     x_window = block(x_window)          # Window Transformer blocks
-                    print(f" Stage {stage_idx} | Block {blk_idx} | Window out: {x_window.shape}")
+#                    print(f" Stage {stage_idx} | Block {blk_idx} | Window out: {x_window.shape}")
                     x = x_window.transpose(1, 2).view(B_T, D, H_s, W_s) # Reshape back to image-like
             else:
                 tokens = x.flatten(2).transpose(1, 2) # [B*T, H_s*W_s, D]
-                print(f" Stage {stage_idx} | Global Block | Tokens in: {tokens.shape}")
+#                print(f" Stage {stage_idx} | Global Block | Tokens in: {tokens.shape}")
                 for blk_idx, block in enumerate(stage['block']):
                     tokens = block(tokens)                 # Transformer blocks
-                    print(f" Stage {stage_idx} | Block {blk_idx} | Tokens out: {tokens.shape}")
+#                    print(f" Stage {stage_idx} | Block {blk_idx} | Tokens out: {tokens.shape}")
                 x = tokens.transpose(1, 2).view(B_T, D, H_s, W_s) # Reshape back to image-like
-                print(f" Stage {stage_idx} | Global reshape | Tokens out: {tokens.shape}")
+#                print(f" Stage {stage_idx} | Global reshape | Tokens out: {tokens.shape}")
         
         x = x.mean([2, 3]) # Global average pooling (B*T, D)
-        print(f"[Global Avg Pool] -> {x.shape}")
+#        print(f"[Global Avg Pool] -> {x.shape}")
         x = self.norm(x)
         x = x.view(B, T, -1) # [B, T, D]
         x = self.frame_proj(x) # Project to desired 128 dim for cross-attention
