@@ -214,32 +214,58 @@ class WindowTransformerBlock(nn.Module):
 
         return x
 
+
+
 class ViT_Hierarchical(nn.Module):
     '''
-    Hierarchical Vision Transformer (ViT) model with multi-stage feature extraction.
+    Vision Transformer with hierarchical stages and window-based attention.
     Args:
         img_size (int): Input image size (assumed square).
-        in_channels (int): Number of input channels.
-        stage_dims (list of int): Feature dimensions for each stage.
-        layer_nums (list of int): Number of transformer layers per stage.
-        head_nums (list of int): Number of attention heads per stage.
-        ffn_ratios (int): Ratio to determine the hidden dimension in feedforward networks.
-        dropout (float): Dropout rate.
+        in_channels (int): Number of input image channels.
+        stage_dims (list): List of embedding dimensions for each stage.
+        layer_nums (list): List of number of transformer layers for each stage.
+        head_nums (list): List of number of attention heads for each stage.
+        window_size (list): List of window sizes for each stage (None for global attention).
+        mlp_ratios (list): List of feedforward network expansion ratios for each stage.
+        drop_path (float, optional): Stochastic depth rate. Default: 0.1
+        attn_dropout (float, optional): Attention dropout rate. Default: 0.1
+        proj_dropout (float, optional): Projection dropout rate. Default: 0.1
+        dropout (float, optional): Dropout rate. Default: 0.1
     Returns:
-        Tensor: (B, T, 128)
-    '''
+        Tensor: (B, T, 128) where B is batch size, T is sequence length, and 128 is the final embedding dimension.
+        '''
     def __init__(self,
                  img_size=128,
                  in_channels=3,
                  stage_dims=[64, 128, 256],
                  layer_nums=[2, 4, 6],
                  head_nums=[2, 4, 8],
-                 ffn_ratios=3,
+                 window_size=[8, 4, None],   # None → global attention
+                 mlp_ratio=[4, 4, 4],
+                 drop_path=0.1,
+                 attn_dropout=0.1,
+                 proj_dropout=0.1,
                  dropout=0.1):
         super().__init__()
+
+        # --- helper ---
+        def _to_list(x, n):
+            return x if isinstance(x, (list, tuple)) else [x] * n
+
+        num_stages = len(stage_dims)
+        mlp_ratio    = _to_list(mlp_ratio, num_stages)
+        window_size  = _to_list(window_size, num_stages)
+        attn_dropout = _to_list(attn_dropout, num_stages)
+        proj_dropout = _to_list(proj_dropout, num_stages)
+
+        # progressive stochastic depth schedule
+        total_blocks = sum(layer_nums)
+        dpr = torch.linspace(0, drop_path, total_blocks).tolist()
+        block_idx = 0
+
+        # --- stem ---
         self.stem = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=stage_dims[0], 
-                      kernel_size=7, stride=4, padding=3, bias=False),
+            nn.Conv2d(in_channels, stage_dims[0], kernel_size=7, stride=4, padding=3, bias=False),
             nn.BatchNorm2d(stage_dims[0]),
             nn.GELU()
         )
@@ -247,36 +273,52 @@ class ViT_Hierarchical(nn.Module):
         self.stages = nn.ModuleList()
         self.stage_types = []
         in_dim = stage_dims[0]
-        for i, (dim, num_layers, num_heads) in enumerate(zip(stage_dims, layer_nums, head_nums)):
+
+        # --- build stages ---
+        for i, (dim, num_layers, num_heads, w_size, mlp_r, attn_dp, proj_dp) in \
+            enumerate(zip(stage_dims, layer_nums, head_nums, window_size, mlp_ratio, attn_dropout, proj_dropout)):
+
+            # downsample between stages
             down_sample = (
-                nn.Conv2d(in_channels=in_dim, out_channels=dim, kernel_size=3, 
-                            stride=2, padding=1, bias=False) if i != 0 else nn.Identity()
-                            )
-            if i < len(stage_dims) - 1:
+                nn.Conv2d(in_dim, dim, kernel_size=3, stride=2, padding=1, bias=False)
+                if i != 0 else nn.Identity()
+            )
 
-                block = nn.ModuleList([
-                    WindowTransformerBlock(dim=dim, num_heads=num_heads, window_size=4, 
-                                            mlp_ratio=ffn_ratios, dropout=dropout, 
-                                            attn_dropout=dropout, proj_dropout=dropout, drop_path=0.1)
-                    for _ in range(num_layers)
-                ])
-                block_type = 'window'
-            else:
-                block = nn.ModuleList([
-                    TransformerEncoderBlock(d_model=dim, num_heads=num_heads, 
-                                            dim_feedforward=dim*ffn_ratios, dropout=dropout)
-                    for _ in range(num_layers)
-                ])
-                block_type = 'global'
-            
+            # build blocks
+            blocks = []
+            for j in range(num_layers):
+                dp_rate = dpr[block_idx]
+                block_idx += 1
 
+                if i < len(stage_dims) - 1 and w_size is not None:
+                    # window-based local transformer
+                    blocks.append(WindowTransformerBlock(
+                        dim=dim,
+                        num_heads=num_heads,
+                        window_size=w_size,
+                        mlp_ratio=mlp_r,
+                        dropout=dropout,
+                        attn_dropout=attn_dp,
+                        proj_dropout=proj_dp,
+                        drop_path=dp_rate
+                    ))
+                else:
+                    # global attention stage
+                    blocks.append(TransformerEncoderBlock(
+                        d_model=dim,
+                        num_heads=num_heads,
+                        dim_feedforward=int(dim * mlp_r),
+                        dropout=dropout
+                    ))
+
+            # register stage
             self.stages.append(nn.ModuleDict({
-                'down_sample': down_sample if i != 0 else nn.Identity(),
-                'block': block,
+                'down_sample': down_sample,
+                'block': nn.ModuleList(blocks)
             }))
-            self.stage_types.append(block_type)
+            self.stage_types.append('window' if i < len(stage_dims) - 1 else 'global')
+            in_dim = dim
 
-            in_dim=dim
         self.norm = nn.LayerNorm(stage_dims[-1])
         self.frame_proj = nn.Linear(stage_dims[-1], 128)
 
@@ -323,11 +365,19 @@ if __name__ == '__main__':
     in_channels = 3
     x = torch.randn(batch_size, seq_len, in_channels, img_size, img_size) # Example input
 
-    model = ViT_Hierarchical(img_size=img_size, in_channels=in_channels, 
-                             stage_dims=[64, 128, 224], 
-                             layer_nums=[2, 4, 5], 
-                             head_nums=[2, 4, 7], 
-                             ffn_ratios=3, dropout=0.1)
-    out = model(x)
+    vit = ViT_Hierarchical(
+        img_size=128,
+        in_channels=3,
+        stage_dims=[64, 128, 224],
+        layer_nums=[2, 4, 5],
+        head_nums=[2, 4, 7],
+        window_size=[8, 4, None],
+        mlp_ratio=[4, 4, 4],
+        drop_path=0.1,
+        attn_dropout=0.1,
+        proj_dropout=0.1,
+        dropout=0.1
+    )
+    out = vit(x)
     print("Output shape:", out.shape) # Expected: [batch_size, seq_len, 128]
-    print ("Total parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
+    print ("Total parameters:", sum(p.numel() for p in vit.parameters() if p.requires_grad))
