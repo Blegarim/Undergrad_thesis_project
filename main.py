@@ -13,8 +13,8 @@ pie = PIE(data_path='PIE')
 
 # Configuration
 video_path = 'test_clip2.mp4'
-out_video = 'output_with_predictions_1.1.mp4'
-model_path = 'outputs/best_model_epoch2.pth'
+out_video = 'output_with_predictions_1.2.mp4'
+model_path = 'outputs/best_model_epoch5.pth'
 
 # Image transformation
 # default_img_transform = transforms.Compose([

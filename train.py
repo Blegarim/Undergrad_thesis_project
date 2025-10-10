@@ -127,10 +127,10 @@ def main():
 
     # Configuration
     embedding_dim = 128
-    learning_rate = 5e-5
+    learning_rate = 1e-5
     batch_size = 32
     sequence_length = 20
-    num_epochs = 10
+    num_epochs = 5
     num_workers = 4
 
     # Number of prediction classes per head
@@ -150,16 +150,16 @@ def main():
             head_nums=[2, 4, 7],
             window_size=[8, 4, None],
             mlp_ratio=[4, 4, 4],
-            drop_path=0.1,
+            drop_path=0.15,
             attn_dropout=0.1,
             proj_dropout=0.1,
-            dropout=0.1
+            dropout=0.15
         ),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 
     # Load model
-    checkpoint_path = 'outputs/best_model_epoch.pth'
+    checkpoint_path = 'outputs/best_model_epoch5.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
@@ -167,9 +167,13 @@ def main():
         print(f'Checkpoint {checkpoint_path} not found. Starting from scratch.')
 
     criterion = {name: nn.CrossEntropyLoss() for name in num_classes_dict}
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=5e-5)
 
-    early_stopping = EarlyStopping(patience=4, min_delta=0.001)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'
+    )
+
+    early_stopping = EarlyStopping(patience=2, min_delta=0.0005)
     best_val_loss = float('inf')
 
     os.makedirs('outputs', exist_ok=True)
@@ -228,6 +232,8 @@ def main():
         )
 
         val_loss, val_acc = validate_one_epoch(model, val_loader, criterion, device)
+        scheduler.step(val_loss)
+
         print(f"Validation Loss: {val_loss:.4f}, Overall Accuracy: {val_acc:.4f}")
 
         del val_data, val_dataset, val_loader
