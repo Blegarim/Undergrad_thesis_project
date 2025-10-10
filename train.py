@@ -12,10 +12,30 @@ from models.Unified_Module import EnsembleModel
 import time
 import gc
 import matplotlib.pyplot as plt
+import csv
+from datetime import datetime
 
 '''
 Training script for the PIE dataset using a multimodal model with CNN, Transformer, and Cross-Attention.
 '''
+
+datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+log_file = f'training_log/training_log_{datetime_str}.csv'
+
+os.makedirs('training_log', exist_ok=True)
+with open(log_file, mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow([
+        'Epoch',
+        'Avg Train Loss',
+        'Actions Acc',
+        'Looks Acc',
+        'Crosses Acc',
+        'Val Loss',
+        'Overall Val Acc'
+    ])
+
+print(f'Logging training progress to {log_file}')
 
 def collate_fn(batch):
     images = torch.stack([item['images'] for item in batch], dim=0)
@@ -79,7 +99,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device):
 
 def validate_one_epoch(model, dataloader, criterion, device):
     model.eval()
-    running_loss = 0
+    running_loss = 0.0
     correct = {}
     total = {}
 
@@ -91,26 +111,37 @@ def validate_one_epoch(model, dataloader, criterion, device):
 
             remap_cross_labels(labels)
             outputs = model(images, motions)
-            batch_loss = 0
-            for name in outputs:
+
+            batch_loss = 0.0
+            for name in outputs:  # 'actions', 'looks', 'crosses'
                 logits = outputs[name]
                 targets = labels[name]
                 loss_i = criterion[name](logits, targets)
                 batch_loss += loss_i.item()
-                _, preds = torch.max(outputs[name], 1)
-                correct[name] = correct.get(name, 0) + (preds == labels[name]).sum().item()
-                total[name] = total.get(name, 0) + labels[name].size(0)
+
+                _, preds = torch.max(logits, 1)
+                correct[name] = correct.get(name, 0) + (preds == targets).sum().item()
+                total[name] = total.get(name, 0) + targets.size(0)
+
             running_loss += batch_loss
 
+    # --- Compute metrics ---
     epoch_loss = running_loss / len(dataloader)
+
+    val_metrics = {}
     for name in correct:
-        if total[name] > 0:
-            acc = correct[name] / total[name]
-            print(f"Validation Accuracy for {name}: {acc:.4f}")
-        else:
-            print(f"No samples for {name}, accuracy set to 0.0")
+        acc = correct[name] / total[name] if total[name] > 0 else 0.0
+        val_metrics[name] = acc
+        print(f"Validation Accuracy for {name}: {acc:.4f}")
+
     overall_acc = sum(correct.values()) / sum(total.values()) if sum(total.values()) > 0 else 0.0
-    return epoch_loss, overall_acc
+    val_metrics["overall"] = overall_acc
+
+    print(f"Overall Validation Accuracy: {overall_acc:.4f}")
+    print(f"Validation Loss: {epoch_loss:.4f}")
+
+    return epoch_loss, val_metrics
+
 
 # Define PTChunkDataset once
 class PTChunkDataset(torch.utils.data.Dataset):
@@ -166,8 +197,14 @@ def main():
     else:
         print(f'Checkpoint {checkpoint_path} not found. Starting from scratch.')
 
+    for name, param in model.named_parameters():
+        if 'cross_attention' in name or 'classifier' in name or 'cross_attn' in name:
+            param.requires_grad = True
+        else:
+            param.requires_grad = False
+
     criterion = {name: nn.CrossEntropyLoss() for name in num_classes_dict}
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=5e-5)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=5e-5)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'
@@ -212,11 +249,6 @@ def main():
         
         print(f"Epoch {epoch + 1} average loss: {sum(epoch_loss) / len(epoch_loss):.4f}")
 
-        plt.plot(range(len(epoch_loss)), epoch_loss, label=f'Epoch {epoch + 1}')
-        plt.xlabel('Chunk Index')
-        plt.ylabel('Loss')
-        plt.savefig(f'training_log/ epoch_{epoch + 1}_loss.png')
-
         # Validation (load all val data once per epoch)
         val_data = []
         for chunk_path in val_chunk_files:
@@ -231,10 +263,20 @@ def main():
             pin_memory=True
         )
 
-        val_loss, val_acc = validate_one_epoch(model, val_loader, criterion, device)
+        val_loss, val_metric = validate_one_epoch(model, val_loader, criterion, device)
         scheduler.step(val_loss)
 
-        print(f"Validation Loss: {val_loss:.4f}, Overall Accuracy: {val_acc:.4f}")
+        with open(log_file, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([
+                epoch + 1,
+                round(sum(epoch_loss) / len(epoch_loss), 4),
+                round((val_metric['actions'], 4)),
+                round((val_metric['looks'], 4)),
+                round((val_metric['crosses'], 4)),
+                round(val_loss, 4),
+                round(val_metric['overall'], 4)
+            ])
 
         del val_data, val_dataset, val_loader
         gc.collect()

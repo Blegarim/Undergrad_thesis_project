@@ -358,9 +358,10 @@ class ViT_Hierarchical(nn.Module):
         return x
 
 if __name__ == '__main__':
+    from torchview import draw_graph
     # Test the ViT_Hierarchical module
     batch_size = 32
-    seq_len = 8
+    seq_len = 20
     img_size = 128
     in_channels = 3
     x = torch.randn(batch_size, seq_len, in_channels, img_size, img_size) # Example input
@@ -381,3 +382,6 @@ if __name__ == '__main__':
     out = vit(x)
     print("Output shape:", out.shape) # Expected: [batch_size, seq_len, 128]
     print ("Total parameters:", sum(p.numel() for p in vit.parameters() if p.requires_grad))
+
+    graph = draw_graph(vit, input_size=(batch_size, seq_len, in_channels, img_size, img_size))
+    graph.visual_graph.render("vit_hierarchical", format="plain", cleanup=True)

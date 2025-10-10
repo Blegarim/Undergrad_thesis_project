@@ -18,6 +18,7 @@ class EnsembleModel(nn.Module):
         motion_out = self.tcngru(motions)     # [B, T, D]
         motion_feats = self.norm(motion_out)
 
+
         # --- Cross-attention fusion ---
         logits = self.cross_attention(motion_feats, image_feats)  # dict of logits per task
 
