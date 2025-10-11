@@ -91,7 +91,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device):
         end_time = time.time()
         batch_time = end_time - start_time
         if batch_idx % 10 == 0:
-            print(f"Batch {batch_idx}, Loss: {loss.item():.4f}, Time: {batch_time:.3f} sec")
+            print(f"Batch {batch_idx}, Loss: {loss.item():.4f}, Time per batch: {batch_time:.3f} sec")
 
     avg_loss = total_loss / len(dataloader)
     print(f"Average chunk Loss: {avg_loss:.4f}")
@@ -215,14 +215,37 @@ def main():
 
     os.makedirs('outputs', exist_ok=True)
 
+    import threading
+
+    # Asynchronous chunk loading
+    def async_load_chunk(path, holder):
+        holder['data'] = torch.load(path, map_location='cpu')
+
     # --- Training loop ---
     train_chunk_folder = 'preprocessed_train'
-    train_chunk_files = sorted([os.path.join(train_chunk_folder, f) for f in os.listdir(train_chunk_folder) if f.endswith('.pt')])
+    train_chunk_files = sorted([os.path.join(train_chunk_folder, f) 
+                                for f in os.listdir(train_chunk_folder) 
+                                if f.endswith('.pt')])
 
     val_chunk_folder = 'preprocessed_val'
-    val_chunk_files = sorted([os.path.join(val_chunk_folder, f) for f in os.listdir(val_chunk_folder) if f.endswith('.pt')])
+    val_chunk_files = sorted([os.path.join(val_chunk_folder, f) 
+                              for f in os.listdir(val_chunk_folder) 
+                              if f.endswith('.pt')])
 
     print(f'Total trainable parameters: {count_parameters(model)}')
+
+    # Dataloader initialization
+    dataset = PTChunkDataset([])
+    loader = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            collate_fn=collate_fn,
+            pin_memory=True,
+            persistent_workers=True, # keep workers alive between epochs
+            prefetch_factor=4 # number of samples loaded in advance by each worker
+        )
 
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
@@ -230,22 +253,32 @@ def main():
         import random; random.shuffle(train_chunk_files)
         epoch_loss = []
 
+        # Load the first chunk
+        current_holder = {'data': torch.load(train_chunk_files[0], map_location='cpu')}
+        
+        # Iterate through chunks
         for chunk_idx, chunk_path in enumerate(train_chunk_files):
             print(f"Loading chunk {chunk_idx + 1}/{len(train_chunk_files)}: {chunk_path}")
-            chunk_data = torch.load(chunk_path, map_location='cpu')
-            dataset = PTChunkDataset(chunk_data)
-            loader = DataLoader(
-                dataset,
-                batch_size=batch_size,
-                shuffle=True,
-                num_workers=num_workers,
-                collate_fn=collate_fn,
-                pin_memory=True
-            )
+            next_holder = {}
+
+            # Start async loading of the next chunk
+            if chunk_idx +1 < len(train_chunk_files):
+                thread = threading.Thread(target=async_load_chunk, 
+                                          args=(train_chunk_files[chunk_idx + 1], next_holder))
+                thread.start()
+            else:
+                thread = None
+
+            dataset.data = current_holder['data']
             avg_loss = train_one_chunk(model, loader, criterion, optimizer, device)
             epoch_loss.append(avg_loss)
-            del chunk_data, dataset, loader
+            del current_holder['data']
             gc.collect()
+
+            # Wait for the next chunk to finish loading
+            if thread is not None:
+                thread.join()
+                current_holder = next_holder
         
         print(f"Epoch {epoch + 1} average loss: {sum(epoch_loss) / len(epoch_loss):.4f}")
 

@@ -214,8 +214,6 @@ class WindowTransformerBlock(nn.Module):
 
         return x
 
-
-
 class ViT_Hierarchical(nn.Module):
     '''
     Vision Transformer with hierarchical stages and window-based attention.
