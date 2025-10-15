@@ -51,5 +51,20 @@ def main():
 
     print("All dataset chunks saved successfully.")
 
+def test():
+    test_sequences = load_sequences_from_pkl('sequences_test.pkl')
+    transform = transforms.Compose([
+        transforms.Resize((128, 128)),
+        transforms.ToTensor(),
+    ])
+    test_start_idx = 0
+    test_end_idx = len(test_sequences)
+    save_dataset_in_chunks(test_sequences,
+                            out_dir='preprocessed_test', 
+                           chunk_size=5000, 
+                           transform=transform,
+                           start_idx=test_start_idx,
+                           end_idx=test_end_idx)
+
 if __name__ == "__main__":
-    main()
+    test()

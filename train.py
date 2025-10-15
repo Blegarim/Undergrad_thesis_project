@@ -162,6 +162,7 @@ def main():
     batch_size = 32
     sequence_length = 20
     num_epochs = 5
+
     num_workers = 4
 
     # Number of prediction classes per head
