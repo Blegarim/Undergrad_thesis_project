@@ -19,27 +19,9 @@ from datetime import datetime
 Training script for the PIE dataset using a multimodal model with CNN, Transformer, and Cross-Attention.
 '''
 
-datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_file = f'training_log/training_log_{datetime_str}.csv'
-
-os.makedirs('training_log', exist_ok=True)
-with open(log_file, mode='w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow([
-        'Epoch',
-        'Avg Train Loss',
-        'Actions Acc',
-        'Looks Acc',
-        'Crosses Acc',
-        'Val Loss',
-        'Overall Val Acc'
-    ])
-
-print(f'Logging training progress to {log_file}')
-
 def collate_fn(batch):
     images = torch.stack([item['images'] for item in batch], dim=0)
-    motions = torch.stack([item['motions'] for item in batch], dim=0)[..., :3]
+    motions = torch.stack([item['motions'] for item in batch], dim=0)[..., :4]
     labels = {k: torch.stack([item[k] for item in batch], dim=0) for k in ['actions', 'looks', 'crosses']}
     return images, motions, labels
 
@@ -156,14 +138,32 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
+    datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = f'training_log/training_log_{datetime_str}.csv'
+
+    os.makedirs('training_log', exist_ok=True)
+    with open(log_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([
+            'Epoch',
+            'Avg Train Loss',
+            'Actions Acc',
+            'Looks Acc',
+            'Crosses Acc',
+            'Val Loss',
+            'Overall Val Acc'
+        ])
+
+    print(f'Logging training progress to {log_file}')
+
     # Configuration
     embedding_dim = 128
     learning_rate = 1e-5
     batch_size = 32
     sequence_length = 20
-    num_epochs = 5
+    num_epochs = 10
 
-    num_workers = 4
+    num_workers = 1
 
     # Number of prediction classes per head
     num_classes_dict = {
@@ -173,7 +173,7 @@ def main():
     }
 
     model = EnsembleModel(
-        tcngru=TCNGRU(input_dim=3, num_layers=2, kernel_size=3, dropout=0.1),
+        tcngru=TCNGRU(input_dim=4, num_layers=2, kernel_size=3, dropout=0.1),
         vit=ViT_Hierarchical(
             img_size=128,
             in_channels=3,
@@ -183,15 +183,15 @@ def main():
             window_size=[8, 4, None],
             mlp_ratio=[4, 4, 4],
             drop_path=0.15,
-            attn_dropout=0.1,
-            proj_dropout=0.1,
+            attn_dropout=0.15,
+            proj_dropout=0.15,
             dropout=0.15
         ),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 
     # Load model
-    checkpoint_path = 'outputs/best_model_epoch5.pth'
+    checkpoint_path = 'outputs/best_model_epoch.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
@@ -202,10 +202,10 @@ def main():
         if 'cross_attention' in name or 'classifier' in name or 'cross_attn' in name:
             param.requires_grad = True
         else:
-            param.requires_grad = False
+            param.requires_grad = True
 
     criterion = {name: nn.CrossEntropyLoss() for name in num_classes_dict}
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=5e-5)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'
@@ -220,7 +220,7 @@ def main():
 
     # Asynchronous chunk loading
     def async_load_chunk(path, holder):
-        holder['data'] = torch.load(path, map_location='cpu')
+        holder['data'] = torch.load(path, map_location='cpu', weights_only=False)
 
     # --- Training loop ---
     train_chunk_folder = 'preprocessed_train'
@@ -235,58 +235,54 @@ def main():
 
     print(f'Total trainable parameters: {count_parameters(model)}')
 
-    # Dataloader initialization
-    dataset = PTChunkDataset([])
-    loader = DataLoader(
-            dataset,
-            batch_size=batch_size,
-            shuffle=True,
-            num_workers=num_workers,
-            collate_fn=collate_fn,
-            pin_memory=True,
-            persistent_workers=True, # keep workers alive between epochs
-            prefetch_factor=4 # number of samples loaded in advance by each worker
-        )
+    
 
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
-
         import random; random.shuffle(train_chunk_files)
         epoch_loss = []
 
-        # Load the first chunk
-        current_holder = {'data': torch.load(train_chunk_files[0], map_location='cpu')}
-        
-        # Iterate through chunks
         for chunk_idx, chunk_path in enumerate(train_chunk_files):
-            print(f"Loading chunk {chunk_idx + 1}/{len(train_chunk_files)}: {chunk_path}")
-            next_holder = {}
+            print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] Loading from {chunk_path}")
+            try:
+                current_data = torch.load(chunk_path, map_location='cpu')
+            except Exception as e:
+                print(f"⚠️ Failed to load chunk {chunk_path}: {e}")
+                continue
 
-            # Start async loading of the next chunk
-            if chunk_idx +1 < len(train_chunk_files):
-                thread = threading.Thread(target=async_load_chunk, 
-                                          args=(train_chunk_files[chunk_idx + 1], next_holder))
-                thread.start()
-            else:
-                thread = None
+            if not current_data:
+                print(f"⚠️ Chunk {chunk_path} is empty, skipping.")
+                continue
 
-            dataset.data = current_holder['data']
+            dataset = PTChunkDataset(current_data)
+            loader = DataLoader(
+                dataset,
+                batch_size=batch_size,
+                shuffle=True,
+                num_workers=1,          # safer for Windows
+                collate_fn=collate_fn,
+                pin_memory=False,
+                persistent_workers=False,
+                prefetch_factor=1
+            )
+
+            print(f"→ Training {len(loader)} batches in this chunk")
             avg_loss = train_one_chunk(model, loader, criterion, optimizer, device)
             epoch_loss.append(avg_loss)
-            del current_holder['data']
+
+            del current_data, dataset, loader
             gc.collect()
+            torch.cuda.empty_cache()
 
-            # Wait for the next chunk to finish loading
-            if thread is not None:
-                thread.join()
-                current_holder = next_holder
-        
-        print(f"Epoch {epoch + 1} average loss: {sum(epoch_loss) / len(epoch_loss):.4f}")
+        # ---- end of chunks ----
+        avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
+        print(f"Epoch {epoch + 1} average loss: {avg_epoch_loss:.4f}")
 
-        # Validation (load all val data once per epoch)
+        # ---- validation ----
         val_data = []
         for chunk_path in val_chunk_files:
             val_data.extend(torch.load(chunk_path, map_location='cpu'))
+
         val_dataset = PTChunkDataset(val_data)
         val_loader = DataLoader(
             val_dataset,
@@ -294,7 +290,7 @@ def main():
             shuffle=False,
             num_workers=0,
             collate_fn=collate_fn,
-            pin_memory=True
+            pin_memory=False
         )
 
         val_loss, val_metric = validate_one_epoch(model, val_loader, criterion, device)
@@ -304,16 +300,17 @@ def main():
             writer = csv.writer(file)
             writer.writerow([
                 epoch + 1,
-                round(sum(epoch_loss) / len(epoch_loss), 4),
-                round((val_metric['actions'], 4)),
-                round((val_metric['looks'], 4)),
-                round((val_metric['crosses'], 4)),
+                round(avg_epoch_loss, 4),
+                round(val_metric.get('actions', 0.0), 4),
+                round(val_metric.get('looks', 0.0), 4),
+                round(val_metric.get('crosses', 0.0), 4),
                 round(val_loss, 4),
-                round(val_metric['overall'], 4)
+                round(val_metric.get('overall', 0.0), 4)
             ])
 
         del val_data, val_dataset, val_loader
         gc.collect()
+        torch.cuda.empty_cache()
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -325,6 +322,7 @@ def main():
             print("Early stopping triggered. Saving final model and stopping.")
             torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}.pth')
             break
+
 
 if __name__ == "__main__":
     main()

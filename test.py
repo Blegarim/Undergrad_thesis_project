@@ -1,17 +1,63 @@
 import os
-import torch
-from torch.utils.data import DataLoader
-import csv, threading, time, gc
+import csv
+import time
+import gc
 from datetime import datetime
+import torch
+from torch.utils.data import Dataset, DataLoader
 
+# ==== Model Imports ====
 from models.Vision_Transformer import ViT_Hierarchical
 from models.Regression import TCNGRU
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
-from train import remap_cross_labels, PTChunkDataset
+from train import remap_cross_labels
 
 
-def test(model, dataloader, device):
+# ============================================================
+# === Dataset for preprocessed .pt chunks ====================
+# ============================================================
+
+class PTChunkDataset(Dataset):
+    """
+    For preprocessed .pt chunks that store dict samples:
+    {
+        'images': Tensor[T, C, H, W],
+        'motions': Tensor[T, 4],
+        'bboxes': ...,
+        'actions': Tensor,
+        'looks': Tensor,
+        'crosses': Tensor
+    }
+    """
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        sample = self.data[idx]
+        if isinstance(sample, dict):
+            images = sample["images"]
+            motions = sample["motions"]
+            labels = {
+                "actions": sample["actions"],
+                "looks": sample["looks"],
+                "crosses": sample["crosses"],
+            }
+            return images, motions, labels
+        elif isinstance(sample, (list, tuple)) and len(sample) == 3:
+            return sample  # backward compatibility
+        else:
+            raise ValueError(f"Unexpected sample structure at idx {idx}: {type(sample)}")
+
+
+# ============================================================
+# === Evaluation Function ====================================
+# ============================================================
+
+def evaluate(model, dataloader, device):
     model.eval()
     correct, total = {}, {}
 
@@ -27,38 +73,53 @@ def test(model, dataloader, device):
             for name in outputs.keys():
                 _, preds = torch.max(outputs[name], 1)
                 correct[name] = correct.get(name, 0) + (preds == labels[name]).sum().item()
-                total[name] = total.get(name, 0) + labels[name].size(0)
+                total[name] = total.get(name, 0) + labels[name].numel()
 
-    test_metrics = {}
+    metrics = {}
     for name in correct:
         acc = 100.0 * correct[name] / total[name]
-        test_metrics[name] = acc
-        print(f"  {name} accuracy: {acc:.2f}%")
+        metrics[name] = acc
+        print(f"    {name} accuracy: {acc:.2f}%")
 
     overall = 100.0 * sum(correct.values()) / sum(total.values())
-    test_metrics["overall"] = overall
-    print(f"  Overall accuracy: {overall:.2f}%")
-    return test_metrics
+    metrics["overall"] = overall
+    print(f"    Overall accuracy: {overall:.2f}%")
+    return metrics
 
+
+# ============================================================
+# === Main Testing Script ====================================
+# ============================================================
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # --- Config ---
+    # ==== Config ====
     embedding_dim = 128
     batch_size = 32
     num_workers = 4
     num_classes_dict = {"actions": 2, "looks": 2, "crosses": 3}
-    model_path = "outputs/best_model_epoch5.pth"
+    model_path = "outputs/best_model_epoch3.pth"
     test_chunk_folder = "preprocessed_test"
-    csv_output = f"training_log/test_metrics_summary_{datetime_str}.csv"
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
 
-    # --- Load model ---
+    # ==== Prepare log file ====
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_csv = os.path.join(log_dir, f"test_log_{timestamp}.csv")
+    csv_headers = ["timestamp", "chunk", "actions", "looks", "crosses", "overall", "duration_sec"]
+
+    with open(log_csv, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(csv_headers)
+
+    # ==== Load model ====
+    print(f"Loading model from {model_path}")
+    assert os.path.exists(model_path), f"Model not found: {model_path}"
+
     model = EnsembleModel(
-        tcngru=TCNGRU(input_dim=3, num_layers=2, kernel_size=3, dropout=0.1),
+        tcngru=TCNGRU(input_dim=4, num_layers=2, kernel_size=3, dropout=0.1),
         vit=ViT_Hierarchical(
             img_size=128, in_channels=3,
             stage_dims=[64, 128, 224],
@@ -69,68 +130,88 @@ def main():
             drop_path=0.15, attn_dropout=0.1,
             proj_dropout=0.1, dropout=0.15,
         ),
-        cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict),
+        cross_attention=CrossAttentionModule(
+            d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict
+        ),
     ).to(device)
 
-    assert os.path.exists(model_path), f"Model path {model_path} not found"
     model.load_state_dict(torch.load(model_path, map_location=device))
+    print("Model loaded successfully.")
 
-    # --- Chunk loading helper ---
-    def async_load_chunk(path, holder):
-        holder["data"] = torch.load(path, map_location="cpu")
-
-    # --- Prepare chunk list ---
-    test_chunk_files = sorted(
-        [os.path.join(test_chunk_folder, f) for f in os.listdir(test_chunk_folder) if f.endswith(".pt")]
+    # ==== Find test chunks ====
+    chunk_files = sorted(
+        [os.path.join(test_chunk_folder, f)
+         for f in os.listdir(test_chunk_folder)
+         if f.endswith(".pt")]
     )
-    assert len(test_chunk_files) > 0, "No test chunks found!"
+    assert len(chunk_files) > 0, f"No .pt chunks found in {test_chunk_folder}"
 
-    # --- Prepare CSV file ---
-    csv_headers = ["chunk", "actions", "looks", "crosses", "overall"]
-    with open(csv_output, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=csv_headers)
-        writer.writeheader()
+    print(f"Found {len(chunk_files)} test chunks.")
 
-    # --- Process each chunk ---
-    current_holder = {"data": torch.load(test_chunk_files[0], map_location="cpu")}
-    for chunk_idx, chunk_path in enumerate(test_chunk_files):
-        print(f"\n[Chunk {chunk_idx+1}/{len(test_chunk_files)}] {chunk_path}")
-        start_time = time.time()
+    # ==== Process each chunk ====
+    all_metrics = []
+    total_start = time.time()
 
-        next_holder = {}
-        if chunk_idx + 1 < len(test_chunk_files):
-            thread = threading.Thread(target=async_load_chunk, args=(test_chunk_files[chunk_idx + 1], next_holder))
-            thread.start()
-        else:
-            thread = None
+    for i, chunk_path in enumerate(chunk_files):
+        print(f"\n[Chunk {i+1}/{len(chunk_files)}] {os.path.basename(chunk_path)}")
+        start = time.time()
 
-        dataset = PTChunkDataset([chunk_path])
-        if hasattr(dataset, "data"):
-            dataset.data = current_holder["data"]
-
+        # Load the chunk
+        chunk_data = torch.load(chunk_path, map_location="cpu")
+        dataset = PTChunkDataset(chunk_data)
         dataloader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=False,
-            num_workers=num_workers, persistent_workers=False,
-            pin_memory=True, prefetch_factor=2
+            dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
         )
 
-        metrics = test(model, dataloader, device)
-        metrics_row = {"chunk": chunk_idx + 1}
-        for key in ["actions", "looks", "crosses", "overall"]:
-            metrics_row[key] = metrics.get(key, 0.0)
+        metrics = evaluate(model, dataloader, device)
+        duration = time.time() - start
 
-        with open(csv_output, "a", newline="") as f:
-            csv.writer(f).writerow(metrics_row.values())
+        metrics_row = [
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            os.path.basename(chunk_path),
+            round(metrics.get("actions", 0.0), 2),
+            round(metrics.get("looks", 0.0), 2),
+            round(metrics.get("crosses", 0.0), 2),
+            round(metrics.get("overall", 0.0), 2),
+            round(duration, 2),
+        ]
+        all_metrics.append(metrics_row)
 
-        print(f"  Chunk {chunk_idx+1} done in {(time.time()-start_time):.2f}s")
-        del dataset, dataloader, current_holder
+        with open(log_csv, "a", newline="") as f:
+            csv.writer(f).writerow(metrics_row)
+
+        print(f"  Chunk done in {duration:.2f}s")
+        del dataset, dataloader, chunk_data
         gc.collect()
 
-        if thread:
-            thread.join()
-            current_holder = next_holder
+    # ==== Compute Average Metrics ====
+    avg_actions = sum(float(m[2]) for m in all_metrics) / len(all_metrics)
+    avg_looks = sum(float(m[3]) for m in all_metrics) / len(all_metrics)
+    avg_crosses = sum(float(m[4]) for m in all_metrics) / len(all_metrics)
+    avg_overall = sum(float(m[5]) for m in all_metrics) / len(all_metrics)
+    total_time = (time.time() - total_start) / 60
 
-    print(f"\n✅ Testing completed. Metrics saved to {csv_output}")
+    avg_row = [
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "AVERAGE",
+        round(avg_actions, 2),
+        round(avg_looks, 2),
+        round(avg_crosses, 2),
+        round(avg_overall, 2),
+        round(total_time * 60, 2),
+    ]
+
+    with open(log_csv, "a", newline="") as f:
+        csv.writer(f).writerow(avg_row)
+
+    print("\n✅ Testing complete.")
+    print(f"Average Accuracies - Actions: {avg_actions:.2f}%, Looks: {avg_looks:.2f}%, Crosses: {avg_crosses:.2f}%, Overall: {avg_overall:.2f}%")
+    print(f"Total time: {total_time:.2f} min")
+    print(f"Results logged to: {log_csv}")
 
 
 if __name__ == "__main__":

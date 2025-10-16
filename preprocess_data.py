@@ -9,16 +9,24 @@ def save_dataset_in_chunks(sequences, out_dir, chunk_size=5000, transform=None, 
     os.makedirs(out_dir, exist_ok=True)
     if end_idx is None:
         end_idx = len(sequences)
+    total = end_idx - start_idx
+    print(f'\nSaving {total} sequences into {out_dir} (chunk_size = {chunk_size})')
 
     for i in range(start_idx, end_idx, chunk_size):
         chunk = sequences[i:i+chunk_size]
         dataset = PIESequenceDataset(chunk, transform=transform, crop=True, preload=True)
 
         # Save the data list (preprocessed tensors) directly
-        torch.save(dataset.data, os.path.join(out_dir, f'chunk_{i:06d}.pt'))
+        #torch.save(dataset.data, os.path.join(out_dir, f'chunk_{i:06d}.pt'))
+        tmp_path = os.path.join(out_dir, f"tmp_chunk_{i:06d}.pt")
+        final_path = os.path.join(out_dir, f"chunk_{i:06d}.pt")
+
+        torch.save(dataset.data, tmp_path)
+        os.replace(tmp_path, final_path)
 
         print(f"Saved chunk {i}–{i + len(chunk) - 1} to {out_dir}/chunk_{i:06d}.pt")
         del dataset  # Free memory
+        torch.cuda.empty_cache()
         gc.collect() # Force garbage collection
 
 def main():
@@ -57,7 +65,7 @@ def test():
         transforms.Resize((128, 128)),
         transforms.ToTensor(),
     ])
-    test_start_idx = 0
+    test_start_idx = 40000
     test_end_idx = len(test_sequences)
     save_dataset_in_chunks(test_sequences,
                             out_dir='preprocessed_test', 
