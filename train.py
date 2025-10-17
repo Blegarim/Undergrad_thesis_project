@@ -138,7 +138,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    datetime_str = datetime.now().strftime("%m%d_%H%M")
     log_file = f'training_log/training_log_{datetime_str}.csv'
 
     os.makedirs('training_log', exist_ok=True)
@@ -162,8 +162,10 @@ def main():
     batch_size = 32
     sequence_length = 20
     num_epochs = 10
+    num_workers = 2
 
-    num_workers = 1
+    # Model checkpoint path
+    checkpoint_path = 'outputs/best_model_epoch3.pth'
 
     # Number of prediction classes per head
     num_classes_dict = {
@@ -182,16 +184,16 @@ def main():
             head_nums=[2, 4, 7],
             window_size=[8, 4, None],
             mlp_ratio=[4, 4, 4],
-            drop_path=0.15,
-            attn_dropout=0.15,
-            proj_dropout=0.15,
-            dropout=0.15
+            drop_path=0.2,
+            attn_dropout=0.3,
+            proj_dropout=0.3,
+            dropout=0.3
         ),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 
     # Load model
-    checkpoint_path = 'outputs/best_model_epoch.pth'
+    
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
@@ -205,7 +207,7 @@ def main():
             param.requires_grad = True
 
     criterion = {name: nn.CrossEntropyLoss() for name in num_classes_dict}
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=5e-5)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'
@@ -215,12 +217,6 @@ def main():
     best_val_loss = float('inf')
 
     os.makedirs('outputs', exist_ok=True)
-
-    import threading
-
-    # Asynchronous chunk loading
-    def async_load_chunk(path, holder):
-        holder['data'] = torch.load(path, map_location='cpu', weights_only=False)
 
     # --- Training loop ---
     train_chunk_folder = 'preprocessed_train'
@@ -259,11 +255,11 @@ def main():
                 dataset,
                 batch_size=batch_size,
                 shuffle=True,
-                num_workers=1,          # safer for Windows
+                num_workers=num_workers,     
                 collate_fn=collate_fn,
-                pin_memory=False,
+                pin_memory=True,
                 persistent_workers=False,
-                prefetch_factor=1
+                prefetch_factor=2
             )
 
             print(f"→ Training {len(loader)} batches in this chunk")
@@ -315,12 +311,12 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             print(f"New best validation loss: {best_val_loss:.4f}. Saving model...")
-            torch.save(model.state_dict(), f'outputs/best_model_epoch{epoch+1}.pth')
+            torch.save(model.state_dict(), f'outputs/best_model_epoch{epoch+1}_{datetime_str}.pth')
 
         early_stopping(val_loss)
         if early_stopping.early_stop:
             print("Early stopping triggered. Saving final model and stopping.")
-            torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}.pth')
+            torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}_{datetime_str}.pth')
             break
 
 
