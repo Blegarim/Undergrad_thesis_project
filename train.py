@@ -134,11 +134,16 @@ class PTChunkDataset(torch.utils.data.Dataset):
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
+def finetune(model, x=False):
+    if x:
+        for name, param in model.named_parameters():
+            param.requires_grad = True if 'cross_attention' in name or 'classifier' in name or 'cross_attn' in name else False
+
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    datetime_str = datetime.now().strftime("%m%d_%H%M")
+    datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = f'training_log/training_log_{datetime_str}.csv'
 
     os.makedirs('training_log', exist_ok=True)
@@ -162,10 +167,8 @@ def main():
     batch_size = 32
     sequence_length = 20
     num_epochs = 10
-    num_workers = 2
 
-    # Model checkpoint path
-    checkpoint_path = 'outputs/best_model_epoch3.pth'
+    num_workers = 1
 
     # Number of prediction classes per head
     num_classes_dict = {
@@ -184,30 +187,26 @@ def main():
             head_nums=[2, 4, 7],
             window_size=[8, 4, None],
             mlp_ratio=[4, 4, 4],
-            drop_path=0.2,
-            attn_dropout=0.3,
-            proj_dropout=0.3,
-            dropout=0.3
+            drop_path=0.15,
+            attn_dropout=0.15,
+            proj_dropout=0.15,
+            dropout=0.15
         ),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 
     # Load model
-    
+    checkpoint_path = 'outputs/best_model_epoch.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     else:
         print(f'Checkpoint {checkpoint_path} not found. Starting from scratch.')
 
-    for name, param in model.named_parameters():
-        if 'cross_attention' in name or 'classifier' in name or 'cross_attn' in name:
-            param.requires_grad = True
-        else:
-            param.requires_grad = True
+    finetune(model, False)
 
     criterion = {name: nn.CrossEntropyLoss() for name in num_classes_dict}
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=5e-5)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'
@@ -255,11 +254,11 @@ def main():
                 dataset,
                 batch_size=batch_size,
                 shuffle=True,
-                num_workers=num_workers,     
+                num_workers=1,          # safer for Windows
                 collate_fn=collate_fn,
-                pin_memory=True,
+                pin_memory=False,
                 persistent_workers=False,
-                prefetch_factor=2
+                prefetch_factor=1
             )
 
             print(f"→ Training {len(loader)} batches in this chunk")
@@ -311,12 +310,12 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             print(f"New best validation loss: {best_val_loss:.4f}. Saving model...")
-            torch.save(model.state_dict(), f'outputs/best_model_epoch{epoch+1}_{datetime_str}.pth')
+            torch.save(model.state_dict(), f'outputs/best_model_epoch{epoch+1}.pth')
 
         early_stopping(val_loss)
         if early_stopping.early_stop:
             print("Early stopping triggered. Saving final model and stopping.")
-            torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}_{datetime_str}.pth')
+            torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}.pth')
             break
 
 
