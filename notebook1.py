@@ -1,4 +1,6 @@
 from collections import Counter
+import torch
+import os
 
 def label_counts(chunk_data):
     cnts = {'actions': Counter(), 'looks': Counter(), 'crosses': Counter()}
@@ -10,11 +12,18 @@ def label_counts(chunk_data):
         print(f'{k} label counts: {dict(c)}')
 
 if __name__ == "__main__":
-    import torch
 
-    # Load a sample .pt chunk file
-    chunk_path = 'preprocessed_test/chunk_000000.pt'
-    chunk_data = torch.load(chunk_path, map_location='cpu')
 
-    # Print label counts
-    label_counts(chunk_data)
+    test_chunk_folder = "preprocessed_test"
+
+    chunk_files = sorted(
+        [os.path.join(test_chunk_folder, f)
+         for f in os.listdir(test_chunk_folder)
+         if f.endswith(".pt")]
+    )
+
+    for i, chunk_path in enumerate(chunk_files):
+        print(f"\n[Chunk {i+1}/{len(chunk_files)}] {os.path.basename(chunk_path)}")
+        chunk_data = torch.load(chunk_path, map_location="cpu")
+        label_counts(chunk_data)
+        del chunk_data

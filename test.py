@@ -81,7 +81,7 @@ def evaluate(model, dataloader, device):
                 correct[name] = correct.get(name, 0) + (preds == labels[name]).sum().item()
                 total[name] = total.get(name, 0) + labels[name].numel()
 
-                # ✨ NEW: store for F1/AUC
+                # store for F1/AUC
                 all_preds.setdefault(name, []).append(preds.cpu())
                 all_labels.setdefault(name, []).append(labels[name].cpu())
                 all_probs.setdefault(name, []).append(probs.cpu())
@@ -114,7 +114,6 @@ def evaluate(model, dataloader, device):
     print(f"    Overall Accuracy: {overall:.2f}%")
     return metrics
 
-
 # ============================================================
 # === Main Testing Script ====================================
 # ============================================================
@@ -137,10 +136,10 @@ def main():
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_csv = os.path.join(log_dir, f"test_log_{timestamp}.csv")
 
-    # ✨ NEW: expanded headers
+    # headers
     csv_headers = [
         "timestamp", "chunk",
-        "actions_acc", "actions_f1", "actions_auc",
+        "actions_acc", "actions_f1", "actions_auc", 
         "looks_acc", "looks_f1", "looks_auc",
         "crosses_acc", "crosses_f1", "crosses_auc",
         "overall_acc", "duration_sec"
