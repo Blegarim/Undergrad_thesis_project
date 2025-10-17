@@ -102,7 +102,7 @@ def main():
     num_classes_dict = {"actions": 2, "looks": 2, "crosses": 3}
     model_path = "outputs/best_model_epoch3.pth"
     test_chunk_folder = "preprocessed_test"
-    log_dir = "logs"
+    log_dir = "training_log"
     os.makedirs(log_dir, exist_ok=True)
 
     # ==== Prepare log file ====

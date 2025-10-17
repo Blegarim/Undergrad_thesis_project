@@ -7,7 +7,7 @@ from models.Regression import TCNGRU
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
 
-from pedestrian_detection import extract_tracks_from_video, smooth_track, extract_sequences_from_track
+from scripts.pedestrian_detection import extract_tracks_from_video, smooth_track, extract_sequences_from_track
 from PIE.utilities.pie_data import PIE
 pie = PIE(data_path='PIE')
 

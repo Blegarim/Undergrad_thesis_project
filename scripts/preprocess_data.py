@@ -1,6 +1,6 @@
 import torch
 from torchvision import transforms
-from scripts.PIE_sequence_Dataset_1 import load_sequences_from_pkl, PIESequenceDataset
+from PIE_sequence_Dataset_1 import load_sequences_from_pkl, PIESequenceDataset
 import os
 from tqdm import tqdm
 import gc
