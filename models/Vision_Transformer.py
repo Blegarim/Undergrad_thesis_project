@@ -155,7 +155,6 @@ class WindowTransformerBlock(nn.Module):
     A Transformer block that applies window-based multi-head self-attention (W-MSA).
     Args:
         dim (int): Number of input channels.
-        input_resolution (tuple): Input resolution.
         num_heads (int): Number of attention heads.
         window_size (int): Window size.
         mlp_ratio (float): Ratio to determine the hidden dimension in feedforward networks.
@@ -163,8 +162,7 @@ class WindowTransformerBlock(nn.Module):
         dropout (float, optional): Dropout rate. Default: 0.1
         attn_dropout (float, optional): Attention dropout rate. Default: 0.1
         proj_dropout (float, optional): Projection dropout rate. Default: 0.1
-        drop_path (float, optional): Stochastic depth rate. Default: 0.1
-        fused_window_process (bool, optional): If True, process all windows in a batch together for efficiency. Default: False    
+        drop_path (float, optional): Stochastic depth rate. Default: 0.1   
     '''
     def __init__(self, dim=128, num_heads=8, window_size=4, mlp_ratio=4.0, 
                  qkv_bias=True, dropout=0.1, attn_dropout=0.1, proj_dropout=0.1, drop_path=0.1,
@@ -358,16 +356,16 @@ class ViT_Hierarchical(nn.Module):
 if __name__ == '__main__':
     from torchview import draw_graph
     # Test the ViT_Hierarchical module
-    batch_size = 32
-    seq_len = 20
-    img_size = 128
+    batch_size = 2
+    seq_len = 10
+    img_size = 256
     in_channels = 3
     x = torch.randn(batch_size, seq_len, in_channels, img_size, img_size) # Example input
 
     vit = ViT_Hierarchical(
-        img_size=128,
+        img_size=img_size,
         in_channels=3,
-        stage_dims=[64, 128, 224],
+        stage_dims=[48, 96, 168],
         layer_nums=[2, 4, 5],
         head_nums=[2, 4, 7],
         window_size=[8, 4, None],
@@ -377,9 +375,13 @@ if __name__ == '__main__':
         proj_dropout=0.1,
         dropout=0.1
     )
-    out = vit(x)
-    print("Output shape:", out.shape) # Expected: [batch_size, seq_len, 128]
-    print ("Total parameters:", sum(p.numel() for p in vit.parameters() if p.requires_grad))
 
-    graph = draw_graph(vit, input_size=(batch_size, seq_len, in_channels, img_size, img_size))
-    graph.visual_graph.render("vit_hierarchical", format="plain", cleanup=True)
+    print("Running forward...")
+    with torch.no_grad():
+        out = vit(x)
+    print("Finished forward.")
+    print("Output shape:", out.shape) # Expected: [batch_size, seq_len, 128]
+    print ("Total parameters:", sum(p.numel() for p in vit.parameters()))
+
+    #graph = draw_graph(vit, input_size=(batch_size, seq_len, in_channels, img_size, img_size))
+    #graph.visual_graph.render("vit_hierarchical", format="plain", cleanup=True)
