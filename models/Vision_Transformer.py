@@ -355,8 +355,9 @@ class ViT_Hierarchical(nn.Module):
 
 if __name__ == '__main__':
     from torchview import draw_graph
+    from fvcore.nn import FlopCountAnalysis
     # Test the ViT_Hierarchical module
-    batch_size = 2
+    batch_size = 1
     seq_len = 10
     img_size = 256
     in_channels = 3
@@ -376,12 +377,11 @@ if __name__ == '__main__':
         dropout=0.1
     )
 
-    print("Running forward...")
-    with torch.no_grad():
-        out = vit(x)
-    print("Finished forward.")
-    print("Output shape:", out.shape) # Expected: [batch_size, seq_len, 128]
-    print ("Total parameters:", sum(p.numel() for p in vit.parameters()))
+    out = vit(x)
+    flops = FlopCountAnalysis(vit, x)
+    print("Total FLOPs:", flops.total())
+    print("Per-frame FLOPs:", flops.total() / seq_len)
+    print("Total parameters:", sum(p.numel() for p in vit.parameters() if p.requires_grad))
 
     #graph = draw_graph(vit, input_size=(batch_size, seq_len, in_channels, img_size, img_size))
     #graph.visual_graph.render("vit_hierarchical", format="plain", cleanup=True)

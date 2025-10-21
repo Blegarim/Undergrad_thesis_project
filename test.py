@@ -6,7 +6,7 @@ from datetime import datetime
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
-from sklearn.metrics import f1_score, roc_auc_score
+from sklearn.metrics import f1_score, roc_auc_score, precision_score, recall_score
 
 # ==== Model Imports ====
 from models.Vision_Transformer import ViT_Hierarchical
@@ -95,6 +95,8 @@ def evaluate(model, dataloader, device):
         acc = 100.0 * correct[name] / total[name]
         avg_type = "binary" if y_prob.shape[1] == 2 else "macro"
         f1 = f1_score(y_true, y_pred, average=avg_type)
+        precision = precision_score(y_true, y_pred, average=avg_type)
+        recall = recall_score(y_true, y_pred, average=avg_type)
         try:
             if y_prob.shape[1] == 2:
                 auc = roc_auc_score(y_true, y_prob[:, 1])
@@ -104,10 +106,12 @@ def evaluate(model, dataloader, device):
             auc = float("nan")
 
         metrics[name + "_acc"] = acc
-        metrics[name + "_f1"] = f1 * 100.0
-        metrics[name + "_auc"] = auc * 100.0
+        metrics[name + "_f1"] = f1 
+        metrics[name + "_auc"] = auc 
+        metrics[name + "_p"] = precision
+        metrics[name + "_r"] = recall
 
-        print(f"    {name}: Acc={acc:.2f}% | F1={f1*100:.2f}% | AUC={metrics[name + '_auc']:.2f}%")
+        print(f"    {name}: Acc={acc:.2f}% | F1={f1:.2f}% | AUC={metrics[name + '_auc']:.2f} | Precision={precision:.2f} | Recall={recall:.2f}")
 
     overall = 100.0 * sum(correct.values()) / sum(total.values())
     metrics["overall_acc"] = overall
@@ -139,9 +143,9 @@ def main():
     # headers
     csv_headers = [
         "timestamp", "chunk",
-        "actions_acc", "actions_f1", "actions_auc", 
-        "looks_acc", "looks_f1", "looks_auc",
-        "crosses_acc", "crosses_f1", "crosses_auc",
+        "actions_acc", "actions_f1", "actions_auc", "actions_p", "actions_r"
+        "looks_acc", "looks_f1", "looks_auc", "looks_p", "looks_r"
+        "crosses_acc", "crosses_f1", "crosses_auc", "crosses_p", "crosses_r"
         "overall_acc", "duration_sec"
     ]
 
@@ -210,12 +214,18 @@ def main():
             round(metrics.get("actions_acc", 0.0), 2),
             round(metrics.get("actions_f1", 0.0), 2),
             round(metrics.get("actions_auc", 0.0), 2),
+            round(metrics.get("actions_p", 0.0), 2),
+            round(metrics.get("actions_r", 0.0), 2), 
             round(metrics.get("looks_acc", 0.0), 2),
             round(metrics.get("looks_f1", 0.0), 2),
             round(metrics.get("looks_auc", 0.0), 2),
+            round(metrics.get("looks_p", 0.0), 2),
+            round(metrics.get("looks_r", 0.0), 2),
             round(metrics.get("crosses_acc", 0.0), 2),
             round(metrics.get("crosses_f1", 0.0), 2),
             round(metrics.get("crosses_auc", 0.0), 2),
+            round(metrics.get("crosses_p", 0.0), 2),
+            round(metrics.get("crosses_r", 0.0), 2),
             round(metrics.get("overall_acc", 0.0), 2),
             round(duration, 2),
         ]
@@ -231,9 +241,9 @@ def main():
     # ==== Compute Average Metrics ====
     avg_metrics = {}
     metric_names = [
-        "actions_acc", "actions_f1", "actions_auc",
-        "looks_acc", "looks_f1", "looks_auc",
-        "crosses_acc", "crosses_f1", "crosses_auc",
+        "actions_acc", "actions_f1", "actions_auc", "actions_p", "actions_r",
+        "looks_acc", "looks_f1", "looks_auc", "looks_p", "looks_r",
+        "crosses_acc", "crosses_f1", "crosses_auc", "crosses_p", "crosses_r",
         "overall_acc"
     ]
     for m in metric_names:
