@@ -30,32 +30,79 @@ def save_dataset_in_chunks(sequences, out_dir, chunk_size=5000, transform=None, 
         gc.collect() # Force garbage collection
 
 def main():
-    transform = transforms.Compose([
+
+    base_128 = transforms.Compose([
         transforms.Resize((128, 128)),
-        transforms.ToTensor(),
+        transforms.ToTensor()
+    ])
+
+    base_256 = transforms.Compose([
+        transforms.Resize((256, 256)),
+        transforms.ToTensor()
+    ])
+
+    augmented_256 = transforms.Compose([
+        transforms.Resize((256, 256)),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.3, hue=0.3),
+        transforms.RandomResizedCrop(256, scale=(0.8, 1.0)),
+        transforms.ToTensor()
     ])
 
     train_sequences = load_sequences_from_pkl('sequences_train.pkl')
     val_sequences = load_sequences_from_pkl('sequences_val.pkl')
+    test_sequences = load_sequences_from_pkl('sequences_test.pkl')
 
     train_start_idx = 0
     train_end_idx = len(train_sequences)
     val_start_idx = 5000
     val_end_idx = len(train_sequences)
+    test_start_idx = 0
+    test_end_idx = len(test_sequences)
+
 
     # Save in chunks
     save_dataset_in_chunks(train_sequences, 
-                           out_dir='preprocessed_train', 
-                           chunk_size=5000, 
-                           transform=transform, 
+                           out_dir='preprocessed_train_base', 
+                           chunk_size=7500, 
+                           transform=base_256, 
                            start_idx=train_start_idx,
                            end_idx=train_end_idx)
-    save_dataset_in_chunks(val_sequences, 
-                           out_dir='preprocessed_val', 
+    
+    save_dataset_in_chunks(train_sequences, 
+                           out_dir='preprocessed_train_augmented', 
                            chunk_size=7500, 
-                           transform=transform,
+                           transform=augmented_256, 
+                           start_idx=train_start_idx,
+                           end_idx=train_end_idx)
+    
+    save_dataset_in_chunks(val_sequences, 
+                           out_dir='preprocessed_val_base', 
+                           chunk_size=7500, 
+                           transform=base_256,
                            start_idx=val_start_idx,
                            end_idx=val_end_idx)
+    
+    save_dataset_in_chunks(val_sequences, 
+                           out_dir='preprocessed_val_augmented', 
+                           chunk_size=7500, 
+                           transform=augmented_256,
+                           start_idx=val_start_idx,
+                           end_idx=val_end_idx)
+    
+    save_dataset_in_chunks(test_sequences,
+                           out_dir='preprocessed_test_128',
+                           chunk_size=7500,
+                           transform=base_128,
+                           start_idx=test_start_idx,
+                           end_idx=test_end_idx)
+    
+    save_dataset_in_chunks(test_sequences,
+                           out_dir='preprocessed_test_128',
+                           chunk_size=7500,
+                           transform=base_256,
+                           start_idx=test_start_idx,
+                           end_idx=test_end_idx)
 
     print("All dataset chunks saved successfully.")
 
@@ -75,4 +122,4 @@ def test():
                            end_idx=test_end_idx)
 
 if __name__ == "__main__":
-    test()
+    main()
