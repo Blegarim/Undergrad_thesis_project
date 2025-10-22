@@ -36,16 +36,16 @@ def main():
         transforms.ToTensor()
     ])
 
-    base_256 = transforms.Compose([
-        transforms.Resize((256, 256)),
+    base_160 = transforms.Compose([
+        transforms.Resize((160, 160)),
         transforms.ToTensor()
     ])
 
-    augmented_256 = transforms.Compose([
-        transforms.Resize((256, 256)),
+    augmented_160 = transforms.Compose([
+        transforms.Resize((160, 160)),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.3, hue=0.3),
-        transforms.RandomResizedCrop(256, scale=(0.8, 1.0)),
+        transforms.RandomResizedCrop(160, scale=(0.8, 1.0)),
         transforms.ToTensor()
     ])
 
@@ -56,37 +56,36 @@ def main():
     train_start_idx = 0
     train_end_idx = len(train_sequences)
     val_start_idx = 5000
-    val_end_idx = len(train_sequences)
+    val_end_idx = len(val_sequences)
     test_start_idx = 0
     test_end_idx = len(test_sequences)
-
 
     # Save in chunks
     save_dataset_in_chunks(train_sequences, 
                            out_dir='preprocessed_train_base', 
                            chunk_size=7500, 
-                           transform=base_256, 
+                           transform=base_160, 
                            start_idx=train_start_idx,
                            end_idx=train_end_idx)
     
     save_dataset_in_chunks(train_sequences, 
                            out_dir='preprocessed_train_augmented', 
                            chunk_size=7500, 
-                           transform=augmented_256, 
+                           transform=augmented_160, 
                            start_idx=train_start_idx,
                            end_idx=train_end_idx)
     
     save_dataset_in_chunks(val_sequences, 
                            out_dir='preprocessed_val_base', 
                            chunk_size=7500, 
-                           transform=base_256,
+                           transform=base_160,
                            start_idx=val_start_idx,
                            end_idx=val_end_idx)
     
     save_dataset_in_chunks(val_sequences, 
                            out_dir='preprocessed_val_augmented', 
                            chunk_size=7500, 
-                           transform=augmented_256,
+                           transform=augmented_160,
                            start_idx=val_start_idx,
                            end_idx=val_end_idx)
     
@@ -98,28 +97,13 @@ def main():
                            end_idx=test_end_idx)
     
     save_dataset_in_chunks(test_sequences,
-                           out_dir='preprocessed_test_128',
+                           out_dir='preprocessed_test_160',
                            chunk_size=7500,
-                           transform=base_256,
+                           transform=base_160,
                            start_idx=test_start_idx,
                            end_idx=test_end_idx)
 
     print("All dataset chunks saved successfully.")
-
-def test():
-    test_sequences = load_sequences_from_pkl('sequences_test.pkl')
-    transform = transforms.Compose([
-        transforms.Resize((128, 128)),
-        transforms.ToTensor(),
-    ])
-    test_start_idx = 40000
-    test_end_idx = len(test_sequences)
-    save_dataset_in_chunks(test_sequences,
-                            out_dir='preprocessed_test', 
-                           chunk_size=5000, 
-                           transform=transform,
-                           start_idx=test_start_idx,
-                           end_idx=test_end_idx)
 
 if __name__ == "__main__":
     main()

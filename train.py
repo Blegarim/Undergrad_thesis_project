@@ -2,7 +2,9 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import numpy as np
 from torch.utils.data import DataLoader
+from sklearn.utils.class_weight import compute_class_weight
 
 from models.Vision_Transformer import ViT_Hierarchical
 from models.Regression import TCNGRU
@@ -11,6 +13,7 @@ from models.Unified_Module import EnsembleModel
 
 import time
 import gc
+import random
 import matplotlib.pyplot as plt
 import csv
 from datetime import datetime
@@ -134,16 +137,32 @@ class PTChunkDataset(torch.utils.data.Dataset):
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def finetune(model, x=False):
-    if x:
-        for name, param in model.named_parameters():
-            param.requires_grad = True if 'cross_attention' in name or 'classifier' in name or 'cross_attn' in name else False
+def finetune(model, enable_finetune=False):
+    if not enable_finetune:
+        return
+    for name, param in model.named_parameters():
+        param.requires_grad = False
+        if ('cross_attention' in name) or ('classifier' in name) or ('cross_attn' in name):
+            param.requires_grad = True
+
+
+def gather_chunks(folders):
+    if isinstance(folders, str):
+        folders = [folders]
+    all_files = []
+    for folder in folders:
+        chunk_files = sorted([os.path.join(folder, f) 
+                            for f in os.listdir(folder) 
+                            if f.endswith('.pt')])
+        all_files.extend(chunk_files)
+    
+    return all_files
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    datetime_str = datetime.now().strftime("%m%d_%H%M")
     log_file = f'training_log/training_log_{datetime_str}.csv'
 
     os.makedirs('training_log', exist_ok=True)
@@ -165,10 +184,23 @@ def main():
     embedding_dim = 128
     learning_rate = 1e-5
     batch_size = 32
+    vit_args = dict(
+        img_size=128,
+        in_channels=3,
+        stage_dims=[48, 96, 168],
+        layer_nums=[2, 4, 5],
+        head_nums=[2, 4, 7],
+        window_size=[8, 4, None],
+        mlp_ratio=[4, 4, 4],
+        drop_path=0.15,
+        attn_dropout=0.15,
+        proj_dropout=0.15,
+        dropout=0.15
+    )
     sequence_length = 20
     num_epochs = 10
 
-    num_workers = 1
+    num_workers = 2
 
     # Number of prediction classes per head
     num_classes_dict = {
@@ -179,19 +211,7 @@ def main():
 
     model = EnsembleModel(
         tcngru=TCNGRU(input_dim=4, num_layers=2, kernel_size=3, dropout=0.1),
-        vit=ViT_Hierarchical(
-            img_size=128,
-            in_channels=3,
-            stage_dims=[64, 128, 224],
-            layer_nums=[2, 4, 5],
-            head_nums=[2, 4, 7],
-            window_size=[8, 4, None],
-            mlp_ratio=[4, 4, 4],
-            drop_path=0.15,
-            attn_dropout=0.15,
-            proj_dropout=0.15,
-            dropout=0.15
-        ),
+        vit=ViT_Hierarchical(**vit_args),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 
@@ -203,38 +223,40 @@ def main():
     else:
         print(f'Checkpoint {checkpoint_path} not found. Starting from scratch.')
 
-    finetune(model, False)
+    finetune(model, enable_finetune=False)
 
-    criterion = {name: nn.CrossEntropyLoss() for name in num_classes_dict}
+    # Class weighting for 'looks' labels. Criterion, optimizer, scheduler
+    y = np.array([0]*45000 + [1]*5000)
+    looks_weight = compute_class_weight(class_weight='balanced', classes=np.unique(y), y=y)
+    criterion = {
+        name: (
+            nn.CrossEntropyLoss(weight=torch.tensor(looks_weight, dtype=torch.float).to(device))
+            if name == 'looks'
+            else nn.CrossEntropyLoss()
+        )
+        for name in num_classes_dict
+    }
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
-
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'
     )
 
-    early_stopping = EarlyStopping(patience=2, min_delta=0.0005)
+    early_stopping = EarlyStopping(patience=3, min_delta=0.001)
     best_val_loss = float('inf')
 
     os.makedirs('outputs', exist_ok=True)
 
     # --- Training loop ---
-    train_chunk_folder = 'preprocessed_train'
-    train_chunk_files = sorted([os.path.join(train_chunk_folder, f) 
-                                for f in os.listdir(train_chunk_folder) 
-                                if f.endswith('.pt')])
-
-    val_chunk_folder = 'preprocessed_val'
-    val_chunk_files = sorted([os.path.join(val_chunk_folder, f) 
-                              for f in os.listdir(val_chunk_folder) 
-                              if f.endswith('.pt')])
+    train_chunk_folder = ['preprocessed_train_base', 'preprocessed_train_augmented']
+    val_chunk_folder = 'preprocessed_val_base'
+    train_chunk_files = gather_chunks(train_chunk_folder)
+    val_chunk_files = gather_chunks(val_chunk_folder)
 
     print(f'Total trainable parameters: {count_parameters(model)}')
 
-    
-
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
-        import random; random.shuffle(train_chunk_files)
+        random.shuffle(train_chunk_files)
         epoch_loss = []
 
         for chunk_idx, chunk_path in enumerate(train_chunk_files):
@@ -242,11 +264,11 @@ def main():
             try:
                 current_data = torch.load(chunk_path, map_location='cpu')
             except Exception as e:
-                print(f"⚠️ Failed to load chunk {chunk_path}: {e}")
+                print(f"Failed to load chunk {chunk_path}: {e}")
                 continue
 
             if not current_data:
-                print(f"⚠️ Chunk {chunk_path} is empty, skipping.")
+                print(f"Chunk {chunk_path} is empty, skipping.")
                 continue
 
             dataset = PTChunkDataset(current_data)
@@ -254,7 +276,7 @@ def main():
                 dataset,
                 batch_size=batch_size,
                 shuffle=True,
-                num_workers=1,          # safer for Windows
+                num_workers=num_workers, 
                 collate_fn=collate_fn,
                 pin_memory=False,
                 persistent_workers=False,
@@ -310,12 +332,12 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             print(f"New best validation loss: {best_val_loss:.4f}. Saving model...")
-            torch.save(model.state_dict(), f'outputs/best_model_epoch{epoch+1}.pth')
+            torch.save(model.state_dict(), f'outputs/best_model_epoch{epoch+1}_{datetime_str}.pth')
 
         early_stopping(val_loss)
         if early_stopping.early_stop:
             print("Early stopping triggered. Saving final model and stopping.")
-            torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}.pth')
+            torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}_{datetime_str}.pth')
             break
 
 
