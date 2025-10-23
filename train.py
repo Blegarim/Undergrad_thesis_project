@@ -16,10 +16,13 @@ import gc
 import random
 import matplotlib.pyplot as plt
 import csv
+import psutil
+import tqdm
 from datetime import datetime
 
 '''
-Training script for the PIE dataset using a multimodal model with CNN, Transformer, and Cross-Attention.
+Training script for the PIE dataset using an Ensemble Model with Temporal ConvNet, GRU, Hierarchical Vision Transformer and Cross Attention.
+I love femboys 
 '''
 
 def collate_fn(batch):
@@ -47,39 +50,58 @@ class EarlyStopping:
 
 def remap_cross_labels(labels):
     crosses = labels['crosses']
-    crosses = crosses.clone()
-    crosses[crosses == -1] = 2
+    crosses = torch.clamp(crosses, 0, 1)
     labels['crosses'] = crosses
 
-def train_one_chunk(model, dataloader, criterion, optimizer, device):
+def filter_irrelevant(data):
+    return [item for item in data if int(item['crosses'].item())==0 or int(item['crosses'].item())==1]
+
+def class_weight(a, b, device):
+    y = np.array([0]*a + [1]*b)
+    weight = compute_class_weight(class_weight='balanced', classes=np.unique(y), y=y)
+    return torch.tensor(weight, dtype=torch.float).to(device)
+
+def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight=None):
     model.train()
     total_loss = 0
+    progress_bar = tqdm(dataloader, desc='Training', total=len(dataloader))
 
-    for batch_idx, (images, motions, labels) in enumerate(dataloader):
+    if loss_weight is None:
+        loss_weight = {'actions': 1.0, 'looks': 1.0, 'crosses': 1.0}
+
+    for batch_idx, (images, motions, labels) in progress_bar:
         start_time = time.time()
-        images = images.to(device)
-        motions = motions.to(device)
+        images = images.to(device, non_blocking=True)
+        motions = motions.to(device, non_blocking=True)
         labels = {k: v.to(device) for k, v in labels.items()}
 
         remap_cross_labels(labels)
         optimizer.zero_grad()
         outputs = model(images, motions)
-        loss = 0
+
+        total_batch_loss = 0.0
+        loss_dict = {}
         for name in outputs:
             logits = outputs[name]
             targets = labels[name]
-            loss += criterion[name](logits, targets)
-        loss.backward()
+            head_loss = criterion[name](logits, targets)
+            weighted_loss = loss_weight.get(name, 1.0) * head_loss
+            total_batch_loss += weighted_loss
+            loss_dict[name] = head_loss.item()
+        total_batch_loss.backward()
         optimizer.step()
-        total_loss += loss.item()
+        total_loss += total_batch_loss.item()
 
         end_time = time.time()
         batch_time = end_time - start_time
-        if batch_idx % 10 == 0:
-            print(f"Batch {batch_idx}, Loss: {loss.item():.4f}, Time per batch: {batch_time:.3f} sec")
 
+        progress_bar.set_postfix({'loss':f'{total_batch_loss.item():.4f}'})
+        if batch_idx % 100 == 0 or (batch_idx + 1) == len(dataloader):
+            tqdm.write(f"Batch {batch_idx}/{len(dataloader)}, Loss: {total_batch_loss.item():.4f}, Time per batch: {batch_time:.3f} sec")
+
+    progress_bar.close()
     avg_loss = total_loss / len(dataloader)
-    print(f"Average chunk Loss: {avg_loss:.4f}")
+    tqdm.write(f"Average chunk Loss: {avg_loss:.4f}")
     return avg_loss
 
 def validate_one_epoch(model, dataloader, criterion, device):
@@ -127,13 +149,13 @@ def validate_one_epoch(model, dataloader, criterion, device):
 
     return epoch_loss, val_metrics
 
-
 # Define PTChunkDataset once
 class PTChunkDataset(torch.utils.data.Dataset):
     def __init__(self, data): self.data = data
     def __len__(self): return len(self.data)
     def __getitem__(self, idx): return self.data[idx]
 
+# Parameters counter helper
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -144,7 +166,6 @@ def finetune(model, enable_finetune=False):
         param.requires_grad = False
         if ('cross_attention' in name) or ('classifier' in name) or ('cross_attn' in name):
             param.requires_grad = True
-
 
 def gather_chunks(folders):
     if isinstance(folders, str):
@@ -157,6 +178,11 @@ def gather_chunks(folders):
         all_files.extend(chunk_files)
     
     return all_files
+
+def wait_for_memory(threshold=96, interval=1):
+    while psutil.virtual_memory().percent > threshold:
+        print(f"RAM at {psutil.virtual_memory().percent:.1f}%, waiting...")
+        time.sleep(interval)
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -183,9 +209,9 @@ def main():
     # Configuration
     embedding_dim = 128
     learning_rate = 1e-5
-    batch_size = 32
+    batch_size = 16
     vit_args = dict(
-        img_size=128,
+        img_size=160,
         in_channels=3,
         stage_dims=[48, 96, 168],
         layer_nums=[2, 4, 5],
@@ -197,17 +223,18 @@ def main():
         proj_dropout=0.15,
         dropout=0.15
     )
-    sequence_length = 20
     num_epochs = 10
-
-    num_workers = 2
-
+    num_workers = 1
     # Number of prediction classes per head
     num_classes_dict = {
         'actions': 2,
         'looks': 2,
-        'crosses': 3
+        'crosses': 2
     }
+    # Per-head Loss weighting
+    loss_weight = {'actions': 1.0, 'looks': 0.6, 'crosses': 1.2}
+    early_stopping = EarlyStopping(patience=4, min_delta=0.001)
+    best_val_loss = float('inf')
 
     model = EnsembleModel(
         tcngru=TCNGRU(input_dim=4, num_layers=2, kernel_size=3, dropout=0.1),
@@ -226,23 +253,18 @@ def main():
     finetune(model, enable_finetune=False)
 
     # Class weighting for 'looks' labels. Criterion, optimizer, scheduler
-    y = np.array([0]*45000 + [1]*5000)
-    looks_weight = compute_class_weight(class_weight='balanced', classes=np.unique(y), y=y)
-    criterion = {
-        name: (
-            nn.CrossEntropyLoss(weight=torch.tensor(looks_weight, dtype=torch.float).to(device))
-            if name == 'looks'
-            else nn.CrossEntropyLoss()
-        )
-        for name in num_classes_dict
-    }
+    criterion = {}
+    for name in num_classes_dict:
+        if name == 'looks':
+            criterion[name] = nn.CrossEntropyLoss(weight=class_weight(45000, 5000, device))
+        elif name == 'crosses':
+            criterion[name] = nn.CrossEntropyLoss(weight=class_weight(40000, 10000, device))
+        else:
+            criterion[name] = nn.CrossEntropyLoss()
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'
     )
-
-    early_stopping = EarlyStopping(patience=3, min_delta=0.001)
-    best_val_loss = float('inf')
 
     os.makedirs('outputs', exist_ok=True)
 
@@ -262,7 +284,9 @@ def main():
         for chunk_idx, chunk_path in enumerate(train_chunk_files):
             print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] Loading from {chunk_path}")
             try:
+                wait_for_memory(threshold=96, interval=1)
                 current_data = torch.load(chunk_path, map_location='cpu')
+                current_data = filter_irrelevant(current_data)
             except Exception as e:
                 print(f"Failed to load chunk {chunk_path}: {e}")
                 continue
@@ -278,13 +302,13 @@ def main():
                 shuffle=True,
                 num_workers=num_workers, 
                 collate_fn=collate_fn,
-                pin_memory=False,
+                pin_memory=True,
                 persistent_workers=False,
                 prefetch_factor=1
             )
 
             print(f"→ Training {len(loader)} batches in this chunk")
-            avg_loss = train_one_chunk(model, loader, criterion, optimizer, device)
+            avg_loss = train_one_chunk(model, loader, criterion, optimizer, device, loss_weight=loss_weight)
             epoch_loss.append(avg_loss)
 
             del current_data, dataset, loader

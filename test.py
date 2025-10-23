@@ -14,7 +14,7 @@ from models.Vision_Transformer import ViT_Hierarchical
 from models.Regression import TCNGRU
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
-from train import remap_cross_labels
+from train import remap_cross_labels, filter_irrelevant
 
 
 # ============================================================
@@ -183,9 +183,9 @@ def main():
         dropout=0.15,
     )
     num_workers = 4
-    num_classes_dict = {"actions": 2, "looks": 2, "crosses": 3}
-    model_path = "outputs/best_model_epoch3.pth"
-    test_chunk_folder = "preprocessed_test"
+    num_classes_dict = {"actions": 2, "looks": 2, "crosses": 2}
+    model_path = "outputs/final_model_epoch7_1022_1247.pth"
+    test_chunk_folder = "preprocessed_test_128"
     log_dir = "training_log"
     os.makedirs(log_dir, exist_ok=True)
 
@@ -247,6 +247,7 @@ def main():
         start = time.time()
 
         chunk_data = torch.load(chunk_path, map_location="cpu")
+        chunk_data = filter_irrelevant(chunk_data)
         dataset = PTChunkDataset(chunk_data)
         dataloader = DataLoader(
             dataset,
@@ -361,7 +362,7 @@ def main():
     print("\n✅ Testing complete.")
     print("Average metrics:")
     for k, v in avg_metrics.items():
-        print(f"  {k}: {v:.2f}%")
+        print(f"  {k}: {v:.2f}")
     print(f"Results logged to: {log_csv}")
 
 if __name__ == "__main__":

@@ -106,4 +106,5 @@ def main():
     print("All dataset chunks saved successfully.")
 
 if __name__ == "__main__":
-    main()
+    data = torch.load('preprocessed_train_augmented/chunk_000000.pt')
+    print(type(data[0]['images']))

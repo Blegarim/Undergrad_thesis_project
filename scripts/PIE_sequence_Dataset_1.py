@@ -4,7 +4,6 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from turbojpeg import TurboJPEG, TJPF_RGB
 jpeg = TurboJPEG(lib_path="C:\\libjpeg-turbo64\\bin\\turbojpeg.dll")
-from torchvision.transforms import ToTensor
 from pathlib import Path
 from tqdm import tqdm
 
