@@ -321,33 +321,25 @@ def main():
         avg_metrics[name + "_p"] = precision
         avg_metrics[name + "_r"] = recall
 
-    avg_row = [
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            'AVERAGE',
-            round_metric(avg_metrics, 'actions_acc'),
-            round_metric(avg_metrics, 'actions_f1'),
-            round_metric(avg_metrics, 'actions_auc'),
-            round_metric(avg_metrics, 'actions_p'),
-            round_metric(avg_metrics, 'actions_r'),
-            round_metric(avg_metrics, 'looks_acc'),
-            round_metric(avg_metrics, 'looks_f1'),
-            round_metric(avg_metrics, 'looks_auc'),
-            round_metric(avg_metrics, 'looks_p'),
-            round_metric(avg_metrics, 'looks_r'),
-            round_metric(avg_metrics, 'crosses_acc'),
-            round_metric(avg_metrics, 'crosses_f1'),
-            round_metric(avg_metrics, 'crosses_auc'),
-            round_metric(avg_metrics, 'crosses_p'),
-            round_metric(avg_metrics, 'crosses_r'),
-            round_metric(avg_metrics, 'overall_acc'),
-        ]
+    avg_metrics["overall_acc"] = (
+        100 * sum(v for k, v in avg_metrics.item() if k.endswith("_acc")) / 3.0
+    )
 
+    # Summary Table
+    heads = ["actions", "looks", "crosses"]
+    metric_suffixes = ["acc", "f1", "auc", "p", "r"]
+    score_row = ["Heads", "Accuracy", "F1", "AUC", "P", "R"]
+    rows = [score_row]
+    for h in heads:
+        row = [h.capitalize()] + [round_metric(avg_metrics, f"{h}_{s}") for s in metric_suffixes]
+        rows.append(row)
+    overall_row = ['Overall', round_metric(avg_metrics, 'overall_acc')]
     computational = [
         'Parameters count:',
         f'{sum(p.numel() for p in model.parameters() if p.requires_grad)} params',
         '',
         'Per-frame FLOPs:',
-        f'{flops_per_frame/1e6:2f} MFLOPs',
+        f'{flops_per_frame/1e6:.2f} MFLOPs',
         '',
         'Per-frame Latency:',
         f'{latency_per_frame*1000:.2f} ms',
@@ -357,8 +349,12 @@ def main():
     ]
 
     with open(log_csv, "a", newline="") as f:
-        csv.writer(f).writerow(avg_row)
-        csv.writer(f).writerow(computational)
+        writer = csv.writer(f)
+        writer.writerow([])
+        for r in rows:
+            writer.writerow(r)
+        writer.writerow(overall_row)
+        writer.writerow(computational)
 
     print("\n✅ Testing complete.")
     print("Average metrics:")
