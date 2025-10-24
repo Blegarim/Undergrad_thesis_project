@@ -14,7 +14,7 @@ pie = PIE(data_path='PIE')
 # Configuration
 video_path = 'test_clip2.mp4'
 out_video = 'output_with_predictions_1.2.mp4'
-model_path = 'outputs/best_model_epoch5.pth'
+model_path = "outputs/final_model_epoch5_1023_1349.pth"
 
 # Image transformation
 # default_img_transform = transforms.Compose([
@@ -27,18 +27,18 @@ sequence_length = 20
 num_classes_dict = {
         'actions': 2,
         'looks': 2,
-        'crosses': 3,
+        'crosses': 2,
     }
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Initialize the multimodal model
 model = EnsembleModel(
-        tcngru=TCNGRU(input_dim=3, num_layers=2, kernel_size=3, dropout=0.1),
+        tcngru=TCNGRU(input_dim=4, num_layers=2, kernel_size=3, dropout=0.1),
         vit=ViT_Hierarchical(
-            img_size=128,
+            img_size=160,
             in_channels=3,
-            stage_dims=[64, 128, 224],
+            stage_dims=[48, 96, 168],
             layer_nums=[2, 4, 5],
             head_nums=[2, 4, 7],
             window_size=[8, 4, None],

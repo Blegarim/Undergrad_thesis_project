@@ -17,7 +17,7 @@ import random
 import matplotlib.pyplot as plt
 import csv
 import psutil
-import tqdm
+from tqdm import tqdm
 from datetime import datetime
 
 '''
@@ -69,7 +69,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
     if loss_weight is None:
         loss_weight = {'actions': 1.0, 'looks': 1.0, 'crosses': 1.0}
 
-    for batch_idx, (images, motions, labels) in progress_bar:
+    for batch_idx, (images, motions, labels) in enumerate(progress_bar):
         start_time = time.time()
         images = images.to(device, non_blocking=True)
         motions = motions.to(device, non_blocking=True)
@@ -96,7 +96,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
         batch_time = end_time - start_time
 
         progress_bar.set_postfix({'loss':f'{total_batch_loss.item():.4f}'})
-        if batch_idx % 100 == 0 or (batch_idx + 1) == len(dataloader):
+        if (batch_idx+1) % 100 == 0 or (batch_idx + 1) == len(dataloader):
             tqdm.write(f"Batch {batch_idx}/{len(dataloader)}, Loss: {total_batch_loss.item():.4f}, Time per batch: {batch_time:.3f} sec")
 
     progress_bar.close()
@@ -154,10 +154,6 @@ class PTChunkDataset(torch.utils.data.Dataset):
     def __init__(self, data): self.data = data
     def __len__(self): return len(self.data)
     def __getitem__(self, idx): return self.data[idx]
-
-# Parameters counter helper
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def finetune(model, enable_finetune=False):
     if not enable_finetune:
@@ -233,6 +229,7 @@ def main():
     }
     # Per-head Loss weighting
     loss_weight = {'actions': 1.0, 'looks': 0.6, 'crosses': 1.2}
+
     early_stopping = EarlyStopping(patience=4, min_delta=0.001)
     best_val_loss = float('inf')
 
@@ -274,7 +271,7 @@ def main():
     train_chunk_files = gather_chunks(train_chunk_folder)
     val_chunk_files = gather_chunks(val_chunk_folder)
 
-    print(f'Total trainable parameters: {count_parameters(model)}')
+    print(f'Total trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad())}')
 
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch + 1}/{num_epochs}")

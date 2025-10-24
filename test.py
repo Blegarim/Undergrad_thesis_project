@@ -8,6 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, precision_score, recall_score
 from fvcore.nn import FlopCountAnalysis
+import builtins
 
 # ==== Model Imports ====
 from models.Vision_Transformer import ViT_Hierarchical
@@ -184,7 +185,7 @@ def main():
     )
     num_workers = 4
     num_classes_dict = {"actions": 2, "looks": 2, "crosses": 2}
-    model_path = "outputs/final_model_epoch7_1022_1247.pth"
+    model_path = "outputs/final_model_epoch5_1023_1349.pth"
     test_chunk_folder = "preprocessed_test_128"
     log_dir = "training_log"
     os.makedirs(log_dir, exist_ok=True)
@@ -340,10 +341,10 @@ def main():
             round_metric(avg_metrics, 'crosses_r'),
             round_metric(avg_metrics, 'overall_acc'),
         ]
-    
+
     computational = [
         'Parameters count:',
-        sum(p.numel() for p in model.parameters() if p.requires_grad()),
+        f'{sum(p.numel() for p in model.parameters() if p.requires_grad)} params',
         '',
         'Per-frame FLOPs:',
         f'{flops_per_frame/1e6:2f} MFLOPs',

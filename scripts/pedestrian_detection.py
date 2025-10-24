@@ -97,11 +97,12 @@ def extract_sequences_from_track(track_data, T=20, img_transform=default_img_tra
             imgs.append(img)
             cx = item['cx']
             cy = item['cy']
-            dt = 0 if j == 0 else item['frame_idx'] - window[j-1]['frame_idx']
-            motions.append([cx, cy, dt])
+            dx = 0 if j == 0 else item['cx'] - window[j-1]['cx']
+            dy = 0 if j == 0 else item['cy'] - window[j-1]['cy']
+            motions.append([cx, cy, dx, dy])
         if len(imgs) == T and len(motions) == T:
             imgs_tensor = torch.stack(imgs)                 # [T, 3, 128, 128]
-            motion_tensor = torch.tensor(motions, dtype=torch.float32)  # [T, 3]
+            motion_tensor = torch.tensor(motions, dtype=torch.float32)  # [T, 4]
             sequences.append((imgs_tensor, motion_tensor))
         # else: skip sequence if not all images present
     return sequences
