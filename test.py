@@ -15,7 +15,7 @@ from models.Vision_Transformer import ViT_Hierarchical
 from models.Regression import TCNGRU
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
-from train import remap_cross_labels, filter_irrelevant
+from train import remap_cross_labels, filter_irrelevant, vit_args_config
 
 
 # ============================================================
@@ -170,19 +170,7 @@ def main():
     embedding_dim = 128
     batch_size = 32
     img_size = 160
-    vit_args = dict(
-        img_size=img_size, 
-        in_channels=3,
-        stage_dims=[48, 96, 168],
-        layer_nums=[2, 4, 5],
-        head_nums=[2, 4, 7],
-        window_size=[8, 4, None],
-        mlp_ratio=[4, 4, 4],
-        drop_path=0.15, 
-        attn_dropout=0.1,
-        proj_dropout=0.1, 
-        dropout=0.15,
-    )
+    vit_args = vit_args_config()
     num_workers = 4
     num_classes_dict = {"actions": 2, "looks": 2, "crosses": 2}
     model_path = "outputs/final_model_epoch5_1023_1349.pth"
@@ -223,11 +211,14 @@ def main():
     print("Model loaded successfully.")
 
     # ==== Computing FLOPs/Inference Latency (dummy input) ====
-    dummy_images = torch.randn(1, 20, 3, img_size, img_size).to(device)
-    dummy_motions = torch.randn(1, 20, 4).to(device)
+    dummy_images_1 = torch.randn(1, 20, 3, img_size, img_size).to(device)
+    dummy_motions_1 = torch.randn(1, 20, 4).to(device)
 
-    flops_per_frame = compute_flops(model, dummy_images, dummy_motions)
-    fps, latency_per_frame = inference_latency(model, dummy_images, dummy_motions)
+    dummy_images_2 = torch.randn(1, 20, 3, img_size, img_size).to(device)
+    dummy_motions_2 = torch.randn(1, 20, 4).to(device)
+
+    flops_per_frame = compute_flops(model, dummy_images_1, dummy_motions_1)
+    fps, latency_per_frame = inference_latency(model, dummy_images_2, dummy_motions_2)
 
     # ==== Find test chunks ====
     chunk_files = sorted(
@@ -242,6 +233,8 @@ def main():
     # ==== Process each chunk ====
     all_metrics = []
     all_labels_global, all_preds_global, all_probs_global = {}, {}, {}
+    heads = ["actions", "looks", "crosses"]
+    metric_suffixes = ["acc", "f1", "auc", "p", "r"]
 
     for i, chunk_path in enumerate(chunk_files):
         print(f"\n[Chunk {i+1}/{len(chunk_files)}] {os.path.basename(chunk_path)}")
@@ -326,8 +319,6 @@ def main():
     )
 
     # Summary Table
-    heads = ["actions", "looks", "crosses"]
-    metric_suffixes = ["acc", "f1", "auc", "p", "r"]
     score_row = ["Heads", "Accuracy", "F1", "AUC", "P", "R"]
     rows = [score_row]
     for h in heads:
@@ -356,7 +347,7 @@ def main():
         writer.writerow(overall_row)
         writer.writerow(computational)
 
-    print("\n✅ Testing complete.")
+    print("\nTesting complete.")
     print("Average metrics:")
     for k, v in avg_metrics.items():
         print(f"  {k}: {v:.2f}")

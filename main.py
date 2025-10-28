@@ -8,6 +8,7 @@ from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
 
 from scripts.pedestrian_detection import extract_tracks_from_video, smooth_track, extract_sequences_from_track
+from train import vit_args_config
 from PIE.utilities.pie_data import PIE
 pie = PIE(data_path='PIE')
 
@@ -24,6 +25,7 @@ model_path = "outputs/final_model_epoch5_1023_1349.pth"
 # ])
 embedding_dim = 128
 sequence_length = 20
+vit_args = vit_args_config()
 num_classes_dict = {
         'actions': 2,
         'looks': 2,
@@ -35,19 +37,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # Initialize the multimodal model
 model = EnsembleModel(
         tcngru=TCNGRU(input_dim=4, num_layers=2, kernel_size=3, dropout=0.1),
-        vit=ViT_Hierarchical(
-            img_size=160,
-            in_channels=3,
-            stage_dims=[48, 96, 168],
-            layer_nums=[2, 4, 5],
-            head_nums=[2, 4, 7],
-            window_size=[8, 4, None],
-            mlp_ratio=[4, 4, 4],
-            drop_path=0.1,
-            attn_dropout=0.1,
-            proj_dropout=0.1,
-            dropout=0.1
-        ),
+        vit=ViT_Hierarchical(**vit_args),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
 

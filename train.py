@@ -105,13 +105,21 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
     return avg_loss
 
 def validate_one_epoch(model, dataloader, criterion, device):
+    """
+    Returns:
+      - loss_sum: float (sum of per-sample losses across the dataloader)
+      - n_samples: int (total number of samples seen)
+      - correct_counts: dict mapping head -> number of correct predictions (ints)
+    """
     model.eval()
-    running_loss = 0.0
+    loss_sum = 0.0
     correct = {}
     total = {}
+    samples = 0
 
     with torch.no_grad():
         for images, motions, labels in dataloader:
+            batch_size = images.size(0)
             images = images.to(device)
             motions = motions.to(device)
             labels = {k: v.to(device) for k, v in labels.items()}
@@ -119,35 +127,28 @@ def validate_one_epoch(model, dataloader, criterion, device):
             remap_cross_labels(labels)
             outputs = model(images, motions)
 
+            # accumulate loss as sum over samples (handles criterion reduction='mean')
             batch_loss = 0.0
             for name in outputs:  # 'actions', 'looks', 'crosses'
                 logits = outputs[name]
                 targets = labels[name]
                 loss_i = criterion[name](logits, targets)
-                batch_loss += loss_i.item()
+                # convert mean loss to sum so we can weight properly later:
+                batch_loss += loss_i.item() * batch_size
 
                 _, preds = torch.max(logits, 1)
                 correct[name] = correct.get(name, 0) + (preds == targets).sum().item()
                 total[name] = total.get(name, 0) + targets.size(0)
 
-            running_loss += batch_loss
+            samples += batch_size
+            loss_sum += batch_loss
 
-    # --- Compute metrics ---
-    epoch_loss = running_loss / len(dataloader)
+    if samples == 0:
+        return 0.0, 0, {}
 
-    val_metrics = {}
-    for name in correct:
-        acc = correct[name] / total[name] if total[name] > 0 else 0.0
-        val_metrics[name] = acc
-        print(f"Validation Accuracy for {name}: {acc:.4f}")
+    # Note: we return raw correct counts (not per-chunk accuracies)
+    return loss_sum, samples, correct
 
-    overall_acc = sum(correct.values()) / sum(total.values()) if sum(total.values()) > 0 else 0.0
-    val_metrics["overall"] = overall_acc
-
-    print(f"Overall Validation Accuracy: {overall_acc:.4f}")
-    print(f"Validation Loss: {epoch_loss:.4f}")
-
-    return epoch_loss, val_metrics
 
 # Define PTChunkDataset once
 class PTChunkDataset(torch.utils.data.Dataset):
@@ -174,6 +175,19 @@ def gather_chunks(folders):
         all_files.extend(chunk_files)
     
     return all_files
+
+def vit_args_config(img_size=160,
+            in_channels=3,
+            stage_dims=[48, 96, 168],
+            layer_nums=[2, 4, 5],
+            head_nums=[2, 4, 7],
+            window_size=[8, 4, None],
+            mlp_ratio=[4, 4, 4],
+            drop_path=0.15,
+            attn_dropout=0.15,
+            proj_dropout=0.15,
+            dropout=0.15):
+    return dict(img_size, in_channels, stage_dims, layer_nums, head_nums, window_size, mlp_ratio, drop_path, attn_dropout, proj_dropout, dropout)
 
 def wait_for_memory(threshold=96, interval=1):
     while psutil.virtual_memory().percent > threshold:
@@ -206,19 +220,7 @@ def main():
     embedding_dim = 128
     learning_rate = 1e-5
     batch_size = 16
-    vit_args = dict(
-        img_size=160,
-        in_channels=3,
-        stage_dims=[48, 96, 168],
-        layer_nums=[2, 4, 5],
-        head_nums=[2, 4, 7],
-        window_size=[8, 4, None],
-        mlp_ratio=[4, 4, 4],
-        drop_path=0.15,
-        attn_dropout=0.15,
-        proj_dropout=0.15,
-        dropout=0.15
-    )
+    vit_args = vit_args_config()
     num_epochs = 10
     num_workers = 1
     # Number of prediction classes per head
@@ -317,22 +319,65 @@ def main():
         print(f"Epoch {epoch + 1} average loss: {avg_epoch_loss:.4f}")
 
         # ---- validation ----
-        val_data = []
+        total_val_loss_sum = 0.0
+        total_val_samples = 0
+        total_correct_counts = {}  # head -> total correct across all val chunks
+        total_label_counts = {}    # head -> total labels across all val chunks
+
         for chunk_path in val_chunk_files:
-            val_data.extend(torch.load(chunk_path, map_location='cpu'))
+            print(f"Loading validation chunk {chunk_path}")
+            val_data = torch.load(chunk_path, map_location='cpu')
+            val_data = filter_irrelevant(val_data)
 
-        val_dataset = PTChunkDataset(val_data)
-        val_loader = DataLoader(
-            val_dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            num_workers=0,
-            collate_fn=collate_fn,
-            pin_memory=False
-        )
+            if not val_data:
+                print(f"Validation chunk {chunk_path} is empty, skipping.")
+                continue
 
-        val_loss, val_metric = validate_one_epoch(model, val_loader, criterion, device)
+            val_dataset = PTChunkDataset(val_data)
+            del val_data
+            gc.collect()
+
+            val_loader = DataLoader(
+                val_dataset,
+                batch_size=batch_size,
+                shuffle=False,
+                num_workers=0,
+                collate_fn=collate_fn,
+                pin_memory=False
+            )
+
+            chunk_loss_sum, chunk_n, chunk_corrects = validate_one_epoch(model, val_loader, criterion, device)
+
+            total_val_loss_sum += chunk_loss_sum
+            total_val_samples += chunk_n
+
+            # aggregate correct counts and per-head totals
+            for head, corr_count in chunk_corrects.items():
+                total_correct_counts[head] = total_correct_counts.get(head, 0) + int(corr_count)
+                # for per-head totals, assume chunk_n is the number of samples for that head
+                # (we used labels.size(0) in validate_one_epoch, which is same as batch_size)
+                total_label_counts[head] = total_label_counts.get(head, 0) + chunk_n
+
+            del val_dataset, val_loader, chunk_corrects
+            gc.collect()
+            torch.cuda.empty_cache()
+
+        if total_val_samples == 0:
+            raise RuntimeError("No validation samples found!")
+
+        # final averaged loss (per-sample)
+        val_loss = total_val_loss_sum / total_val_samples
+
+        # compute per-head accuracies and overall accuracy
+        val_metric = {}
+        for head in total_correct_counts:
+            val_metric[head] = total_correct_counts[head] / total_label_counts[head] if total_label_counts[head] > 0 else 0.0
+
+        overall_acc = sum(total_correct_counts.values()) / sum(total_label_counts.values()) if sum(total_label_counts.values()) > 0 else 0.0
+        val_metric['overall'] = overall_acc
+
         scheduler.step(val_loss)
+
 
         with open(log_file, mode='a', newline='') as file:
             writer = csv.writer(file)
@@ -346,10 +391,6 @@ def main():
                 round(val_metric.get('overall', 0.0), 4)
             ])
 
-        del val_data, val_dataset, val_loader
-        gc.collect()
-        torch.cuda.empty_cache()
-
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             print(f"New best validation loss: {best_val_loss:.4f}. Saving model...")
@@ -360,7 +401,6 @@ def main():
             print("Early stopping triggered. Saving final model and stopping.")
             torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}_{datetime_str}.pth')
             break
-
 
 if __name__ == "__main__":
     main()
