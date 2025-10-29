@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 
 class EnsembleModel(nn.Module):
-    def __init__(self, tcngru, vit, cross_attention, d_model=128):
+    def __init__(self, motion_enc, vit, cross_attention, d_model=128):
         super().__init__()
-        self.tcngru = tcngru
+        self.motion_enc = motion_enc
         self.vit = vit
         self.cross_attention = cross_attention
         self.norm = nn.LayerNorm(d_model)
@@ -15,7 +15,7 @@ class EnsembleModel(nn.Module):
         image_feats = self.norm(image_feats)
 
         # --- Motion branch ---
-        motion_out = self.tcngru(motions)     # [B, T, D]
+        motion_out = self.motion_enc(motions)     # [B, T, D]
         motion_feats = self.norm(motion_out)
 
 

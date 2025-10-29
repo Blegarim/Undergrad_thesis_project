@@ -8,13 +8,13 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, precision_score, recall_score
 from fvcore.nn import FlopCountAnalysis
-import builtins
 
 # ==== Model Imports ====
 from models.Vision_Transformer import ViT_Hierarchical
-from models.Regression import TCNGRU
+from models.Regression import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
+from config import vit_args_config, motion_enc_args_config
 from train import remap_cross_labels, filter_irrelevant
 
 
@@ -168,19 +168,10 @@ def main():
 
     # ==== CONFIGURATION ====
     embedding_dim = 128
-    batch_size = 32
+    batch_size = 16
     img_size = 160
-    vit_args = dict(img_size=160,
-            in_channels=3,
-            stage_dims=[48, 96, 168],
-            layer_nums=[2, 4, 5],
-            head_nums=[2, 4, 7],
-            window_size=[8, 4, None],
-            mlp_ratio=[4, 4, 4],
-            drop_path=0.15,
-            attn_dropout=0.15,
-            proj_dropout=0.15,
-            dropout=0.15)
+    vit_args = vit_args_config()
+    motion_enc_args = motion_enc_args_config()
     num_workers = 4
     num_classes_dict = {"actions": 2, "looks": 2, "crosses": 2}
     model_path = "outputs/final_model_epoch5_1023_1349.pth"
@@ -210,7 +201,7 @@ def main():
     assert os.path.exists(model_path), f"Model not found: {model_path}"
 
     model = EnsembleModel(
-        tcngru=TCNGRU(input_dim=4, num_layers=2, kernel_size=3, dropout=0.1),
+        motion_enc=MotionEncoder(**motion_enc_args),
         vit=ViT_Hierarchical(**vit_args),
         cross_attention=CrossAttentionModule(
             d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict

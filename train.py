@@ -7,9 +7,10 @@ from torch.utils.data import DataLoader
 from sklearn.utils.class_weight import compute_class_weight
 
 from models.Vision_Transformer import ViT_Hierarchical
-from models.Regression import TCNGRU
+from models.Regression import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
+from config import vit_args_config, motion_enc_args_config
 
 import time
 import gc
@@ -133,7 +134,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
                 logits = outputs[name]
                 targets = labels[name]
                 loss_i = criterion[name](logits, targets)
-                # convert mean loss to sum so we can weight properly later:
+                # convert mean loss to sum
                 batch_loss += loss_i.item() * batch_size
 
                 _, preds = torch.max(logits, 1)
@@ -146,9 +147,8 @@ def validate_one_epoch(model, dataloader, criterion, device):
     if samples == 0:
         return 0.0, 0, {}
 
-    # Note: we return raw correct counts (not per-chunk accuracies)
+    # Note: return raw correct counts (not per-chunk accuracies)
     return loss_sum, samples, correct
-
 
 # Define PTChunkDataset once
 class PTChunkDataset(torch.utils.data.Dataset):
@@ -207,17 +207,8 @@ def main():
     embedding_dim = 128
     learning_rate = 1e-5
     batch_size = 16
-    vit_args = dict(img_size=160,
-            in_channels=3,
-            stage_dims=[48, 96, 168],
-            layer_nums=[2, 4, 5],
-            head_nums=[2, 4, 7],
-            window_size=[8, 4, None],
-            mlp_ratio=[4, 4, 4],
-            drop_path=0.15,
-            attn_dropout=0.15,
-            proj_dropout=0.15,
-            dropout=0.15)
+    vit_args = vit_args_config()
+    motion_enc_args = motion_enc_args_config()
     num_epochs = 10
     num_workers = 1
     # Number of prediction classes per head
@@ -233,7 +224,7 @@ def main():
     best_val_loss = float('inf')
 
     model = EnsembleModel(
-        tcngru=TCNGRU(input_dim=4, num_layers=2, kernel_size=3, dropout=0.1),
+        motion_enc=MotionEncoder(**motion_enc_args),
         vit=ViT_Hierarchical(**vit_args),
         cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
     ).to(device)
