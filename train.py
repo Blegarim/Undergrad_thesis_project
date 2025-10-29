@@ -176,19 +176,6 @@ def gather_chunks(folders):
     
     return all_files
 
-def vit_args_config(img_size=160,
-            in_channels=3,
-            stage_dims=[48, 96, 168],
-            layer_nums=[2, 4, 5],
-            head_nums=[2, 4, 7],
-            window_size=[8, 4, None],
-            mlp_ratio=[4, 4, 4],
-            drop_path=0.15,
-            attn_dropout=0.15,
-            proj_dropout=0.15,
-            dropout=0.15):
-    return dict(img_size, in_channels, stage_dims, layer_nums, head_nums, window_size, mlp_ratio, drop_path, attn_dropout, proj_dropout, dropout)
-
 def wait_for_memory(threshold=96, interval=1):
     while psutil.virtual_memory().percent > threshold:
         print(f"RAM at {psutil.virtual_memory().percent:.1f}%, waiting...")
@@ -220,7 +207,17 @@ def main():
     embedding_dim = 128
     learning_rate = 1e-5
     batch_size = 16
-    vit_args = vit_args_config()
+    vit_args = dict(img_size=160,
+            in_channels=3,
+            stage_dims=[48, 96, 168],
+            layer_nums=[2, 4, 5],
+            head_nums=[2, 4, 7],
+            window_size=[8, 4, None],
+            mlp_ratio=[4, 4, 4],
+            drop_path=0.15,
+            attn_dropout=0.15,
+            proj_dropout=0.15,
+            dropout=0.15)
     num_epochs = 10
     num_workers = 1
     # Number of prediction classes per head
@@ -242,7 +239,7 @@ def main():
     ).to(device)
 
     # Load model
-    checkpoint_path = 'outputs/best_model_epoch.pth'
+    checkpoint_path = 'outputs/final_model_epoch5_1023_1349.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
@@ -273,7 +270,7 @@ def main():
     train_chunk_files = gather_chunks(train_chunk_folder)
     val_chunk_files = gather_chunks(val_chunk_folder)
 
-    print(f'Total trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad())}')
+    print(f'Total trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
 
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch + 1}/{num_epochs}")

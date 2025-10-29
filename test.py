@@ -15,7 +15,7 @@ from models.Vision_Transformer import ViT_Hierarchical
 from models.Regression import TCNGRU
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
-from train import remap_cross_labels, filter_irrelevant, vit_args_config
+from train import remap_cross_labels, filter_irrelevant
 
 
 # ============================================================
@@ -170,7 +170,17 @@ def main():
     embedding_dim = 128
     batch_size = 32
     img_size = 160
-    vit_args = vit_args_config()
+    vit_args = dict(img_size=160,
+            in_channels=3,
+            stage_dims=[48, 96, 168],
+            layer_nums=[2, 4, 5],
+            head_nums=[2, 4, 7],
+            window_size=[8, 4, None],
+            mlp_ratio=[4, 4, 4],
+            drop_path=0.15,
+            attn_dropout=0.15,
+            proj_dropout=0.15,
+            dropout=0.15)
     num_workers = 4
     num_classes_dict = {"actions": 2, "looks": 2, "crosses": 2}
     model_path = "outputs/final_model_epoch5_1023_1349.pth"
