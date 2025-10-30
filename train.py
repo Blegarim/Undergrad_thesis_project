@@ -15,9 +15,9 @@ from config import vit_args_config, motion_enc_args_config
 import time
 import gc
 import random
-import matplotlib.pyplot as plt
 import csv
 import psutil
+import threading
 from tqdm import tqdm
 from datetime import datetime
 
@@ -255,7 +255,6 @@ def main():
 
     os.makedirs('outputs', exist_ok=True)
 
-    import threading
     # Asynchronous chunk loading
     def async_chunk_loading(path, holder):
         try:
@@ -276,24 +275,28 @@ def main():
         random.shuffle(train_chunk_files)
         epoch_loss = []
 
+        preload_buffer = []
+        for preload_idx in range(min(2, len(train_chunk_files))):
+            wait_for_memory(threshold=96, interval=1)
+            holder = {}
+            t = threading.Thread(target=async_chunk_loading, args=(train_chunk_files[preload_idx], holder))
+            t.start()
+            preload_buffer.append((t, holder, train_chunk_files[preload_idx]))
+
         for chunk_idx, chunk_path in enumerate(train_chunk_files):
-            print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] Loading from {chunk_path}")
-            try:
-                wait_for_memory(threshold=96, interval=1)
-                current_holder = {'data': torch.load(chunk_path, map_location='cpu')}
-            except Exception as e:
-                print(f"Failed to load chunk {chunk_path}: {e}")
+
+            thread, holder, _ = preload_buffer.pop(0)
+            thread.join()
+
+            if 'error' in holder:
+                print(f"Failed to preload {chunk_path}: {holder['error']}")
+                continue
+            if 'data' not in holder:
+                print(f"Warning: Missing data for {chunk_path}")
                 continue
 
-            next_holder = {}
-            if chunk_idx+1 < len(train_chunk_files):
-                thread = threading.Thread(target=async_chunk_loading,
-                                          args=(train_chunk_files[chunk_idx+1], next_holder))
-                thread.start()
-            else:
-                thread = None
-
-            dataset = PTChunkDataset(current_holder['data'])
+            current_data = holder['data']
+            dataset = PTChunkDataset(current_data)
             loader = DataLoader(
                 dataset,
                 batch_size=batch_size,
@@ -304,23 +307,24 @@ def main():
                 persistent_workers=False,
                 prefetch_factor=None
             )
-
+            print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] Training {len(loader)} batches from {chunk_path}")
             print(f"→ Training {len(loader)} batches in this chunk")
             avg_loss = train_one_chunk(model, loader, criterion, optimizer, device, loss_weight=loss_weight)
             epoch_loss.append(avg_loss)
 
-
-            del current_holder['data'], dataset, loader
+            del current_data, dataset, loader
             gc.collect()
-            if thread is not None:
-                thread.join()
-                if 'error' in next_holder:
-                    print(f"Preload failed for next chunk: {next_holder['error']}")
-                    continue
-                if 'data' not in next_holder:
-                    print("Warning: Next chunk missing data after preload!")
-                    continue
-                current_holder = next_holder
+
+            next_idx = chunk_idx + len(preload_buffer) + 1
+            if next_idx < len(train_chunk_files) and len(preload_buffer) < 2:
+                wait_for_memory(threshold=96, interval=1)
+                next_holder = {}
+                t = threading.Thread(target=async_chunk_loading, args=(train_chunk_files[next_idx], next_holder))
+                t.start()
+                preload_buffer.append((t, next_holder, train_chunk_files[next_idx]))
+        
+        for thread, holder, _ in preload_buffer:
+            thread.join()
 
         # ---- end of chunks ----
         avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)

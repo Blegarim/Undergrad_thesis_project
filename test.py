@@ -14,7 +14,7 @@ from models.Vision_Transformer import ViT_Hierarchical
 from models.Regression import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
-from config import vit_args_config, motion_enc_args_config, num_classes_dict
+from config import vit_args_config, motion_enc_args_config
 from train import remap_cross_labels, filter_irrelevant
 
 
