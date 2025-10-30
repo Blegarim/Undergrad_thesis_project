@@ -38,4 +38,3 @@ def motion_enc_args_config(input_dim=4,
             "num_heads": num_heads,
             "dropout": dropout}
 
-num_class_dict = {}

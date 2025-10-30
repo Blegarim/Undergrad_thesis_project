@@ -56,45 +56,38 @@ def main():
     train_start_idx = 0
     train_end_idx = len(train_sequences)
     val_start_idx = 0
-    val_end_idx = 13999
+    val_end_idx = 13499
     test_start_idx = 0
     test_end_idx = len(test_sequences)
 
     # Save in chunks
-    # save_dataset_in_chunks(train_sequences, 
-    #                        out_dir='preprocessed_train_base', 
-    #                        chunk_size=7500, 
-    #                        transform=base_160, 
-    #                        start_idx=train_start_idx,
-    #                        end_idx=train_end_idx)
+    save_dataset_in_chunks(train_sequences, 
+                           out_dir='preprocessed_train_base', 
+                           chunk_size=1500, 
+                           transform=base_160, 
+                           start_idx=train_start_idx,
+                           end_idx=train_end_idx)
     
-    # save_dataset_in_chunks(train_sequences, 
-    #                        out_dir='preprocessed_train_augmented', 
-    #                        chunk_size=7500, 
-    #                        transform=augmented_160, 
-    #                        start_idx=train_start_idx,
-    #                        end_idx=train_end_idx)
+    save_dataset_in_chunks(train_sequences, 
+                           out_dir='preprocessed_train_augmented', 
+                           chunk_size=1500, 
+                           transform=augmented_160, 
+                           start_idx=train_start_idx,
+                           end_idx=train_end_idx)
     
     save_dataset_in_chunks(val_sequences, 
                            out_dir='preprocessed_val_base', 
-                           chunk_size=7500, 
+                           chunk_size=1500, 
                            transform=base_160,
                            start_idx=val_start_idx,
                            end_idx=val_end_idx)
     
-    # save_dataset_in_chunks(test_sequences,
-    #                        out_dir='preprocessed_test_128',
-    #                        chunk_size=7500,
-    #                        transform=base_128,
-    #                        start_idx=test_start_idx,
-    #                        end_idx=test_end_idx)
-    
-    # save_dataset_in_chunks(test_sequences,
-    #                        out_dir='preprocessed_test_160',
-    #                        chunk_size=7500,
-    #                        transform=base_160,
-    #                        start_idx=test_start_idx,
-    #                        end_idx=test_end_idx)
+    save_dataset_in_chunks(test_sequences,
+                           out_dir='preprocessed_test_160',
+                           chunk_size=1500,
+                           transform=base_160,
+                           start_idx=test_start_idx,
+                           end_idx=test_end_idx)
 
     print("All dataset chunks saved successfully.")
 

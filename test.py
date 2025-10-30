@@ -14,7 +14,7 @@ from models.Vision_Transformer import ViT_Hierarchical
 from models.Regression import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
-from config import vit_args_config, motion_enc_args_config
+from config import vit_args_config, motion_enc_args_config, num_classes_dict
 from train import remap_cross_labels, filter_irrelevant
 
 
@@ -173,7 +173,11 @@ def main():
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
     num_workers = 4
-    num_classes_dict = {"actions": 2, "looks": 2, "crosses": 2}
+    num_classes_dict = {
+        'actions': 2,
+        'looks': 2,
+        'crosses': 2
+    }
     model_path = "outputs/final_model_epoch5_1023_1349.pth"
     test_chunk_folder = "preprocessed_test_128"
     log_dir = "training_log"

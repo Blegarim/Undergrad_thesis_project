@@ -30,7 +30,7 @@ motion_enc_args = motion_enc_args_config()
 num_classes_dict = {
         'actions': 2,
         'looks': 2,
-        'crosses': 2,
+        'crosses': 2
     }
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

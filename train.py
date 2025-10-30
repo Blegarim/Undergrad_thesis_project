@@ -210,13 +210,13 @@ def main():
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
     num_epochs = 10
-    num_workers = 1
+    num_workers = 0
     # Number of prediction classes per head
     num_classes_dict = {
-        'actions': 2,
-        'looks': 2,
-        'crosses': 2
-    }
+            'actions': 2,
+            'looks': 2,
+            'crosses': 2
+        }
     # Per-head Loss weighting
     loss_weight = {'actions': 1.0, 'looks': 0.6, 'crosses': 1.2}
 
@@ -230,7 +230,7 @@ def main():
     ).to(device)
 
     # Load model
-    checkpoint_path = 'outputs/final_model_epoch5_1023_1349.pth'
+    checkpoint_path = 'outputs/best_model_epoch.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
@@ -255,6 +255,14 @@ def main():
 
     os.makedirs('outputs', exist_ok=True)
 
+    import threading
+    # Asynchronous chunk loading
+    def async_chunk_loading(path, holder):
+        try:
+            holder['data'] = torch.load(path, map_location='cpu')
+        except Exception as e:
+            holder['error'] = e
+
     # --- Training loop ---
     train_chunk_folder = ['preprocessed_train_base', 'preprocessed_train_augmented']
     val_chunk_folder = 'preprocessed_val_base'
@@ -272,35 +280,47 @@ def main():
             print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] Loading from {chunk_path}")
             try:
                 wait_for_memory(threshold=96, interval=1)
-                current_data = torch.load(chunk_path, map_location='cpu')
-                current_data = filter_irrelevant(current_data)
+                current_holder = {'data': torch.load(chunk_path, map_location='cpu')}
             except Exception as e:
                 print(f"Failed to load chunk {chunk_path}: {e}")
                 continue
 
-            if not current_data:
-                print(f"Chunk {chunk_path} is empty, skipping.")
-                continue
+            next_holder = {}
+            if chunk_idx+1 < len(train_chunk_files):
+                thread = threading.Thread(target=async_chunk_loading,
+                                          args=(train_chunk_files[chunk_idx+1], next_holder))
+                thread.start()
+            else:
+                thread = None
 
-            dataset = PTChunkDataset(current_data)
+            dataset = PTChunkDataset(current_holder['data'])
             loader = DataLoader(
                 dataset,
                 batch_size=batch_size,
                 shuffle=True,
                 num_workers=num_workers, 
                 collate_fn=collate_fn,
-                pin_memory=True,
+                pin_memory=False,
                 persistent_workers=False,
-                prefetch_factor=1
+                prefetch_factor=None
             )
 
             print(f"→ Training {len(loader)} batches in this chunk")
             avg_loss = train_one_chunk(model, loader, criterion, optimizer, device, loss_weight=loss_weight)
             epoch_loss.append(avg_loss)
 
-            del current_data, dataset, loader
+
+            del current_holder['data'], dataset, loader
             gc.collect()
-            torch.cuda.empty_cache()
+            if thread is not None:
+                thread.join()
+                if 'error' in next_holder:
+                    print(f"Preload failed for next chunk: {next_holder['error']}")
+                    continue
+                if 'data' not in next_holder:
+                    print("Warning: Next chunk missing data after preload!")
+                    continue
+                current_holder = next_holder
 
         # ---- end of chunks ----
         avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
