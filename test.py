@@ -267,23 +267,11 @@ def main():
         metrics_row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             os.path.basename(chunk_path),
-            round_metric(metrics, 'actions_acc'),
-            round_metric(metrics, 'actions_f1'),
-            round_metric(metrics, 'actions_auc'),
-            round_metric(metrics, 'actions_p'),
-            round_metric(metrics, 'actions_r'),
-            round_metric(metrics, 'looks_acc'),
-            round_metric(metrics, 'looks_f1'),
-            round_metric(metrics, 'looks_auc'),
-            round_metric(metrics, 'looks_p'),
-            round_metric(metrics, 'looks_r'),
-            round_metric(metrics, 'crosses_acc'),
-            round_metric(metrics, 'crosses_f1'),
-            round_metric(metrics, 'crosses_auc'),
-            round_metric(metrics, 'crosses_p'),
-            round_metric(metrics, 'crosses_r'),
-            round_metric(metrics, 'overall_acc'),
         ]
+
+        for h in heads:
+            metrics_row += [h.capitalize()] + [round_metric(metrics, f'{h}_{s}') for s in metric_suffixes]
+        metrics_row.append(round_metric(metrics, 'overall_acc'))
         all_metrics.append(metrics_row)
 
         with open(log_csv, "a", newline="") as f:

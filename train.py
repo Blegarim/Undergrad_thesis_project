@@ -77,7 +77,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
         labels = {k: v.to(device) for k, v in labels.items()}
 
         remap_cross_labels(labels)
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         outputs = model(images, motions)
 
         total_batch_loss = 0.0
@@ -92,6 +92,10 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
         total_batch_loss.backward()
         optimizer.step()
         total_loss += total_batch_loss.item()
+
+        del outputs, logits, targets, head_loss, weighted_loss
+        torch.cuda.empty_cache()
+        gc.collect()
 
         end_time = time.time()
         batch_time = end_time - start_time
@@ -152,9 +156,15 @@ def validate_one_epoch(model, dataloader, criterion, device):
 
 # Define PTChunkDataset once
 class PTChunkDataset(torch.utils.data.Dataset):
-    def __init__(self, data): self.data = data
-    def __len__(self): return len(self.data)
-    def __getitem__(self, idx): return self.data[idx]
+    def __init__(self, data): 
+        self._items = []
+        for item in data:
+            self._items.append(item)
+    def __len__(self): return len(self._items)
+    def __getitem__(self, idx): 
+        item = self._items[idx]
+        return item
+    
 
 def finetune(model, enable_finetune=False):
     if not enable_finetune:
@@ -206,7 +216,7 @@ def main():
     # Configuration
     embedding_dim = 128
     learning_rate = 1e-5
-    batch_size = 16
+    batch_size = 8
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
     num_epochs = 10
@@ -276,17 +286,19 @@ def main():
         epoch_loss = []
 
         preload_buffer = []
-        for preload_idx in range(min(2, len(train_chunk_files))):
+        initial_prefetch = min(2, len(train_chunk_files))
+        for i in range(initial_prefetch):
             wait_for_memory(threshold=96, interval=1)
             holder = {}
-            t = threading.Thread(target=async_chunk_loading, args=(train_chunk_files[preload_idx], holder))
+            t = threading.Thread(target=async_chunk_loading, args=(train_chunk_files[i], holder))
             t.start()
-            preload_buffer.append((t, holder, train_chunk_files[preload_idx]))
+            preload_buffer.append((i, t, holder))
 
         for chunk_idx, chunk_path in enumerate(train_chunk_files):
 
-            thread, holder, _ = preload_buffer.pop(0)
+            idx, thread, holder= preload_buffer.pop(0)
             thread.join()
+            assert idx == chunk_idx
 
             if 'error' in holder:
                 print(f"Failed to preload {chunk_path}: {holder['error']}")
@@ -295,7 +307,7 @@ def main():
                 print(f"Warning: Missing data for {chunk_path}")
                 continue
 
-            current_data = holder['data']
+            current_data = holder.pop('data', None)
             dataset = PTChunkDataset(current_data)
             loader = DataLoader(
                 dataset,
@@ -313,18 +325,26 @@ def main():
             epoch_loss.append(avg_loss)
 
             del current_data, dataset, loader
+            del holder, thread
+            torch.cuda.empty_cache()
             gc.collect()
+            tensors = [obj for obj in gc.get_objects() if torch.is_tensor(obj)]
+            print(f"Live tensors: {len(tensors)}")
 
-            next_idx = chunk_idx + len(preload_buffer) + 1
-            if next_idx < len(train_chunk_files) and len(preload_buffer) < 2:
+            next_idx = chunk_idx + initial_prefetch
+            if next_idx < len(train_chunk_files):
                 wait_for_memory(threshold=96, interval=1)
                 next_holder = {}
                 t = threading.Thread(target=async_chunk_loading, args=(train_chunk_files[next_idx], next_holder))
                 t.start()
-                preload_buffer.append((t, next_holder, train_chunk_files[next_idx]))
+                preload_buffer.append((next_idx, t, next_holder))
+            initial_prefetch = 2
         
         for thread, holder, _ in preload_buffer:
             thread.join()
+            del holder['data']
+            del holder, thread
+        gc.collect()
 
         # ---- end of chunks ----
         avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
