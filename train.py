@@ -340,7 +340,7 @@ def main():
                 preload_buffer.append((next_idx, t, next_holder))
             initial_prefetch = 2
         
-        for thread, holder, _ in preload_buffer:
+        for _, thread, holder in preload_buffer:
             thread.join()
             del holder['data']
             del holder, thread
