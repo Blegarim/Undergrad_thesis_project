@@ -17,13 +17,15 @@ import gc
 import random
 import csv
 import psutil
-import threading
+import multiprocessing as mp
+import multiprocessing.queues as mpq
+from queue import Empty
 from tqdm import tqdm
 from datetime import datetime
 
 '''
-Training script for the PIE dataset using an Ensemble Model with Temporal ConvNet, GRU, Hierarchical Vision Transformer and Cross Attention.
-I love femboys 
+Training script for the PIE dataset using an Ensemble Model with Temporal ConvNet-GRU-Attention, Hierarchical Vision Transformer and Cross Attention.
+I love femboys. 
 '''
 
 def collate_fn(batch):
@@ -94,8 +96,6 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
         total_loss += total_batch_loss.item()
 
         del outputs, logits, targets, head_loss, weighted_loss
-        torch.cuda.empty_cache()
-        gc.collect()
 
         end_time = time.time()
         batch_time = end_time - start_time
@@ -266,17 +266,27 @@ def main():
     os.makedirs('outputs', exist_ok=True)
 
     # Asynchronous chunk loading
-    def async_chunk_loading(path, holder):
+    def mp_async_load(idx, path, queue):
         try:
-            holder['data'] = torch.load(path, map_location='cpu')
+            data = torch.load(path, map_location='cpu')
+            queue.put((idx, 'ok', data))
         except Exception as e:
-            holder['error'] = e
+            queue.put((idx, 'err', str(e)))
 
     # --- Training loop ---
     train_chunk_folder = ['preprocessed_train_base', 'preprocessed_train_augmented']
     val_chunk_folder = 'preprocessed_val_base'
     train_chunk_files = gather_chunks(train_chunk_folder)
     val_chunk_files = gather_chunks(val_chunk_folder)
+
+    try:
+        mp.set_start_method('spawn', force=False)
+    except RuntimeError:
+        pass
+
+    queue = mp.Queue(maxsize=3)
+    processes = {}
+    results = {}
 
     print(f'Total trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
 
@@ -285,69 +295,98 @@ def main():
         random.shuffle(train_chunk_files)
         epoch_loss = []
 
-        preload_buffer = []
-        initial_prefetch = min(2, len(train_chunk_files))
-        for i in range(initial_prefetch):
+        preload = min(2, len(train_chunk_files))
+        for i in range(preload):
             wait_for_memory(threshold=96, interval=1)
-            holder = {}
-            t = threading.Thread(target=async_chunk_loading, args=(train_chunk_files[i], holder))
-            t.start()
-            preload_buffer.append((i, t, holder))
+            p = mp.Process(target=mp_async_load, args=(i, train_chunk_files[i], queue))
+            p.start()
+            processes[i] = p
 
         for chunk_idx, chunk_path in enumerate(train_chunk_files):
-
-            idx, thread, holder= preload_buffer.pop(0)
-            thread.join()
-            assert idx == chunk_idx
-
-            if 'error' in holder:
-                print(f"Failed to preload {chunk_path}: {holder['error']}")
+            # Collect queue results until desired chunk
+            try:
+                while chunk_idx not in results:
+                    idx, status, payload = queue.get(timeout=300)  # seconds (tunable)
+                    results[idx] = (status, payload)
+            except Empty:
+                print(f"Timeout waiting for chunk {chunk_idx} — terminating associated process")
+                proc = processes.pop(chunk_idx, None)
+                if proc is not None:
+                    proc.terminate()
+                    proc.join()
                 continue
-            if 'data' not in holder:
-                print(f"Warning: Missing data for {chunk_path}")
-                continue
+            status, payload = results.pop(chunk_idx)
 
-            current_data = holder.pop('data', None)
+            # Join the process that produce this chunk
+            proc = processes.pop(chunk_idx, None)
+            if proc is not None:
+                proc.join()
+            
+            if status == 'err':
+                print(f'Failed to preload {chunk_path}: {payload}')
+                continue
+            current_data = payload
+
+            del payload
+
             dataset = PTChunkDataset(current_data)
-            loader = DataLoader(
-                dataset,
+            loader_kwargs = dict(
                 batch_size=batch_size,
                 shuffle=True,
-                num_workers=num_workers, 
+                num_workers=num_workers,
                 collate_fn=collate_fn,
                 pin_memory=False,
                 persistent_workers=False,
-                prefetch_factor=None
             )
+            if num_workers > 0:
+                loader_kwargs['prefetch_factor'] = 2
+
+            loader = DataLoader(dataset, **loader_kwargs)
             print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] Training {len(loader)} batches from {chunk_path}")
             print(f"→ Training {len(loader)} batches in this chunk")
             avg_loss = train_one_chunk(model, loader, criterion, optimizer, device, loss_weight=loss_weight)
             epoch_loss.append(avg_loss)
 
             del current_data, dataset, loader
-            del holder, thread
+            del payload
             torch.cuda.empty_cache()
-            gc.collect()
-            tensors = [obj for obj in gc.get_objects() if torch.is_tensor(obj)]
-            print(f"Live tensors: {len(tensors)}")
+            trash = gc.collect()
+            print(f"Unreachable trash: {trash}")
 
-            next_idx = chunk_idx + initial_prefetch
+            next_idx = chunk_idx + preload
             if next_idx < len(train_chunk_files):
                 wait_for_memory(threshold=96, interval=1)
-                next_holder = {}
-                t = threading.Thread(target=async_chunk_loading, args=(train_chunk_files[next_idx], next_holder))
-                t.start()
-                preload_buffer.append((next_idx, t, next_holder))
-            initial_prefetch = 2
+                p = mp.Process(target=mp_async_load, args=(next_idx, train_chunk_files[next_idx], queue))
+                p.start()
+                processes[next_idx] = p
+            
+            preload = min(preload, 2)
         
-        for _, thread, holder in preload_buffer:
-            thread.join()
-            del holder['data']
-            del holder, thread
+        # collect any remaining queue items and join remaining processes
+        remaining = len(processes)
+        for _ in range(remaining):
+            try:
+                idx, status, payload = queue.get(timeout=2)
+                # discard or free payload immediately
+                if status == 'ok':
+                    del payload
+                results.pop(idx, None)
+            except Exception:
+                pass
+
+        for idx, proc in list(processes.items()):
+            proc.join()
+            processes.pop(idx, None)
+
+        # final cleanup
         gc.collect()
+        torch.cuda.empty_cache()
 
         # ---- end of chunks ----
-        avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
+        if len(epoch_loss) == 0:
+            avg_epoch_loss = float('nan')
+        else:
+            avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
         print(f"Epoch {epoch + 1} average loss: {avg_epoch_loss:.4f}")
 
         # ---- validation ----
