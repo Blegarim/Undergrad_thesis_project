@@ -76,7 +76,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
         start_time = time.time()
         images = images.to(device, non_blocking=True)
         motions = motions.to(device, non_blocking=True)
-        labels = {k: v.to(device) for k, v in labels.items()}
+        labels = {k: v.to(device).long() for k, v in labels.items()}
 
         remap_cross_labels(labels)
         optimizer.zero_grad(set_to_none=True)
@@ -105,6 +105,8 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
             tqdm.write(f"Batch {batch_idx}/{len(dataloader)}, Loss: {total_batch_loss.item():.4f}, Time per batch: {batch_time:.3f} sec")
 
     progress_bar.close()
+    if len(dataloader) == 0:
+        return float('nan')  
     avg_loss = total_loss / len(dataloader)
     tqdm.write(f"Average chunk Loss: {avg_loss:.4f}")
     return avg_loss
@@ -127,7 +129,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
             batch_size = images.size(0)
             images = images.to(device)
             motions = motions.to(device)
-            labels = {k: v.to(device) for k, v in labels.items()}
+            labels = {k: v.to(device).long() for k, v in labels.items()}
 
             remap_cross_labels(labels)
             outputs = model(images, motions)
@@ -348,7 +350,6 @@ def main():
             epoch_loss.append(avg_loss)
 
             del current_data, dataset, loader
-            del payload
             torch.cuda.empty_cache()
             trash = gc.collect()
             print(f"Unreachable trash: {trash}")
