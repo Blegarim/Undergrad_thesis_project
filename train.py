@@ -193,6 +193,14 @@ def wait_for_memory(threshold=96, interval=1):
         print(f"RAM at {psutil.virtual_memory().percent:.1f}%, waiting...")
         time.sleep(interval)
 
+# Asynchronous chunk loading
+def mp_async_load(idx, path, queue):
+    try:
+        data = torch.load(path, map_location='cpu')
+        queue.put((idx, 'ok', data))
+    except Exception as e:
+        queue.put((idx, 'err', str(e)))
+
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -267,24 +275,11 @@ def main():
 
     os.makedirs('outputs', exist_ok=True)
 
-    # Asynchronous chunk loading
-    def mp_async_load(idx, path, queue):
-        try:
-            data = torch.load(path, map_location='cpu')
-            queue.put((idx, 'ok', data))
-        except Exception as e:
-            queue.put((idx, 'err', str(e)))
-
     # --- Training loop ---
     train_chunk_folder = ['preprocessed_train_base', 'preprocessed_train_augmented']
     val_chunk_folder = 'preprocessed_val_base'
     train_chunk_files = gather_chunks(train_chunk_folder)
     val_chunk_files = gather_chunks(val_chunk_folder)
-
-    try:
-        mp.set_start_method('spawn', force=False)
-    except RuntimeError:
-        pass
 
     queue = mp.Queue(maxsize=3)
     processes = {}
@@ -297,7 +292,7 @@ def main():
         random.shuffle(train_chunk_files)
         epoch_loss = []
 
-        preload = min(2, len(train_chunk_files))
+        preload = min(3, len(train_chunk_files))
         for i in range(preload):
             wait_for_memory(threshold=96, interval=1)
             p = mp.Process(target=mp_async_load, args=(i, train_chunk_files[i], queue))
@@ -361,7 +356,7 @@ def main():
                 p.start()
                 processes[next_idx] = p
             
-            preload = min(preload, 2)
+            preload = min(preload, 3)
         
         # collect any remaining queue items and join remaining processes
         remaining = len(processes)
@@ -475,4 +470,5 @@ def main():
             break
 
 if __name__ == "__main__":
+    mp.set_start_method('spawn', force=True)
     main()
