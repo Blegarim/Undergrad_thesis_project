@@ -32,7 +32,8 @@ class PIESequenceDataset(Dataset):
             self.sequences = sequences
 
     def _process_sequence(self, seq):
-        images = []
+        images_tight, images_context = [], []
+        centers, width, height = [], [], []
         for img_path, bbox in zip(seq['images'], seq['bboxes']):
             img_path = Path(img_path)
             if not img_path.exists():
@@ -46,30 +47,52 @@ class PIESequenceDataset(Dataset):
             try:
                 img_array = jpeg.decode(buff, pixel_format=TJPF_RGB)
                 img = Image.fromarray(img_array)
-            except Exception as e:
+            except Exception:
                 img = Image.open(img_path).convert('RGB')
             if self.crop:
                 x1, y1, x2, y2 = map(int, bbox)
-                img = img.crop((x1, y1, x2, y2))
+                tight = img.crop((x1, y1, x2, y2))
+            scale = 2.0  # 2× enlargement
+            w, h = x2 - x1, y2 - y1
+            cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+            w2, h2 = w * scale, h * scale
+            x1c, y1c, x2c, y2c = cx - w2 / 2, cy - h2 / 2, cx + w2 / 2, cy + h2 / 2
+            # Clamp to image bounds
+            x1c = max(0, x1c); y1c = max(0, y1c)
+            x2c = min(img.width, x2c); y2c = min(img.height, y2c)
+            context = img.crop((x1c, y1c, x2c, y2c))
             if self.transform:
                 img = self.transform(img)
-            images.append(img)
-        images = torch.stack(images, dim=0)
+            
+            images_tight.append(tight)
+            images_context.append(context)
 
-        centers = []
-        for bbox in seq['bboxes']:
-            x1, y1, x2, y2 = bbox
-            cx = (x1 + x2) / 2
-            cy = (y1 + y2) / 2
             centers.append([cx, cy])
+            width.append(w)
+            height.append(h)
+
         centers = torch.tensor(centers, dtype=torch.float32)
+        widths = torch.tensor(widths, dtype=torch.float32)
+        heights = torch.tensor(heights, dtype=torch.float32)
+
+        # --- Compute motion deltas (dx, dy, dw, dh) ---
         dt = centers[1:] - centers[:-1]
         dt = torch.cat([dt[0:1], dt], dim=0)
-        motions = torch.cat([centers, dt], dim=1)  # [T, 4]
+        dw = torch.cat([widths[0:1], widths[1:] - widths[:-1]], dim=0)
+        dh = torch.cat([heights[0:1], heights[1:] - heights[:-1]], dim=0)
+
+        motions = torch.cat([centers, dt, widths.unsqueeze(1),
+                            heights.unsqueeze(1),
+                            dw.unsqueeze(1), dh.unsqueeze(1)], dim=1)
+        # [T, 8] → (cx, cy, dx, dy, w, h, dw, dh)
+
+        images_tight = torch.stack(images_tight, dim=0)
+        images_context = torch.stack(images_context, dim=0)
 
         sample = {
-            'images': images,   # Tensor [T, C, H, W]
-            'motions': motions, # Tensor [T, 4] (cx, cy, dx, dy)
+            'images_tight': images_tight,               # Tensor [T, C, H, W]
+            'images_context': images_context,           # Tensor [T, C, H, W]
+            'motions': motions,                         # Tensor [T, 8] (cx, cy, dx, dy, w, h, dw, dh)
             'bboxes': seq['bboxes'],
             'actions': torch.tensor(seq['actions'], dtype=torch.long),
             'looks': torch.tensor(seq['looks'], dtype=torch.long),
@@ -118,7 +141,8 @@ def collate_with_padding(batch):
     """
     Custom collate function to pad variable-length sequences
     """
-    images = pad_sequence_tensor([item['images'] for item in batch])
+    images_tight = pad_sequence_tensor([item['images_tight'] for item in batch])
+    images_context = pad_sequence_tensor([item['images_context'] for item in batch])
     motions = pad_sequence_tensor([item['motions'] for item in batch])
     actions = torch.stack([item['actions'] for item in batch])
     looks = torch.stack([item['looks'] for item in batch])
@@ -127,8 +151,9 @@ def collate_with_padding(batch):
     meta = [item['meta'] for item in batch] if 'meta' in batch[0] else None
 
     out = {
-        'images': images,     # [B, T, C, H, W]
-        'motions': motions,  # [B, T, 4] (cx, cy, dx, dy)
+        'images_tight': images_tight,     # [B, T, C, H, W]
+        'images_context': images_context,
+        'motions': motions,  # [B, T, 8] (cx, cy, dx, dy, w, h, dw, dh)
         'actions': actions,  # [B, 1]
         'looks': looks,      # [B, 1]
         'crosses': crosses,  # [B, 1]

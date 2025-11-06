@@ -2,7 +2,6 @@ import torch
 from torchvision import transforms
 from PIE_sequence_Dataset_1 import load_sequences_from_pkl, PIESequenceDataset
 import os
-from tqdm import tqdm
 import gc
 
 def save_dataset_in_chunks(sequences, out_dir, chunk_size=5000, transform=None, start_idx=0, end_idx=None):
@@ -29,25 +28,25 @@ def save_dataset_in_chunks(sequences, out_dir, chunk_size=5000, transform=None, 
         torch.cuda.empty_cache()
         gc.collect() # Force garbage collection
 
-def main():
-
-    base_128 = transforms.Compose([
-        transforms.Resize((128, 128)),
+def img_resize(height=160, width=160):
+    return transforms.Compose([
+        transforms.Resize((height, width)),
         transforms.ToTensor()
     ])
-
-    base_160 = transforms.Compose([
-        transforms.Resize((160, 160)),
-        transforms.ToTensor()
-    ])
-
-    augmented_160 = transforms.Compose([
-        transforms.Resize((160, 160)),
+def img_augment(height=160, width=160):
+    return transforms.Compose([
+        transforms.Resize((height, width)),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.ColorJitter(brightness=0.2, contrast=0.3, saturation=0.3, hue=0.3),
         transforms.RandomResizedCrop(160, scale=(0.8, 1.0)),
         transforms.ToTensor()
     ])
+
+def main(data_aug=False):
+
+    base_128 = img_resize(128, 128)
+    base_160 = img_resize(160, 160)
+    augmented_160 = img_augment(160, 160)
 
     train_sequences = load_sequences_from_pkl('sequences_train.pkl')
     val_sequences = load_sequences_from_pkl('sequences_val.pkl')
@@ -68,12 +67,13 @@ def main():
                            start_idx=train_start_idx,
                            end_idx=train_end_idx)
     
-    save_dataset_in_chunks(train_sequences, 
-                           out_dir='preprocessed_train_augmented', 
-                           chunk_size=1500, 
-                           transform=augmented_160, 
-                           start_idx=train_start_idx,
-                           end_idx=train_end_idx)
+    if data_aug:
+        save_dataset_in_chunks(train_sequences, 
+                            out_dir='preprocessed_train_augmented', 
+                            chunk_size=1500, 
+                            transform=augmented_160, 
+                            start_idx=train_start_idx,
+                            end_idx=train_end_idx)
     
     save_dataset_in_chunks(val_sequences, 
                            out_dir='preprocessed_val_base', 
