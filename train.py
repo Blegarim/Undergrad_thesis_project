@@ -29,10 +29,11 @@ I love femboys.
 '''
 
 def collate_fn(batch):
-    images = torch.stack([item['images'] for item in batch], dim=0)
-    motions = torch.stack([item['motions'] for item in batch], dim=0)[..., :4]
+    images_tight = torch.stack([item['images_tight'] for item in batch], dim=0)
+    images_context = torch.stack([item['images_context'] for item in batch], dim=0)
+    motions = torch.stack([item['motions'] for item in batch], dim=0)[..., :8]
     labels = {k: torch.stack([item[k] for item in batch], dim=0) for k in ['actions', 'looks', 'crosses']}
-    return images, motions, labels
+    return images_tight, images_context, motions, labels
 
 class EarlyStopping:
     def __init__(self, patience=3, min_delta=0.0):
@@ -72,15 +73,16 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
     if loss_weight is None:
         loss_weight = {'actions': 1.0, 'looks': 1.0, 'crosses': 1.0}
 
-    for batch_idx, (images, motions, labels) in enumerate(progress_bar):
+    for batch_idx, (images_tight, images_context, motions, labels) in enumerate(progress_bar):
         start_time = time.time()
-        images = images.to(device, non_blocking=True)
+        images_tight = images_tight.to(device, non_blocking=True)
+        images_context = images_context.to(device, non_blocking=True)
         motions = motions.to(device, non_blocking=True)
         labels = {k: v.to(device).long() for k, v in labels.items()}
 
         remap_cross_labels(labels)
         optimizer.zero_grad(set_to_none=True)
-        outputs = model(images, motions)
+        outputs = model(images_tight, images_context, motions)
 
         total_batch_loss = 0.0
         loss_dict = {}
@@ -125,14 +127,15 @@ def validate_one_epoch(model, dataloader, criterion, device):
     samples = 0
 
     with torch.no_grad():
-        for images, motions, labels in dataloader:
-            batch_size = images.size(0)
-            images = images.to(device)
+        for images_tight, images_context, motions, labels in dataloader:
+            batch_size = images_tight.size(0)
+            images_tight = images_tight.to(device)
+            images_context = images_context.to(device)
             motions = motions.to(device)
             labels = {k: v.to(device).long() for k, v in labels.items()}
 
             remap_cross_labels(labels)
-            outputs = model(images, motions)
+            outputs = model(images_tight, images_context, motions)
 
             # accumulate loss as sum over samples (handles criterion reduction='mean')
             batch_loss = 0.0

@@ -9,13 +9,13 @@ class EnsembleModel(nn.Module):
         self.cross_attention = cross_attention
         self.norm = nn.LayerNorm(d_model)
 
-    def forward(self, images, motions, return_feats=False):
+    def forward(self, images_tight, images_context, motions, return_feats=False):
         # --- Vision Transformer branch ---
-        image_feats = self.vit(images)        # [B, T, D]
+        image_feats = self.vit(images_context)        # [B, T, D]
         image_feats = self.norm(image_feats)
 
         # --- Motion branch ---
-        motion_out = self.motion_enc(motions)     # [B, T, D]
+        motion_out = self.motion_enc(motions, images_tight)     # [B, T, D]
         motion_feats = self.norm(motion_out)
 
 

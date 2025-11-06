@@ -15,10 +15,14 @@ def load_sequences_from_pkl(pkl_path):
     return sequences
 
 class PIESequenceDataset(Dataset):
-    def __init__(self, sequences, transform=None, crop=True, 
+    def __init__(self, sequences, 
+                 transform_tight=None, transform_context=None, 
+                 crop=True, context_scale=2.0,
                  return_metadata=False, preload=True):
-        self.transform = transform
+        self.transform_tight = transform_tight
+        self.transform_context = transform_context
         self.crop = crop
+        self.context_scale = context_scale
         self.return_metadata = return_metadata
         self.preload = preload
         
@@ -52,7 +56,7 @@ class PIESequenceDataset(Dataset):
             if self.crop:
                 x1, y1, x2, y2 = map(int, bbox)
                 tight = img.crop((x1, y1, x2, y2))
-            scale = 2.0  # 2× enlargement
+            scale = self.context_scale
             w, h = x2 - x1, y2 - y1
             cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
             w2, h2 = w * scale, h * scale
@@ -61,8 +65,10 @@ class PIESequenceDataset(Dataset):
             x1c = max(0, x1c); y1c = max(0, y1c)
             x2c = min(img.width, x2c); y2c = min(img.height, y2c)
             context = img.crop((x1c, y1c, x2c, y2c))
-            if self.transform:
-                img = self.transform(img)
+            if self.transform_tight:
+                tight = self.transform_tight(tight)
+            if self.transform_context:
+                context = self.transform_context(context)
             
             images_tight.append(tight)
             images_context.append(context)

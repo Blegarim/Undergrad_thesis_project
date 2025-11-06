@@ -4,68 +4,102 @@ import torch.nn.functional as F
 
 class MotionEncoder(nn.Module):
     def __init__(self, 
-                 input_dim=3, 
-                 tcn_channels=(64, 128), 
+                 motion_dim=8,
+                 img_size=128, 
+                 hidden_dim=128, 
                  d_model=128, 
                  num_layers=2, 
-                 kernel_size=3,
                  num_heads=8, 
                  dropout=0.3):
         super().__init__()
-        # --- Temporal Convolutional Network (TCN) ---
-        layers = []
-        in_channels = input_dim
-        for out_channels in tcn_channels:
-            layers.append(nn.Conv1d(in_channels, out_channels, kernel_size, padding='same'))
-            layers.append(nn.ReLU())
-            layers.append(nn.Dropout(dropout))
-            in_channels = out_channels
-        self.tcn = nn.Sequential(*layers)
+
+        #Images Feature Extraction
+        self.img_encoder = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=7, stride=2, padding=3),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, hidden_dim, kernel_size=3, stride=2, padding=1),
+            nn.AdaptiveAvgPool2d((1,1))
+        )
+
+        #Temporal processing
+        self.fusion = nn.Sequential(
+            nn.Linear(hidden_dim + motion_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout)
+        )
 
         # --- Gated Recurrent Unit (GRU) ---
-        self.gru = nn.GRU(input_size=tcn_channels[-1], hidden_size=tcn_channels[-1], 
-                          num_layers=num_layers, batch_first=True, 
-                          dropout=dropout if num_layers > 1 else 0)
+        self.gru = nn.GRU(input_size=hidden_dim, 
+                          hidden_size=hidden_dim, 
+                          num_layers=num_layers, 
+                          batch_first=True, 
+                          dropout=dropout if num_layers > 1 else 0
+        )
         
-        self.proj = nn.Linear(tcn_channels[-1], d_model if tcn_channels[-1] != d_model else nn.Identity)
+        self.proj = nn.Linear(hidden_dim, d_model) if hidden_dim != d_model else nn.Identity()
         
         # --- Attention ---
-        self.qkv = nn.Linear(d_model, 3 * d_model)
-        self.num_heads = num_heads
+        self.temporal_attn = nn.MultiheadAttention(
+            embed_dim=hidden_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True
+        )
         
+        self.norm = nn.LayerNorm(hidden_dim)
         self.dropout = nn.Dropout(dropout)
     
-    def forward(self, x):
-        # x shape: [B, T, C]
-        B, T, C = x.shape
-        assert C == self.tcn[0].in_channels, f"Input feature dimension {C} does not match expected {self.tcn[0].in_channels}"
-        x = x.transpose(1, 2) # Shape: [B, C, T]
-        x = self.tcn(x)       # Shape: [B, D_tcn, T]
-        x = x.transpose(1, 2) # Shape: [B, T, D_tcn]
-        x, _ = self.gru(x) # Shape: [B, T, D_tcn]
-        x = self.proj(x) # Shape: [B, T, d_model]
-        qkv = self.qkv(x)
-        q, k, v = qkv.chunk(3, dim=-1)
-        B, T, D = q.shape
-        H = self.num_heads
-        assert D % H == 0, f"Input dimension {D} not divisible by num_heads {H}"
-        Dh = D // H
-        q = q.view(B, T, H, Dh).transpose(1, 2) # Shape: [B, H, T, Dh]
-        k = k.view(B, T, H, Dh).transpose(1, 2) # Shape: [B, H, T, Dh]
-        v = v.view(B, T, H, Dh).transpose(1, 2) # Shape: [B, H, T, Dh]
-        attn_out = F.scaled_dot_product_attention(q, k, v, dropout_p=self.dropout.p)
-        attn = attn_out.transpose(1, 2).contiguous().view(B, T, D)
-        x = self.dropout(attn)
+    def forward(self, motion_data, images_data):
+        """
+        Args:
+            motion_data: [batch_size, seq_len, motion_dim] - raw motion features
+            image_data: [batch_size, seq_len, 3, H, W] - tight crops
+        Returns:
+            [B, T, hidden_dim]
+        """
+        B, T = motion_data.shape[:2]
+        
+        # Process images
+        images_data = images_data.flatten(0, 1)  # [B*T, 3, H, W]
+        img_feats = self.img_encoder(images_data)
+        img_feats = img_feats.squeeze(-1).squeeze(-1)  # [B*T, hidden_dim]
+        img_feats = img_feats.view(B, T, -1)  # [B, T, hidden_dim]
+        
+        # Combine features
+        combined = torch.cat([img_feats, motion_data], dim=-1)  # [B, T, hidden_dim + motion_dim]
+        x = self.fusion(combined)  # [B, T, hidden_dim]
+        
+        # Process sequence
+        x, _ = self.gru(x)
+        
+        # Self-attention
+        residual = x
+        x = self.norm(x)
+        x, _ = self.temporal_attn(x, x, x)
+        x = residual + self.dropout(x)
+        
         return x
-    
 if __name__ == "__main__":
-    # Test the M module
     batch_size = 8
     seq_len = 50
-    input_dim = 4
-    x = torch.randn(batch_size, seq_len, input_dim) # Example input
-
-    model = MotionEncoder(input_dim=input_dim, tcn_channels=(128, 256), d_model=128, num_layers=2, kernel_size=3, num_heads=8, dropout=0.1)
-    out = model(x)
-    print("Output shape:", out.shape) # Expected: [batch_size, seq_len, d_model]
+    motion_dim = 4
+    img_size = 128
+    
+    motion_input = torch.randn(batch_size, seq_len, motion_dim)
+    image_input = torch.randn(batch_size, seq_len, 3, img_size, img_size)
+    
+    model = MotionEncoder(
+        motion_dim=motion_dim,
+        img_size=img_size,
+        hidden_dim=128,
+        d_model=128
+    )
+    
+    out = model(motion_input, image_input)
+    print("Output shape:", out.shape)
     print(f"Params: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
