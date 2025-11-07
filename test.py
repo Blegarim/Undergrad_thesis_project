@@ -26,8 +26,9 @@ class PTChunkDataset(Dataset):
     """
     For preprocessed .pt chunks that store dict samples:
     {
-        'images': Tensor[T, C, H, W],
-        'motions': Tensor[T, 4],
+        'images_tight': Tensor[T, C, H, W],
+        'images_context': Tensor[T, C, H, W]
+        'motions': Tensor[T, 8],
         'bboxes': ...,
         'actions': Tensor,
         'looks': Tensor,
@@ -43,14 +44,15 @@ class PTChunkDataset(Dataset):
     def __getitem__(self, idx):
         sample = self.data[idx]
         if isinstance(sample, dict):
-            images = sample["images"]
+            images_tight = sample["images_tight"]
+            images_context = sample["images_context"]
             motions = sample["motions"]
             labels = {
                 "actions": sample["actions"],
                 "looks": sample["looks"],
                 "crosses": sample["crosses"],
             }
-            return images, motions, labels
+            return images_tight, images_context, motions, labels
         elif isinstance(sample, (list, tuple)) and len(sample) == 3:
             return sample  # backward compatibility
         else:
@@ -67,13 +69,14 @@ def evaluate(model, dataloader, device):
     all_preds, all_labels, all_probs = {}, {}, {}
 
     with torch.no_grad():
-        for images, motions, labels in dataloader:
-            images = images.to(device, non_blocking=True)
+        for images_tight, images_context, motions, labels in dataloader:
+            images_tight = images_tight.to(device, non_blocking=True)
+            images_context = images_context.to(device, non_blocking=True)
             motions = motions.to(device, non_blocking=True)
             labels = {k: v.to(device, non_blocking=True) for k, v in labels.items()}
 
             remap_cross_labels(labels)
-            outputs = model(images, motions)
+            outputs = model(images_tight, images_context, motions)
 
             for name, logits in outputs.items():
                 probs = F.softmax(logits, dim=1)
@@ -120,29 +123,35 @@ def evaluate(model, dataloader, device):
     print(f"    Overall Accuracy: {overall:.2f}%")
     return metrics, all_labels, all_preds, all_probs
 
-def compute_flops(model, images, motions):
+def compute_flops(model, img_height, img_width, context_scale, device):
+    dummy_imgages_tight = torch.randn(1, 20, 3, img_height, img_width).to(device)
+    dummy_imgages_context = torch.randn(1, 20, 3, img_height * context_scale, img_width * context_scale).to(device)
+    dummy_motions = torch.randn(1, 20, 8).to(device)
     model.eval()
-    flops = FlopCountAnalysis(model, (images, motions))
+    flops = FlopCountAnalysis(model, (dummy_imgages_tight, dummy_imgages_context, dummy_motions))
     flops = flops.unsupported_ops_warnings(False)
     flops_total = flops.total()
-    flops_per_frame = flops_total / (images.size(0) * images.size(1))
+    flops_per_frame = flops_total / (dummy_imgages_tight.size(0) * dummy_imgages_tight.size(1))
 
-    print(f'Total FLOPs per {images.size(0) * images.size(1)}-frame input: {flops_total/1e9:.2f} GFLOPs')
+    print(f'Total FLOPs per {dummy_imgages_tight.size(0) * dummy_imgages_tight.size(1)}-frame input: {flops_total/1e9:.2f} GFLOPs')
     print(f'Average FLOPs per frame: {flops_per_frame/1e6:.2f} MFLOPs\n')
     return flops_per_frame
 
-def inference_latency(model, images, motions):
+def inference_latency(model, img_height, img_width, context_scale, device):
+    dummy_imgages_tight = torch.randn(1, 20, 3, img_height, img_width).to(device)
+    dummy_imgages_context = torch.randn(1, 20, 3, img_height * context_scale, img_width * context_scale).to(device)
+    dummy_motions = torch.randn(1, 20, 8).to(device)
     model.eval()
     # Warm up
     for _ in range(10):
-        _ = model(images, motions)
+        _ = model(dummy_imgages_tight, dummy_imgages_context, dummy_motions)
         torch.cuda.synchronize()
     
     torch.cuda.synchronize()
     start = time.time()
     num_trials = 50
     for _ in range(num_trials):
-        _ = model(images, motions)
+        _ = model(dummy_imgages_tight, dummy_imgages_context, dummy_motions)
     torch.cuda.synchronize()
     end = time.time()
 
@@ -151,7 +160,7 @@ def inference_latency(model, images, motions):
     avg_latency_per_frame = avg_latency / 20.0
 
     print(f"\n Inference latency (averaged over {num_trials} runs):")
-    print(f"  {avg_latency*1000:.2f} ms per {images.size(1)}-frame sequence")
+    print(f"  {avg_latency*1000:.2f} ms per {dummy_imgages_tight.size(1)}-frame sequence")
     print(f"  {avg_latency_per_frame*1000:.2f} ms per frame")
     print(f"  {avg_fps:.2f} FPS equivalent\n")
     return avg_fps, avg_latency_per_frame
@@ -169,7 +178,7 @@ def main():
     # ==== CONFIGURATION ====
     embedding_dim = 128
     batch_size = 16
-    img_size = 160
+    img_size = 128
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
     num_workers = 4
@@ -215,15 +224,8 @@ def main():
     model.load_state_dict(torch.load(model_path, map_location=device))
     print("Model loaded successfully.")
 
-    # ==== Computing FLOPs/Inference Latency (dummy input) ====
-    dummy_images_1 = torch.randn(1, 20, 3, img_size, img_size).to(device)
-    dummy_motions_1 = torch.randn(1, 20, 4).to(device)
-
-    dummy_images_2 = torch.randn(1, 20, 3, img_size, img_size).to(device)
-    dummy_motions_2 = torch.randn(1, 20, 4).to(device)
-
-    flops_per_frame = compute_flops(model, dummy_images_1, dummy_motions_1)
-    fps, latency_per_frame = inference_latency(model, dummy_images_2, dummy_motions_2)
+    flops_per_frame = compute_flops(model, img_size, img_size, 2.0, device)
+    fps, latency_per_frame = inference_latency(model, img_size, img_size, 2.0, device)
 
     # ==== Find test chunks ====
     chunk_files = sorted(

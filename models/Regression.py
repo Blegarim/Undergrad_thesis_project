@@ -25,9 +25,19 @@ class MotionEncoder(nn.Module):
             nn.AdaptiveAvgPool2d((1,1))
         )
 
+        #Motion feature encoding
+        self.motion_encoder = nn.Sequential(
+            nn.Conv1d(motion_dim, hidden_dim // 2, kernel_size=3, padding=1),
+            nn.BatchNorm1d(hidden_dim // 2),
+            nn.ReLU(),
+            nn.Conv1d(hidden_dim // 2, hidden_dim, kernel_size=3, padding=1),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU()
+        )
+
         #Temporal processing
         self.fusion = nn.Sequential(
-            nn.Linear(hidden_dim + motion_dim, hidden_dim),
+            nn.Linear(hidden_dim * 2, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout)
@@ -41,8 +51,6 @@ class MotionEncoder(nn.Module):
                           dropout=dropout if num_layers > 1 else 0
         )
         
-        self.proj = nn.Linear(hidden_dim, d_model) if hidden_dim != d_model else nn.Identity()
-        
         # --- Attention ---
         self.temporal_attn = nn.MultiheadAttention(
             embed_dim=hidden_dim,
@@ -53,6 +61,7 @@ class MotionEncoder(nn.Module):
         
         self.norm = nn.LayerNorm(hidden_dim)
         self.dropout = nn.Dropout(dropout)
+        self.proj = nn.Linear(hidden_dim, d_model) if hidden_dim != d_model else nn.Identity()
     
     def forward(self, motion_data, images_data):
         """
@@ -60,7 +69,7 @@ class MotionEncoder(nn.Module):
             motion_data: [batch_size, seq_len, motion_dim] - raw motion features
             image_data: [batch_size, seq_len, 3, H, W] - tight crops
         Returns:
-            [B, T, hidden_dim]
+            [B, T, d_model]
         """
         B, T = motion_data.shape[:2]
         
@@ -69,9 +78,14 @@ class MotionEncoder(nn.Module):
         img_feats = self.img_encoder(images_data)
         img_feats = img_feats.squeeze(-1).squeeze(-1)  # [B*T, hidden_dim]
         img_feats = img_feats.view(B, T, -1)  # [B, T, hidden_dim]
+
+        #Process motion:
+        motion_data = motion_data.transpose(1, 2) # [B, motion_dim, T]
+        motion_feats = self.motion_encoder(motion_data) # [B, hidden_dim, T]
+        motion_feats = motion_feats.transpose(1, 2) # [B, T, hidden_dim]
         
         # Combine features
-        combined = torch.cat([img_feats, motion_data], dim=-1)  # [B, T, hidden_dim + motion_dim]
+        combined = torch.cat([img_feats, motion_feats], dim=-1)  # [B, T, hidden_dim * 2]
         x = self.fusion(combined)  # [B, T, hidden_dim]
         
         # Process sequence
@@ -81,13 +95,13 @@ class MotionEncoder(nn.Module):
         residual = x
         x = self.norm(x)
         x, _ = self.temporal_attn(x, x, x)
-        x = residual + self.dropout(x)
+        x = self.proj(residual + self.dropout(x)) # [B, T, d_model]
         
         return x
 if __name__ == "__main__":
     batch_size = 8
-    seq_len = 50
-    motion_dim = 4
+    seq_len = 20
+    motion_dim = 8
     img_size = 128
     
     motion_input = torch.randn(batch_size, seq_len, motion_dim)
@@ -96,7 +110,7 @@ if __name__ == "__main__":
     model = MotionEncoder(
         motion_dim=motion_dim,
         img_size=img_size,
-        hidden_dim=128,
+        hidden_dim=224,
         d_model=128
     )
     

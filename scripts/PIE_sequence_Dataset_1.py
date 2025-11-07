@@ -157,8 +157,8 @@ def collate_with_padding(batch):
     meta = [item['meta'] for item in batch] if 'meta' in batch[0] else None
 
     out = {
-        'images_tight': images_tight,     # [B, T, C, H, W]
-        'images_context': images_context,
+        'images_tight': images_tight,     # [B, T, C, Ht, Wt]
+        'images_context': images_context, # [B, T, C, Hc, Wc]
         'motions': motions,  # [B, T, 8] (cx, cy, dx, dy, w, h, dw, dh)
         'actions': actions,  # [B, 1]
         'looks': looks,      # [B, 1]

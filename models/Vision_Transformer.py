@@ -238,6 +238,7 @@ class ViT_Hierarchical(nn.Module):
                  head_nums=[2, 4, 8],
                  window_size=[8, 4, None],   # None → global attention
                  mlp_ratio=[4, 4, 4],
+                 d_model=128,
                  drop_path=0.1,
                  attn_dropout=0.1,
                  proj_dropout=0.1,
@@ -316,10 +317,14 @@ class ViT_Hierarchical(nn.Module):
             in_dim = dim
 
         self.norm = nn.LayerNorm(stage_dims[-1])
-        self.frame_proj = nn.Linear(stage_dims[-1], 128)
+        self.frame_proj = nn.Linear(stage_dims[-1], d_model) if stage_dims[-1] != d_model else nn.Identity()
 
     def forward(self, x):
-        # x shape: [B, T, C, H, W]
+        '''
+        x: Context cropped images, tensor of shape [B, T, C, Hc, Wc]
+        Returns:
+            Tensor of shape [B, T, 128]
+        '''
         B, T, C, H, W = x.shape
         x = x.view(B * T, C, H, W) # [B*T, C, H, W]
 #        print(f"Input shape: {x.shape}")
@@ -371,6 +376,7 @@ if __name__ == '__main__':
         head_nums=[2, 4, 7],
         window_size=[8, 4, None],
         mlp_ratio=[4, 4, 4],
+        d_model=224,
         drop_path=0.1,
         attn_dropout=0.1,
         proj_dropout=0.1,
@@ -379,8 +385,6 @@ if __name__ == '__main__':
 
     out = vit(x)
     flops = FlopCountAnalysis(vit, x)
-    print("Total FLOPs:", flops.total())
-    print("Per-frame FLOPs:", flops.total() / seq_len)
     print("Total parameters:", sum(p.numel() for p in vit.parameters() if p.requires_grad))
 
     #graph = draw_graph(vit, input_size=(batch_size, seq_len, in_channels, img_size, img_size))
