@@ -11,6 +11,7 @@ from models.Motion_Encoder import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
 from config import vit_args_config, motion_enc_args_config
+from scripts.lmdb_dataset import LMDBChunkDataset
 
 import time
 import gc
@@ -20,13 +21,13 @@ import psutil
 import multiprocessing as mp
 import multiprocessing.queues as mpq
 import subprocess
+import lmdb, pickle
 from queue import Empty
 from tqdm import tqdm
 from datetime import datetime
 
 '''
 Training script for the PIE dataset using an Ensemble Model with Temporal ConvNet-GRU-Attention, Hierarchical Vision Transformer and Cross Attention.
-I love femboys. 
 '''
 
 def collate_fn(batch):
@@ -187,7 +188,7 @@ def gather_chunks(folders):
     for folder in folders:
         chunk_files = sorted([os.path.join(folder, f) 
                             for f in os.listdir(folder) 
-                            if f.endswith('.pt')])
+                            if f.endswith('.lmdb')])
         all_files.extend(chunk_files)
     
     return all_files
@@ -198,12 +199,31 @@ def wait_for_memory(threshold=96, interval=1):
         time.sleep(interval)
 
 # Asynchronous chunk loading
+# replace the existing mp_async_load with this
 def mp_async_load(idx, path, queue):
+    """
+    Warm LMDB chunk file (light read) in a background process, then return the path.
+    For .pt files this would torch.load; for LMDB we just open & read a tiny bit
+    to encourage the OS to cache the file, then pass back the path string.
+    """
     try:
-        data = torch.load(path, map_location='cpu')
-        queue.put((idx, 'ok', data))
+        # Quick warm: open LMDB and read one _meta key if available
+        env = lmdb.open(path, readonly=True, lock=False)
+        with env.begin(write=False) as txn:
+            # iterate until we find a meta key, then break
+            cursor = txn.cursor()
+            for key, _ in cursor:
+                key_s = key.decode()
+                if key_s.endswith("_meta"):
+                    # read one meta to warm
+                    _ = txn.get(key)
+                    break
+        env.close()
+        # Return the path string as payload; parent will instantiate LMDBChunkDataset(path)
+        queue.put((idx, 'ok', path))
     except Exception as e:
         queue.put((idx, 'err', str(e)))
+
 
 def get_hdd_temp(dev="/dev/sda"):
     try:
@@ -287,8 +307,8 @@ def main():
     os.makedirs('outputs', exist_ok=True)
 
     # --- Training loop ---
-    train_chunk_folder = ['preprocessed_train_base', 'preprocessed_train_augmented']
-    val_chunk_folder = 'preprocessed_val_base'
+    train_chunk_folder = ['preprocessed_train_lmdb', 'preprocessed_train_lmdb_aug']
+    val_chunk_folder = 'preprocessed_val_lmdb'
     train_chunk_files = gather_chunks(train_chunk_folder)
     val_chunk_files = gather_chunks(val_chunk_folder)
 
@@ -333,11 +353,11 @@ def main():
             if status == 'err':
                 print(f'Failed to preload {chunk_path}: {payload}')
                 continue
-            current_data = payload
+            lmdb_path = payload
 
             del payload
 
-            dataset = PTChunkDataset(current_data)
+            dataset = LMDBChunkDataset(lmdb_path)
             loader_kwargs = dict(
                 batch_size=batch_size,
                 shuffle=True,
@@ -355,7 +375,7 @@ def main():
             avg_loss = train_one_chunk(model, loader, criterion, optimizer, device, loss_weight=loss_weight)
             epoch_loss.append(avg_loss)
 
-            del current_data, dataset, loader
+            del lmdb_path, dataset, loader
             torch.cuda.empty_cache()
             trash = gc.collect()
             print(f"Unreachable trash: {trash}")
@@ -404,16 +424,11 @@ def main():
 
         for chunk_path in val_chunk_files:
             print(f"Loading validation chunk {chunk_path}")
-            val_data = torch.load(chunk_path, map_location='cpu')
-            val_data = filter_irrelevant(val_data)
-
-            if not val_data:
-                print(f"Validation chunk {chunk_path} is empty, skipping.")
-                continue
-
-            val_dataset = PTChunkDataset(val_data)
-            del val_data
-            gc.collect()
+            val_dataset = LMDBChunkDataset(
+                chunk_path,
+                transform_tight=None,   
+                transform_context=None
+            )
 
             val_loader = DataLoader(
                 val_dataset,
