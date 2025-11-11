@@ -231,7 +231,6 @@ class ViT_Hierarchical(nn.Module):
         Tensor: (B, T, 128) where B is batch size, T is sequence length, and 128 is the final embedding dimension.
         '''
     def __init__(self,
-                 img_size=128,
                  in_channels=3,
                  stage_dims=[64, 128, 256],
                  layer_nums=[2, 4, 6],

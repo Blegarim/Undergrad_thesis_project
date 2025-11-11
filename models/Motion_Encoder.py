@@ -4,8 +4,7 @@ import torch.nn.functional as F
 
 class MotionEncoder(nn.Module):
     def __init__(self, 
-                 motion_dim=8,
-                 img_size=128, 
+                 motion_dim=8, 
                  hidden_dim=128, 
                  d_model=128, 
                  num_layers=2, 
@@ -27,17 +26,17 @@ class MotionEncoder(nn.Module):
 
         #Motion feature encoding
         self.motion_encoder = nn.Sequential(
-            nn.Conv1d(motion_dim, hidden_dim // 2, kernel_size=3, padding=1),
-            nn.BatchNorm1d(hidden_dim // 2),
+            nn.Conv1d(motion_dim, hidden_dim // 4, kernel_size=3, padding=1),
+            nn.BatchNorm1d(hidden_dim // 4),
             nn.ReLU(),
             nn.Conv1d(hidden_dim // 2, hidden_dim, kernel_size=3, padding=1),
-            nn.BatchNorm1d(hidden_dim),
+            nn.BatchNorm1d(hidden_dim // 2),
             nn.ReLU()
         )
 
         #Temporal processing
         self.fusion = nn.Sequential(
-            nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.Linear(hidden_dim + (hidden_dim // 2), hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout)
@@ -89,7 +88,7 @@ class MotionEncoder(nn.Module):
         x = self.fusion(combined)  # [B, T, hidden_dim]
         
         # Process sequence
-        x, _ = self.gru(x)
+        x, _ = self.gru(x) # [B, T, hidden_dim]
         
         # Self-attention
         residual = x
