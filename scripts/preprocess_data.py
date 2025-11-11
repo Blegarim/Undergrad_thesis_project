@@ -45,7 +45,7 @@ def img_augment(height=160, width=160):
     ])
 
 def main(img_height=128, img_width=128, context_scale=2.0,
-         val=True, data_aug=False, test=True):
+         train=True, data_aug=False, val=True, test=True):
 
     transform_tight = img_resize(img_height, img_width)
     transform_context = img_resize(img_height * context_scale, img_width * context_scale)
@@ -64,14 +64,15 @@ def main(img_height=128, img_width=128, context_scale=2.0,
     test_end_idx = len(test_sequences)
 
     # Save in chunks
-    save_dataset_in_chunks(train_sequences, 
-                           out_dir='preprocessed_train_base', 
-                           chunk_size=1500, 
-                           transform_tight=transform_tight, 
-                           transform_context=transform_context,
-                           context_scale=context_scale,
-                           start_idx=train_start_idx,
-                           end_idx=train_end_idx)
+    if train:
+        save_dataset_in_chunks(train_sequences, 
+                            out_dir='preprocessed_train_base', 
+                            chunk_size=1500, 
+                            transform_tight=transform_tight, 
+                            transform_context=transform_context,
+                            context_scale=context_scale,
+                            start_idx=train_start_idx,
+                            end_idx=train_end_idx)
     if data_aug:
         save_dataset_in_chunks(train_sequences, 
                            out_dir='preprocessed_train_augmented', 
@@ -103,4 +104,8 @@ def main(img_height=128, img_width=128, context_scale=2.0,
     print("All dataset chunks saved successfully.")
 
 if __name__ == "__main__":
-    main()
+    main(img_height=128, img_width=128, context_scale=2, 
+        train=True, 
+        data_aug=False, 
+        val=True, 
+        test=True)

@@ -1,3 +1,8 @@
+def get_unified_dim_model():
+    # Ensure consistent d_model across all modules for proper cross-attention
+    d_model = 224
+    return int(d_model)
+
 def vit_args_config(img_size=160,
                 in_channels=3,
                 stage_dims=[48, 96, 168],
@@ -5,12 +10,12 @@ def vit_args_config(img_size=160,
                 head_nums=[2, 4, 7],
                 window_size=[8, 4, None],
                 mlp_ratio=[4, 4, 4],
-                d_model=224,
+                d_model=1,
                 drop_path=0.15,
                 attn_dropout=0.15,
                 proj_dropout=0.15,
                 dropout=0.15):
-    
+    d_model = get_unified_dim_model()
     return {"img_size": img_size,
             "in_channels": in_channels,
             "stage_dims": stage_dims,
@@ -27,11 +32,11 @@ def vit_args_config(img_size=160,
 def motion_enc_args_config(motion_dim=8,
                         img_size=128, 
                         hidden_dim=128, 
-                        d_model=224, 
+                        d_model=1, 
                         num_layers=2, 
                         num_heads=8, 
                         dropout=0.3):
-    
+    d_model = get_unified_dim_model()
     return {"motion_dim": motion_dim,
             "img_size": img_size,
             "hidden_dim": hidden_dim,
@@ -39,4 +44,5 @@ def motion_enc_args_config(motion_dim=8,
             "num_layers": num_layers,
             "num_heads": num_heads,
             "dropout": dropout}
+
 

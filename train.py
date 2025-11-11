@@ -3,11 +3,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
 from sklearn.utils.class_weight import compute_class_weight
 
 from models.Vision_Transformer import ViT_Hierarchical
-from models.Regression import MotionEncoder
+from models.Motion_Encoder import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
 from config import vit_args_config, motion_enc_args_config
@@ -19,6 +19,7 @@ import csv
 import psutil
 import multiprocessing as mp
 import multiprocessing.queues as mpq
+import subprocess
 from queue import Empty
 from tqdm import tqdm
 from datetime import datetime
@@ -160,7 +161,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
     return loss_sum, samples, correct
 
 # Define PTChunkDataset once
-class PTChunkDataset(torch.utils.data.Dataset):
+class PTChunkDataset(Dataset):
     def __init__(self, data): 
         self._items = []
         for item in data:
@@ -203,6 +204,13 @@ def mp_async_load(idx, path, queue):
         queue.put((idx, 'ok', data))
     except Exception as e:
         queue.put((idx, 'err', str(e)))
+
+def get_hdd_temp(dev="/dev/sda"):
+    try:
+        out = subprocess.check_output(["hdddtemp", dev]).decode()
+        return int(out.split(":")[2].strip().split("°")[0])
+    except Exception:
+        return None
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -471,6 +479,16 @@ def main():
             print("Early stopping triggered. Saving final model and stopping.")
             torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}_{datetime_str}.pth')
             break
+        
+        temp = get_hdd_temp()
+        if temp and temp >= 50:
+            rest = 180
+        elif temp and temp >= 40:
+            rest = 120
+        else:
+            rest = 60
+        print(f"HDD at {temp}, resting for {rest}...")
+        time.sleep(rest)
 
 if __name__ == "__main__":
     mp.set_start_method('spawn', force=True)

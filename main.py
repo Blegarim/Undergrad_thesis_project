@@ -3,7 +3,7 @@ from torchvision import transforms
 import cv2
 
 from models.Vision_Transformer import ViT_Hierarchical
-from models.Regression import MotionEncoder
+from models.Motion_Encoder import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
 from config import vit_args_config, motion_enc_args_config
