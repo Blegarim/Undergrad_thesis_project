@@ -1,9 +1,9 @@
 def get_unified_dim_model():
     # Ensure consistent d_model across all modules for proper cross-attention
-    d_model = 224
+    d_model = 128
     return int(d_model)
 
-def vit_args_config(img_size=160,
+def vit_args_config(img_size=300,
                 in_channels=3,
                 stage_dims=[48, 96, 168],
                 layer_nums=[2, 4, 5],
@@ -31,7 +31,7 @@ def vit_args_config(img_size=160,
 
 def motion_enc_args_config(motion_dim=8,
                         img_size=128, 
-                        hidden_dim=128, 
+                        hidden_dim=256, 
                         d_model=1, 
                         num_layers=2, 
                         num_heads=8, 

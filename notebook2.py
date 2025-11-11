@@ -40,7 +40,7 @@ def main():
         train_params = sum(p.numel() for p in module.parameters() if p.requires_grad)
         print(f"  {name:<20} total={mod_params:,} | trainable={train_params:,}")
 
-    B, T, C, H, W = 16, 20, 3, 128, 128   # batch, sequence, channels, height, width
+    B, T, C, H, W = 1, 20, 3, 128, 128   # batch, sequence, channels, height, width
     M = 8                                 # motion feature dim
 
     images_tight = torch.randn(B, T, C, H, W, device=device)
