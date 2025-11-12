@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
 from sklearn.utils.class_weight import compute_class_weight
 
 from models.Vision_Transformer import ViT_Hierarchical
@@ -161,16 +162,16 @@ def validate_one_epoch(model, dataloader, criterion, device):
     # Note: return raw correct counts (not per-chunk accuracies)
     return loss_sum, samples, correct
 
-# Define PTChunkDataset once
-class PTChunkDataset(Dataset):
-    def __init__(self, data): 
-        self._items = []
-        for item in data:
-            self._items.append(item)
-    def __len__(self): return len(self._items)
-    def __getitem__(self, idx): 
-        item = self._items[idx]
-        return item
+# # Define PTChunkDataset once
+# class PTChunkDataset(Dataset):
+#     def __init__(self, data): 
+#         self._items = []
+#         for item in data:
+#             self._items.append(item)
+#     def __len__(self): return len(self._items)
+#     def __getitem__(self, idx): 
+#         item = self._items[idx]
+#         return item
     
 
 def finetune(model, enable_finetune=False):
@@ -306,8 +307,15 @@ def main():
 
     os.makedirs('outputs', exist_ok=True)
 
+    #Transforms
+    base_transforms = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])
+    ])
+
     # --- Training loop ---
-    train_chunk_folder = ['preprocessed_train_lmdb', 'preprocessed_train_lmdb_aug']
+    train_chunk_folder = 'preprocessed_train_lmdb'
     val_chunk_folder = 'preprocessed_val_lmdb'
     train_chunk_files = gather_chunks(train_chunk_folder)
     val_chunk_files = gather_chunks(val_chunk_folder)
@@ -357,7 +365,7 @@ def main():
 
             del payload
 
-            dataset = LMDBChunkDataset(lmdb_path)
+            dataset = LMDBChunkDataset(lmdb_path, transform_tight=base_transforms, transform_context=base_transforms)
             loader_kwargs = dict(
                 batch_size=batch_size,
                 shuffle=True,

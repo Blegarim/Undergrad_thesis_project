@@ -29,7 +29,7 @@ class MotionEncoder(nn.Module):
             nn.Conv1d(motion_dim, hidden_dim // 4, kernel_size=3, padding=1),
             nn.BatchNorm1d(hidden_dim // 4),
             nn.ReLU(),
-            nn.Conv1d(hidden_dim // 2, hidden_dim, kernel_size=3, padding=1),
+            nn.Conv1d(hidden_dim // 4, hidden_dim // 2, kernel_size=3, padding=1),
             nn.BatchNorm1d(hidden_dim // 2),
             nn.ReLU()
         )
@@ -80,11 +80,11 @@ class MotionEncoder(nn.Module):
 
         #Process motion:
         motion_data = motion_data.transpose(1, 2) # [B, motion_dim, T]
-        motion_feats = self.motion_encoder(motion_data) # [B, hidden_dim, T]
-        motion_feats = motion_feats.transpose(1, 2) # [B, T, hidden_dim]
+        motion_feats = self.motion_encoder(motion_data) # [B, hidden_dim/2, T]
+        motion_feats = motion_feats.transpose(1, 2) # [B, T, hidden_dim/2]
         
         # Combine features
-        combined = torch.cat([img_feats, motion_feats], dim=-1)  # [B, T, hidden_dim * 2]
+        combined = torch.cat([img_feats, motion_feats], dim=-1)  # [B, T, hidden_dim * 1.5]
         x = self.fusion(combined)  # [B, T, hidden_dim]
         
         # Process sequence

@@ -35,7 +35,11 @@ def save_dataset_in_chunks_lmdb(sequences, out_dir, chunk_size=5000,
         lmdb_path = os.path.join(out_dir, f"chunk_{i:06d}.lmdb")
         print(f"Writing LMDB {lmdb_path} ...")
 
-        env = lmdb.open(lmdb_path, map_size=100 * 1024**3)  # 100 GB per chunk max
+        est_bytes = len(chunk) * 2 * (512 * 512 * 3) * 0.25
+        map_size = max(int(est_bytes * 1.5), 2 * 1024**3)  # at least 2 GB
+        print(f"→ Allocating map_size ≈ {map_size / 1024**3:.2f} GB")
+
+        env = lmdb.open(lmdb_path, map_size=map_size)  # use calculated map_size
         with env.begin(write=True) as txn:
             for j, sample in enumerate(tqdm(dataset.data, desc=f"Chunk {i}")):
                 # Encode tight/context crops as JPEG

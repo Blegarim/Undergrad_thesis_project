@@ -78,8 +78,8 @@ class PIESequenceDataset(Dataset):
             height.append(h)
 
         centers = torch.tensor(centers, dtype=torch.float32)
-        widths = torch.tensor(widths, dtype=torch.float32)
-        heights = torch.tensor(heights, dtype=torch.float32)
+        widths = torch.tensor(width, dtype=torch.float32)
+        heights = torch.tensor(height, dtype=torch.float32)
 
         # --- Compute motion deltas (dx, dy, dw, dh) ---
         dt = centers[1:] - centers[:-1]

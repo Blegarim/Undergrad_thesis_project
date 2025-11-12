@@ -1,6 +1,7 @@
 import io, lmdb, pickle, torch
 from torch.utils.data import Dataset
 from PIL import Image
+from torchvision import transforms
 
 class LMDBChunkDataset(Dataset):
     """
@@ -9,8 +10,9 @@ class LMDBChunkDataset(Dataset):
     def __init__(self, lmdb_path, transform_tight=None, transform_context=None):
         self.env = lmdb.open(lmdb_path, readonly=True, lock=False)
         self.txn = self.env.begin(write=False)
-        self.transform_tight = transform_tight
-        self.transform_context = transform_context
+        self.default_transform = transforms.ToTensor()
+        self.transform_tight = transform_tight or self.default_transform
+        self.transform_context = transform_context or self.default_transform
 
         # Build a list of available sequence IDs
         self.seq_ids = []
