@@ -3,50 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from timm.layers import DropPath
 
-class GEGLU(nn.Module):
-    def __init__(self, d_model, d_ff, dropout=0.1):
-        super().__init__()
-        self.fc1 = nn.Linear(d_model, d_ff * 2)
-        self.fc2 = nn.Linear(d_ff, d_model)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x):
-        x = self.fc1(x)
-        x1, x2 = x.chunk(2, dim=-1)
-        return self.dropout(self.fc2(F.gelu(x1) * x2))
-
-class TransformerEncoderBlock(nn.Module):
-    '''
-    A standard Transformer encoder block with global multi-head self-attention and feedforward network.'''
-    def __init__(self, d_model=128, num_heads=8, dim_feedforward=512, dropout=0.1):
-        super().__init__()
-        self.self_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads, dropout = dropout, batch_first=True)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.dropout = nn.Dropout(dropout)
-        self.ffn = GEGLU(d_model, dim_feedforward, dropout)
-    
-    def forward(self, x, key_padding_mask=None):
-        """
-        x: Tensor of shape [batch_size, seq_len, d_model]
-        mask: Optional mask tensor of shape [batch_size, seq_len]
-        """
-        # Self-attention
-        y = self.norm1(x)
-        attn_output, _ = self.self_attn(y, y, y, key_padding_mask=key_padding_mask)
-        x = x + self.dropout(attn_output)
-
-        y = self.norm2(x)
-        ffn_output = self.ffn(y)
-        x = x + self.dropout(ffn_output)
-
-        return x
-
 class MLP(nn.Module):
     def __init__(self, dim=128, hidden_dim=None, dropout=0.1):
         super().__init__()
         self.hidden_dim = hidden_dim or dim * 2
-        self.fc1 = nn.Linear(dim, hidden_dim)
+        self.fc1 = nn.Linear(dim, self.hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, dim)
         self.dropout = nn.Dropout(dropout)
     def forward(self, x):
@@ -110,24 +71,55 @@ class WindowAttention(nn.Module):
         )
         nn.init.trunc_normal_(self.relative_position_bias_table, std = 0.02)
 
-        # Get pair-wise relative position index for each token inside the window
-        coords_h = torch.arange(self.window_size[0])
-        coords_w = torch.arange(self.window_size[1])
-        coords = torch.stack(torch.meshgrid(coords_h, coords_w, indexing='ij')) # 2, Wh, Ww
-        coords_flatten = torch.flatten(coords, 1) # 2, Wh*Ww
-        relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :] # 2, Wh*Ww, Wh*Ww
-        relative_coords = relative_coords.permute(1, 2, 0).contiguous() # Wh*Ww, Wh*Ww, 2
-        relative_coords[:, :, 0] += self.window_size[0] -1 # Shift to start from 0
-        relative_coords[:, :, 1] += self.window_size[1] -1 # Shift to start from 0
-        relative_coords[:, :, 0] *= 2 * self.window_size[1] - 1 # Multiply by width
-        relative_position_index = relative_coords.sum(-1) # Wh*Ww, Wh*Ww
-        self.register_buffer("relative_position_index", relative_position_index) # Not a parameter
-
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_dropout = nn.Dropout(attn_dropout)
         self.proj = nn.Linear(dim, dim)
         self.proj_dropout = nn.Dropout(proj_dropout)
         self.softmax = nn.Softmax(dim=-1)
+
+    def init_relative_position_bias(self, Wh, Ww):
+        """
+        Build or rebuild the relative position bias table and index for a window of size (Wh, Ww).
+        Safe to call multiple times; if the current table already matches requested size this is a no-op.
+        """
+        if getattr(self, "window_size", None) == (Wh, Ww) and hasattr(self, "relative_position_index"):
+            return
+        
+        # determine device for new parameter: prefer existing param device, else any param/buffer device, else cpu
+        if hasattr(self, "relative_position_bias_table") and isinstance(self.relative_position_bias_table, nn.Parameter):
+            device = self.relative_position_bias_table.device
+        else:
+            # fallback: check parameters, buffers, else cpu
+            params = list(self.parameters())
+            buffers = list(self.buffers())
+            if params:
+                device = params[0].device
+            elif buffers:
+                device = buffers[0].device
+            else:
+                device = torch.device("cpu")
+        
+        self.window_size = (Wh, Ww)
+        table_size = (2 * Wh - 1) * (2 * Ww - 1)
+        self.relative_position_bias_table = nn.Parameter(
+            torch.zeros(table_size, self.num_heads, device=device)
+        )
+        nn.init.trunc_normal_(self.relative_position_bias_table, std = 0.02)
+
+        # Get pair-wise relative position index for each token inside the window
+        coords_h = torch.arange(Wh, device=device)
+        coords_w = torch.arange(Ww, device=device)
+        coords = torch.stack(torch.meshgrid(coords_h, coords_w, indexing='ij')) # 2, Wh, Ww
+        coords_flatten = torch.flatten(coords, 1) # 2, Wh*Ww
+        relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :] # 2, Wh*Ww, Wh*Ww
+        relative_coords = relative_coords.permute(1, 2, 0).contiguous() # Wh*Ww, Wh*Ww, 2
+        relative_coords[:, :, 0] += Wh -1 # Shift to start from 0
+        relative_coords[:, :, 1] += Ww -1 # Shift to start from 0
+        relative_coords[:, :, 0] *= 2 * Ww - 1 # Multiply by width
+        relative_position_index = relative_coords.sum(-1).long().contiguous() # Wh*Ww, Wh*Ww
+        # register (or replace) buffer
+        self._buffers.pop("relative_position_index", None)
+        self.register_buffer("relative_position_index", relative_position_index) # Not a parameter
 
     def forward(self, x):
         B_, N, C = x.shape
@@ -169,7 +161,10 @@ class WindowTransformerBlock(nn.Module):
                  ):
         super().__init__()
         self.dim = dim
-        self.window_size = window_size if isinstance(window_size, tuple) else (window_size, window_size)
+        if window_size is None:
+            self.window_size = None
+        else:
+            self.window_size = window_size if isinstance(window_size, tuple) else (window_size, window_size)
         self.num_heads = num_heads
         self.mlp_ratio = mlp_ratio
         self.norm1 = nn.LayerNorm(dim)
@@ -180,6 +175,15 @@ class WindowTransformerBlock(nn.Module):
         self.mlp = MLP(dim, int(dim * mlp_ratio), dropout)
         self.dropout = nn.Dropout(dropout)
     
+    def init_relative_position_bias(self, H, W):
+        """
+        Forwarder so ViT can request a block to (re)initialize its attention's relative position bias
+        for a runtime HxW feature map.
+        """
+        # delegate to the WindowAttention instance
+        Wh, Ww = (H, W) if self.window_size is None else self.window_size
+        self.attn.init_relative_position_bias(Wh, Ww)
+
     def forward(self, x):
         B, L, C = x.shape
         Wh, Ww = self.window_size
@@ -235,7 +239,7 @@ class ViT_Hierarchical(nn.Module):
                  stage_dims=[64, 128, 256],
                  layer_nums=[2, 4, 6],
                  head_nums=[2, 4, 8],
-                 window_size=[8, 4, None],   # None → global attention
+                 window_size=[8, 4, "global"],   # global window for last layer
                  mlp_ratio=[4, 4, 4],
                  d_model=128,
                  drop_path=0.1,
@@ -286,25 +290,17 @@ class ViT_Hierarchical(nn.Module):
                 dp_rate = dpr[block_idx]
                 block_idx += 1
 
-                if i < len(stage_dims) - 1 and w_size is not None:
-                    # window-based local transformer
-                    blocks.append(WindowTransformerBlock(
+                if w_size == "global":
+                    w_size = None
+                blocks.append(WindowTransformerBlock(
                         dim=dim,
                         num_heads=num_heads,
-                        window_size=w_size,
+                        window_size=w_size,            
                         mlp_ratio=mlp_r,
                         dropout=dropout,
                         attn_dropout=attn_dp,
                         proj_dropout=proj_dp,
                         drop_path=dp_rate
-                    ))
-                else:
-                    # global attention stage
-                    blocks.append(TransformerEncoderBlock(
-                        d_model=dim,
-                        num_heads=num_heads,
-                        dim_feedforward=int(dim * mlp_r),
-                        dropout=dropout
                     ))
 
             # register stage
@@ -312,7 +308,6 @@ class ViT_Hierarchical(nn.Module):
                 'down_sample': down_sample,
                 'block': nn.ModuleList(blocks)
             }))
-            self.stage_types.append('window' if i < len(stage_dims) - 1 else 'global')
             in_dim = dim
 
         self.norm = nn.LayerNorm(stage_dims[-1])
@@ -329,26 +324,20 @@ class ViT_Hierarchical(nn.Module):
 #        print(f"Input shape: {x.shape}")
         x = self.stem(x)           # [B*T, D, H/4, W/4]
 #        print(f"[Stem] -> {x.shape}")
-        for stage_idx, (stage, block_type) in enumerate(zip(self.stages, self.stage_types)):
-            x = stage['down_sample'](x) # Downsampling
+        for stage_idx, stage in enumerate(self.stages):
+            x = stage['down_sample'](x)
             B_T, D, H_s, W_s = x.shape
-#            print(f"[Downsample] -> ({B_T}, {D}, {H_s}, {W_s}), Block type: {block_type}")
 
-            if block_type == 'window':
-                for blk_idx, block in enumerate(stage['block']):
-                    x_window = x.flatten(2).transpose(1, 2) # [B*T, H_s*W_s, D]
-#                    print(f" Stage {stage_idx} | Block {blk_idx} | Window in: {x_window.shape}")
-                    x_window = block(x_window)          # Window Transformer blocks
-#                    print(f" Stage {stage_idx} | Block {blk_idx} | Window out: {x_window.shape}")
-                    x = x_window.transpose(1, 2).view(B_T, D, H_s, W_s) # Reshape back to image-like
-            else:
-                tokens = x.flatten(2).transpose(1, 2) # [B*T, H_s*W_s, D]
-#                print(f" Stage {stage_idx} | Global Block | Tokens in: {tokens.shape}")
-                for blk_idx, block in enumerate(stage['block']):
-                    tokens = block(tokens)                 # Transformer blocks
-#                    print(f" Stage {stage_idx} | Block {blk_idx} | Tokens out: {tokens.shape}")
-                x = tokens.transpose(1, 2).view(B_T, D, H_s, W_s) # Reshape back to image-like
-#                print(f" Stage {stage_idx} | Global reshape | Tokens out: {tokens.shape}")
+            for blk_idx, block in enumerate(stage['block']):
+                
+                # Ensure the block's relative-position tables are initialized for runtime H_s,W_s.
+            # Use the block API instead of mutating internals.
+                if getattr(block, "window_size", None) is None:
+                    block.init_relative_position_bias(H_s, W_s)
+
+                tokens = x.flatten(2).transpose(1, 2)   # [B*T, H_s*W_s, D]
+                tokens = block(tokens)
+                x = tokens.transpose(1, 2).view(B_T, D, H_s, W_s)
         
         x = x.mean([2, 3]) # Global average pooling (B*T, D)
 #        print(f"[Global Avg Pool] -> {x.shape}")

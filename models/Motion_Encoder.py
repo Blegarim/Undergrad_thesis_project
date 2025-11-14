@@ -58,6 +58,7 @@ class MotionEncoder(nn.Module):
             batch_first=True
         )
         
+        self.pos_encoding = nn.Parameter(torch.randn(1, 200, hidden_dim))
         self.norm = nn.LayerNorm(hidden_dim)
         self.dropout = nn.Dropout(dropout)
         self.proj = nn.Linear(hidden_dim, d_model) if hidden_dim != d_model else nn.Identity()
@@ -79,7 +80,10 @@ class MotionEncoder(nn.Module):
         img_feats = img_feats.view(B, T, -1)  # [B, T, hidden_dim]
 
         #Process motion:
-        motion_data = motion_data.transpose(1, 2) # [B, motion_dim, T]
+        # Normalization before encoding
+        motion_norm = (motion_data - motion_data.mean(dim=1, keepdim=True)) / (motion_data.std(dim=1, keepdim=True) + 1e-6)
+
+        motion_data = motion_norm.transpose(1, 2) # [B, motion_dim, T]
         motion_feats = self.motion_encoder(motion_data) # [B, hidden_dim/2, T]
         motion_feats = motion_feats.transpose(1, 2) # [B, T, hidden_dim/2]
         
@@ -89,6 +93,9 @@ class MotionEncoder(nn.Module):
         
         # Process sequence
         x, _ = self.gru(x) # [B, T, hidden_dim]
+        
+        # Positional Encoding
+        x = x + self.pos_encoding[:, :T, :]
         
         # Self-attention
         residual = x
