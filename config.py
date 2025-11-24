@@ -4,11 +4,11 @@ def get_unified_dim_model():
     return int(d_model)
 
 def vit_args_config(in_channels=3,
-                stage_dims=[48, 48, 224, 48],
-                layer_nums=[2, 4, 5, 7],
-                head_nums=[2, 2, 8, 2],
-                window_size=[8, 8, 4, None],
-                mlp_ratio=[4, 4, 4, 4],
+                stage_dims=[48, 48, 224],
+                layer_nums=[2, 4, 7],
+                head_nums=[2, 2, 8],
+                window_size=[8, 4, None],
+                mlp_ratio=[4, 4, 4],
                 d_model=1,
                 drop_path=0.15,
                 attn_dropout=0.15,

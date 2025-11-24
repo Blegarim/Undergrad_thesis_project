@@ -59,17 +59,41 @@ class WindowAttention(nn.Module):
     def __init__(self, dim, window_size, num_heads,qkv_bias=True, attn_dropout=0.1, proj_dropout=0.1):
         super().__init__()
         self.dim = dim 
-        self.window_size = window_size # (Wh, Ww)
-        Wh, Ww = window_size if isinstance(window_size, tuple) else (window_size, window_size)
+        # preserve None to indicate a dynamic/global window; otherwise normalize to tuple
+        if window_size is None:
+            self.window_size = None
+            Wh = Ww = None
+        else:
+            self.window_size = window_size if isinstance(window_size, tuple) else (window_size, window_size)
+            Wh, Ww = self.window_size
         self.num_heads = num_heads 
         self.scale = (dim // num_heads) ** -0.5 # Scaling factor for dot-product attention
         assert self.dim % self.num_heads == 0, "dim should be divisible by num_heads"
 
-        # Define a parameter table of relative position bias
-        self.relative_position_bias_table = nn.Parameter(
-            torch.zeros((2 * Wh - 1) * (2 * Ww - 1), num_heads)
-        )
-        nn.init.trunc_normal_(self.relative_position_bias_table, std = 0.02)
+        #Prebuild relative position table for fixed windows; keep None if dynamic/global windows
+        if self.window_size is not None:
+            table_size = (2 * Wh - 1) * (2 * Ww - 1)
+            self.relative_position_bias_table = nn.Parameter(
+                torch.zeros(table_size, num_heads)
+            )
+            nn.init.trunc_normal_(self.relative_position_bias_table, std=0.02)
+
+            device = self.relative_position_bias_table.device
+            coords_h = torch.arange(Wh, device=device)
+            coords_w = torch.arange(Ww, device=device)
+            coords = torch.stack(torch.meshgrid(coords_h, coords_w, indexing='ij'))  # 2, Wh, Ww
+            coords_flatten = torch.flatten(coords, 1)  # 2, Wh*Ww
+            relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]  # 2, N, N
+            relative_coords = relative_coords.permute(1, 2, 0).contiguous()  # N, N, 2
+            relative_coords[:, :, 0] += Wh - 1
+            relative_coords[:, :, 1] += Ww - 1
+            relative_coords[:, :, 0] *= 2 * Ww - 1
+            relative_position_index = relative_coords.sum(-1).long().contiguous()  # N, N
+            # register buffer (overwrites existing if present)
+            self._buffers.pop("relative_position_index", None)
+            self.register_buffer("relative_position_index", relative_position_index)
+        else:
+            self.relative_position_bias_table = None
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_dropout = nn.Dropout(attn_dropout)
@@ -123,6 +147,8 @@ class WindowAttention(nn.Module):
 
     def forward(self, x):
         B_, N, C = x.shape
+        if self.relative_position_bias_table is None or not hasattr(self, "relative_position_index"):
+            raise RuntimeError("WindowAttention: call init_relative_position_bias(Wh, Ww) before forward for dynamic/global window")
         qkv = self.qkv(x).reshape(B_, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4) # 3, B_, num_heads, N, C//num_heads
         q, k, v = qkv[0], qkv[1], qkv[2] # Each has shape (B_, num_heads, N, C//num_heads)
         # Scaled dot-product attention
@@ -186,13 +212,23 @@ class WindowTransformerBlock(nn.Module):
 
     def forward(self, x):
         B, L, C = x.shape
-        Wh, Ww = self.window_size
 
         # Dynamically infer H, W from sequence length
         H = W = int(L ** 0.5)
         if H * W != L:
             raise ValueError(f"Non-square feature map: cannot reshape {L} tokens into H*W grid")
 
+        # If self.window_size is None -> global attention, use full feature map, else use configured window
+        if self.window_size is None:
+            Wh, Ww = H, W
+        else:
+            Wh, Ww = self.window_size if isinstance(self.window_size, tuple) else (self.window_size, self.window_size)
+        
+        # Validate that the windows tile the feature map evenly
+        if (H % Wh != 0) or (W % Ww != 0):
+            raise ValueError(f"Feature map ({H}x{W}) is not divisible by window size ({Wh}x{Ww}). "
+                             "Consider padding or choosing a compatible window size.")
+        
         # Update stored resolution to match runtime shape
         self.input_resolution = (H, W)
 
@@ -357,12 +393,11 @@ if __name__ == '__main__':
     x = torch.randn(batch_size, seq_len, in_channels, img_size, img_size) # Example input
 
     vit = ViT_Hierarchical(
-        img_size=img_size,
         in_channels=3,
         stage_dims=[48, 96, 168],
         layer_nums=[2, 4, 5],
         head_nums=[2, 4, 7],
-        window_size=[8, 4, None],
+        window_size=[8, 4, "global"],
         mlp_ratio=[4, 4, 4],
         d_model=224,
         drop_path=0.1,
