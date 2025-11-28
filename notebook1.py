@@ -11,7 +11,7 @@ from models.Unified_Module import EnsembleModel
 from config import vit_args_config, motion_enc_args_config
 
 #---- CONFIG ----
-lmdb_path = "preprocessed_train_lmdb/chunk_001500.lmdb"
+lmdb_path = "preprocessed_train_lmdb/chunk_004500.lmdb"
 batch_size = 8
 vit_args = vit_args_config()
 motion_enc_args = motion_enc_args_config()
@@ -25,8 +25,8 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 #---- DATASET TEST ----
 print(f"Opening LMDB: {lmdb_path}")
 dataset = LMDBChunkDataset(lmdb_path=lmdb_path,
-                           transforms_tight=transforms.ToTensor(),
-                           transforms_context=transforms.ToTensor())
+                           transform_tight=transforms.ToTensor(),
+                           transform_context=transforms.ToTensor())
 print(f"Dataset length: {len(dataset)} sequences\n")
 
 #---- Inspect ----

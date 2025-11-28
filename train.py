@@ -106,8 +106,6 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
         batch_time = end_time - start_time
 
         progress_bar.set_postfix({'loss':f'{total_batch_loss.item():.4f}'})
-        if (batch_idx+1) % 100 == 0 or (batch_idx + 1) == len(dataloader):
-            tqdm.write(f"Batch {batch_idx}/{len(dataloader)}, Loss: {total_batch_loss.item():.4f}, Time per batch: {batch_time:.3f} sec")
 
     progress_bar.close()
     if len(dataloader) == 0:
