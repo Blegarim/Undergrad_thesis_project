@@ -68,7 +68,7 @@ def save_dataset_in_chunks_lmdb(sequences, out_dir, chunk_size=5000,
         torch.cuda.empty_cache()
         gc.collect()
 
-    print("✅ All LMDB chunks saved successfully.")
+    print("All LMDB chunks saved successfully.")
 
 def img_resize(height=160, width=160):
     return transforms.Compose([
@@ -87,7 +87,7 @@ def img_augment(height=160, width=160):
 def main(img_height=128, img_width=128, context_scale=2.0,
          train=True, data_aug=False, val=True, test=True):
     from PIE_sequence_Dataset_1 import load_sequences_from_pkl
-    print("⚙️ Starting LMDB preprocessing pipeline...")
+    print("Starting LMDB preprocessing pipeline...")
 
     transform_tight = img_resize(img_height, img_width)
     transform_context = img_resize(int(img_height * context_scale), int(img_width * context_scale))

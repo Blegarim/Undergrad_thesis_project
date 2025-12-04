@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from torchvision import transforms
 from sklearn.utils.class_weight import compute_class_weight
 
@@ -62,11 +62,6 @@ def remap_cross_labels(labels):
 
 def filter_irrelevant(data):
     return [item for item in data if int(item['crosses'].item())==0 or int(item['crosses'].item())==1]
-
-def class_weight(a, b, device):
-    y = np.array([0]*a + [1]*b)
-    weight = compute_class_weight(class_weight='balanced', classes=np.unique(y), y=y)
-    return torch.tensor(weight, dtype=torch.float).to(device)
 
 def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight=None):
     model.train()
@@ -140,7 +135,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
 
             # accumulate loss as sum over samples (handles criterion reduction='mean')
             batch_loss = 0.0
-            for name in outputs:  # 'actions', 'looks', 'crosses'
+            for name in outputs: 
                 logits = outputs[name]
                 targets = labels[name]
                 loss_i = criterion[name](logits, targets)
@@ -159,19 +154,7 @@ def validate_one_epoch(model, dataloader, criterion, device):
 
     # Note: return raw correct counts (not per-chunk accuracies)
     return loss_sum, samples, correct
-
-# # Define PTChunkDataset once
-# class PTChunkDataset(Dataset):
-#     def __init__(self, data): 
-#         self._items = []
-#         for item in data:
-#             self._items.append(item)
-#     def __len__(self): return len(self._items)
-#     def __getitem__(self, idx): 
-#         item = self._items[idx]
-#         return item
     
-
 def finetune(model, enable_finetune=False):
     if not enable_finetune:
         return
@@ -197,8 +180,6 @@ def wait_for_memory(threshold=96, interval=1):
         print(f"RAM at {psutil.virtual_memory().percent:.1f}%, waiting...")
         time.sleep(interval)
 
-# Asynchronous chunk loading
-# replace the existing mp_async_load with this
 def mp_async_load(idx, path, queue):
     """
     Warm LMDB chunk file (light read) in a background process, then return the path.
@@ -222,7 +203,6 @@ def mp_async_load(idx, path, queue):
         queue.put((idx, 'ok', path))
     except Exception as e:
         queue.put((idx, 'err', str(e)))
-
 
 def get_hdd_temp(dev="/dev/sda"):
     try:
@@ -261,15 +241,13 @@ def main():
     motion_enc_args = motion_enc_args_config()
     num_epochs = 10
     num_workers = 0
-    # Number of prediction classes per head
     num_classes_dict = {
             'actions': 2,
             'looks': 2,
             'crosses': 2
         }
-    # Per-head Loss weighting
     loss_weight = {'actions': 1.0, 'looks': 0.6, 'crosses': 1.2}
-
+    
     early_stopping = EarlyStopping(patience=4, min_delta=0.001)
     best_val_loss = float('inf')
 
@@ -289,15 +267,28 @@ def main():
 
     finetune(model, enable_finetune=False)
 
-    # Class weighting for 'looks' labels. Criterion, optimizer, scheduler
-    criterion = {}
-    for name in num_classes_dict:
-        if name == 'looks':
-            criterion[name] = nn.CrossEntropyLoss(weight=class_weight(45000, 5000, device))
-        elif name == 'crosses':
-            criterion[name] = nn.CrossEntropyLoss(weight=class_weight(40000, 10000, device))
-        else:
-            criterion[name] = nn.CrossEntropyLoss()
+    actions_labels_count = np.array(([0] * 24831 + [1] * 27124))
+    looks_labels_count = np.array(([0] * 46921 + [1] * 5034))
+    crosses_labels_count = np.array(([0] * (40141 + 1739) + [1] * 10075))
+    
+    def make_weights(labels):
+        unique, counts = np.unique(labels, return_counts=True)
+        class_counts = dict(zip(unique, counts))
+        weights = np.array([1.0 / class_counts[y] for y in labels])
+        return weights
+    
+    actions_weights = make_weights(actions_labels_count)
+    looks_weights = make_weights(looks_labels_count)
+    crosses_weights = make_weights(crosses_labels_count)
+
+    sample_weight = actions_weights + looks_weights + crosses_weights
+    sampler = WeightedRandomSampler(
+        weights=torch.as_tensor(sample_weight, dtype=torch.double),
+        num_samples=len(sample_weight),
+        replacement=True
+    )
+
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'
@@ -305,7 +296,6 @@ def main():
 
     os.makedirs('outputs', exist_ok=True)
 
-    #Transforms
     base_transforms = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -364,9 +354,11 @@ def main():
             del payload
 
             dataset = LMDBChunkDataset(lmdb_path, transform_tight=base_transforms, transform_context=base_transforms)
+            for idx, () in enumerate(dataset):
+                pass
             loader_kwargs = dict(
                 batch_size=batch_size,
-                shuffle=True,
+                sampler=sampler,
                 num_workers=num_workers,
                 collate_fn=collate_fn,
                 pin_memory=False,
