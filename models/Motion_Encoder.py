@@ -79,25 +79,19 @@ class MotionEncoder(nn.Module):
         img_feats = img_feats.squeeze(-1).squeeze(-1)  # [B*T, hidden_dim]
         img_feats = img_feats.view(B, T, -1)  # [B, T, hidden_dim]
 
-        #Process motion:
-        # Normalization before encoding
         motion_norm = (motion_data - motion_data.mean(dim=1, keepdim=True)) / (motion_data.std(dim=1, keepdim=True) + 1e-6)
 
         motion_data = motion_norm.transpose(1, 2) # [B, motion_dim, T]
         motion_feats = self.motion_encoder(motion_data) # [B, hidden_dim/2, T]
         motion_feats = motion_feats.transpose(1, 2) # [B, T, hidden_dim/2]
         
-        # Combine features
         combined = torch.cat([img_feats, motion_feats], dim=-1)  # [B, T, hidden_dim * 1.5]
         x = self.fusion(combined)  # [B, T, hidden_dim]
-        
-        # Process sequence
+
         x, _ = self.gru(x) # [B, T, hidden_dim]
-        
-        # Positional Encoding
+
         x = x + self.pos_encoding[:, :T, :]
-        
-        # Self-attention
+
         residual = x
         x = self.norm(x)
         x, _ = self.temporal_attn(x, x, x)
