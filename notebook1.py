@@ -11,7 +11,7 @@ from models.Unified_Module import EnsembleModel
 from config import vit_args_config, motion_enc_args_config
 
 #---- CONFIG ----
-lmdb_path = "preprocessed_train_lmdb/chunk_004500.lmdb"
+lmdb_path = "preprocessed_train_lmdb/chunk_006000.lmdb"
 batch_size = 8
 vit_args = vit_args_config()
 motion_enc_args = motion_enc_args_config()

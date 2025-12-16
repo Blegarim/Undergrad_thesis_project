@@ -36,7 +36,7 @@ def save_dataset_in_chunks_lmdb(sequences, out_dir, chunk_size=5000,
         print(f"Writing LMDB {lmdb_path} ...")
 
         est_bytes = len(chunk) * 2 * (512 * 512 * 3) * 0.25
-        map_size = max(int(est_bytes * 1.5), 2 * 1024**3)  # at least 2 GB
+        map_size = max(int(est_bytes * 1.5), 4 * 1024**3)  # at least 5 GB
         print(f"→ Allocating map_size ≈ {map_size / 1024**3:.2f} GB")
 
         env = lmdb.open(lmdb_path, map_size=map_size)  # use calculated map_size
@@ -138,8 +138,8 @@ def main(img_height=128, img_width=128, context_scale=2.0,
     print("✅ All LMDB datasets saved successfully.")
 
 if __name__ == "__main__":
-    main(img_height=128, img_width=128, context_scale=2,
+    main(img_height=160, img_width=160, context_scale=3.0,
          train=True,
-         data_aug=False,
+         data_aug=True,
          val=True,
          test=True)

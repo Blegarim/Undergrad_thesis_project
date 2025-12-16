@@ -105,7 +105,7 @@ def main(img_height=128, img_width=128, context_scale=2.0,
 
 if __name__ == "__main__":
     main(img_height=128, img_width=128, context_scale=2, 
-        train=True, 
-        data_aug=False, 
-        val=True, 
-        test=True)
+        train=False, 
+        data_aug=True, 
+        val=False, 
+        test=False)

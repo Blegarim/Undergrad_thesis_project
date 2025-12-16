@@ -388,17 +388,17 @@ if __name__ == '__main__':
     # Test the ViT_Hierarchical module
     batch_size = 1
     seq_len = 10
-    img_size = 256
+    img_size = 480
     in_channels = 3
     x = torch.randn(batch_size, seq_len, in_channels, img_size, img_size) # Example input
 
     vit = ViT_Hierarchical(
         in_channels=3,
-        stage_dims=[48, 96, 168],
-        layer_nums=[2, 4, 5],
-        head_nums=[2, 4, 7],
-        window_size=[8, 4, "global"],
-        mlp_ratio=[4, 4, 4],
+        stage_dims=[48, 96, 168, 96],
+        layer_nums=[2, 4, 5, 7],
+        head_nums=[2, 4, 7, 4],
+        window_size=[8, 4, 2, None],
+        mlp_ratio=[4, 4, 4, 4],
         d_model=224,
         drop_path=0.1,
         attn_dropout=0.1,

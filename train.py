@@ -71,8 +71,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
     if loss_weight is None:
         loss_weight = {'actions': 1.0, 'looks': 1.0, 'crosses': 1.0}
 
-    for batch_idx, (images_tight, images_context, motions, labels) in enumerate(progress_bar):
-        start_time = time.time()
+    for (images_tight, images_context, motions, labels) in progress_bar:
         images_tight = images_tight.to(device, non_blocking=True)
         images_context = images_context.to(device, non_blocking=True)
         motions = motions.to(device, non_blocking=True)
@@ -96,9 +95,6 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
         total_loss += total_batch_loss.item()
 
         del outputs, logits, targets, head_loss, weighted_loss
-
-        end_time = time.time()
-        batch_time = end_time - start_time
 
         progress_bar.set_postfix({'loss':f'{total_batch_loss.item():.4f}'})
 
@@ -282,11 +278,11 @@ def main():
     crosses_weights = make_weights(crosses_labels_count)
 
     sample_weight = actions_weights + looks_weights + crosses_weights
-    sampler = WeightedRandomSampler(
-        weights=torch.as_tensor(sample_weight, dtype=torch.double),
-        num_samples=len(sample_weight),
-        replacement=True
-    )
+    # sampler = WeightedRandomSampler(
+    #     weights=torch.as_tensor(sample_weight, dtype=torch.double),
+    #     num_samples=len(sample_weight),
+    #     replacement=True
+    # )
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
@@ -354,11 +350,9 @@ def main():
             del payload
 
             dataset = LMDBChunkDataset(lmdb_path, transform_tight=base_transforms, transform_context=base_transforms)
-            for idx, () in enumerate(dataset):
-                pass
             loader_kwargs = dict(
                 batch_size=batch_size,
-                sampler=sampler,
+                shuffle=True,
                 num_workers=num_workers,
                 collate_fn=collate_fn,
                 pin_memory=False,
