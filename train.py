@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader
 from torchvision import transforms
 from sklearn.utils.class_weight import compute_class_weight
 
@@ -62,6 +62,11 @@ def remap_cross_labels(labels):
 
 def filter_irrelevant(data):
     return [item for item in data if int(item['crosses'].item())==0 or int(item['crosses'].item())==1]
+
+def class_weight(a, b, device):
+    y = np.array([0]*a + [1]*b)
+    weight = compute_class_weight(class_weight='balanced', classes=np.unique(y), y=y)
+    return torch.tensor(weight, dtype=torch.float).to(device)
 
 def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight=None):
     model.train()
@@ -263,28 +268,11 @@ def main():
 
     finetune(model, enable_finetune=False)
 
-    actions_labels_count = np.array(([0] * 24831 + [1] * 27124))
-    looks_labels_count = np.array(([0] * 46921 + [1] * 5034))
-    crosses_labels_count = np.array(([0] * (40141 + 1739) + [1] * 10075))
-    
-    def make_weights(labels):
-        unique, counts = np.unique(labels, return_counts=True)
-        class_counts = dict(zip(unique, counts))
-        weights = np.array([1.0 / class_counts[y] for y in labels])
-        return weights
-    
-    actions_weights = make_weights(actions_labels_count)
-    looks_weights = make_weights(looks_labels_count)
-    crosses_weights = make_weights(crosses_labels_count)
-
-    sample_weight = actions_weights + looks_weights + crosses_weights
-    # sampler = WeightedRandomSampler(
-    #     weights=torch.as_tensor(sample_weight, dtype=torch.double),
-    #     num_samples=len(sample_weight),
-    #     replacement=True
-    # )
-
-    criterion = nn.CrossEntropyLoss()
+    criterion = {
+        "actions": nn.CrossEntropyLoss(),
+        "looks": nn.CrossEntropyLoss(weight=class_weight(46921, 5034, device)),
+        "crosses": nn.CrossEntropyLoss(weight=class_weight((40141+1739), 10075, device))
+    }
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'

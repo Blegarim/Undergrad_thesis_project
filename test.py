@@ -14,50 +14,9 @@ from models.Vision_Transformer import ViT_Hierarchical
 from models.Motion_Encoder import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
+from scripts.lmdb_dataset import LMDBChunkDataset
 from config import vit_args_config, motion_enc_args_config
 from train import remap_cross_labels, filter_irrelevant
-
-
-# ============================================================
-# === Dataset for preprocessed .pt chunks ====================
-# ============================================================
-
-class PTChunkDataset(Dataset):
-    """
-    For preprocessed .pt chunks that store dict samples:
-    {
-        'images_tight': Tensor[T, C, H, W],
-        'images_context': Tensor[T, C, H, W]
-        'motions': Tensor[T, 8],
-        'bboxes': ...,
-        'actions': Tensor,
-        'looks': Tensor,
-        'crosses': Tensor
-    }
-    """
-    def __init__(self, data):
-        self.data = data
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        sample = self.data[idx]
-        if isinstance(sample, dict):
-            images_tight = sample["images_tight"]
-            images_context = sample["images_context"]
-            motions = sample["motions"]
-            labels = {
-                "actions": sample["actions"],
-                "looks": sample["looks"],
-                "crosses": sample["crosses"],
-            }
-            return images_tight, images_context, motions, labels
-        elif isinstance(sample, (list, tuple)) and len(sample) == 3:
-            return sample  # backward compatibility
-        else:
-            raise ValueError(f"Unexpected sample structure at idx {idx}: {type(sample)}")
-
 
 # ============================================================
 # === Evaluation Function ====================================
@@ -178,7 +137,8 @@ def main():
     # ==== CONFIGURATION ====
     embedding_dim = 128
     batch_size = 16
-    img_size = 128
+    img_size = 160
+    context_scale = 3.0
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
     num_workers = 4
@@ -224,16 +184,16 @@ def main():
     model.load_state_dict(torch.load(model_path, map_location=device))
     print("Model loaded successfully.")
 
-    flops_per_frame = compute_flops(model, img_size, img_size, 2.0, device)
-    fps, latency_per_frame = inference_latency(model, img_size, img_size, 2.0, device)
+    flops_per_frame = compute_flops(model, img_size, img_size, context_scale, device)
+    fps, latency_per_frame = inference_latency(model, img_size, img_size, context_scale, device)
 
     # ==== Find test chunks ====
     chunk_files = sorted(
         [os.path.join(test_chunk_folder, f)
          for f in os.listdir(test_chunk_folder)
-         if f.endswith(".pt")]
+         if f.endswith(".lmdb")]
     )
-    assert len(chunk_files) > 0, f"No .pt chunks found in {test_chunk_folder}"
+    assert len(chunk_files) > 0, f"No .lmdb chunks found in {test_chunk_folder}"
 
     print(f"Found {len(chunk_files)} test chunks.")
 
@@ -249,7 +209,7 @@ def main():
 
         chunk_data = torch.load(chunk_path, map_location="cpu")
         chunk_data = filter_irrelevant(chunk_data)
-        dataset = PTChunkDataset(chunk_data)
+        dataset = LMDBChunkDataset(chunk_data)
         dataloader = DataLoader(
             dataset,
             batch_size=batch_size,
