@@ -12,9 +12,10 @@ def generate_sequences(
         seq_type='all', 
         min_track_size=10, 
         out_path='sequences.pkl',
-        seq_len=20,           # <<< new: desired subsequence length
-        stride=5,              # <<< new: sliding window stride
-        future_offset = 30
+        seq_len=20,
+        stride=5,       
+        future_offset = 20,
+        tol = 2
     ):
     """
     imdb: PIE instance
@@ -39,6 +40,12 @@ def generate_sequences(
     num_sequences = len(sequences['image'])
     dataset = []
 
+    def has_onset(signal):
+        for i in range(1, len(signal)):
+            if signal[i] == 1 and signal[i-1] == 0:
+                return True
+        return False
+
     for i in range(num_sequences):
         images = sequences['image'][i]
         bboxes = sequences['bbox'][i]
@@ -51,15 +58,25 @@ def generate_sequences(
             continue  # skip too-short tracks
 
         # Sliding window: create many fixed-length sub-sequences
-        for start in range(0, n - seq_len - future_offset + 1, stride):
+        for start in range(0, n - seq_len, stride):
             end = start + seq_len
-            target_index = end + future_offset - 1
+
+            if has_onset(crosses[start:end]) or any(crosses[start:end]):
+                continue
+
+            future_start = end
+            future_end = min(end + future_offset + tol, n)
+
+            action_event = 1 if any(actions[future_start:future_end]) else 0
+            look_event = 1 if any(looks[future_start:future_end]) else 0
+            cross_event = 1 if has_onset(crosses[future_start:future_end]) else 0
+
             dataset.append({
                 'images': images[start:end],
                 'bboxes': bboxes[start:end],
-                'actions': actions[target_index],
-                'looks': looks[target_index],
-                'crosses': crosses[target_index]
+                'actions': action_event,
+                'looks': look_event,
+                'crosses': cross_event
             })
 
     # Save the dataset to a pickle file
