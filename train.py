@@ -428,7 +428,6 @@ def main():
             for head, corr_count in chunk_corrects.items():
                 total_correct_counts[head] = total_correct_counts.get(head, 0) + int(corr_count)
                 # for per-head totals, assume chunk_n is the number of samples for that head
-                # (we used labels.size(0) in validate_one_epoch, which is same as batch_size)
                 total_label_counts[head] = total_label_counts.get(head, 0) + chunk_n
 
             del val_dataset, val_loader, chunk_corrects
