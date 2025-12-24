@@ -4,9 +4,9 @@ def get_unified_dim_model():
     return int(d_model)
 
 def vit_args_config(in_channels=3,
-                stage_dims=[48, 48, 224, 48],
+                stage_dims=[36, 36, 288, 36],
                 layer_nums=[2, 4, 5, 7],
-                head_nums=[2, 2, 8, 2],
+                head_nums=[2, 2, 16, 2],
                 window_size=[8, 4, 2, None],
                 mlp_ratio=[4, 4, 4, 4],
                 d_model=1,

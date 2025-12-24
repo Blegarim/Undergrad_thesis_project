@@ -287,7 +287,7 @@ def main():
     ])
 
     # --- Training loop ---
-    train_chunk_folder = 'preprocessed_train_lmdb'
+    train_chunk_folder = ['preprocessed_train_lmdb', 'preprocessed_train_lmdb_aug']
     val_chunk_folder = 'preprocessed_val_lmdb'
     train_chunk_files = gather_chunks(train_chunk_folder)
     val_chunk_files = gather_chunks(val_chunk_folder)
