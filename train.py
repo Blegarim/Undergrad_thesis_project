@@ -237,7 +237,7 @@ def main():
     # Configuration
     embedding_dim = 128
     learning_rate = 1e-5
-    batch_size = 8
+    batch_size = 1
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
     num_epochs = 10
@@ -287,7 +287,7 @@ def main():
     ])
 
     # --- Training loop ---
-    train_chunk_folder = 'preprocessed_train_lmdb'
+    train_chunk_folder = ['preprocessed_train_lmdb', 'preprocessed_train_lmdb_aug']
     val_chunk_folder = 'preprocessed_val_lmdb'
     train_chunk_files = gather_chunks(train_chunk_folder)
     val_chunk_files = gather_chunks(val_chunk_folder)
