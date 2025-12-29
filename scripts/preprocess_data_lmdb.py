@@ -138,7 +138,7 @@ def main(img_height=128, img_width=128, context_scale=2.0,
     print("✅ All LMDB datasets saved successfully.")
 
 if __name__ == "__main__":
-    main(img_height=160, img_width=144, context_scale=2.5,
+    main(img_height=128, img_width=128, context_scale=3.0,
          train=True,
          data_aug=True,
          val=True,

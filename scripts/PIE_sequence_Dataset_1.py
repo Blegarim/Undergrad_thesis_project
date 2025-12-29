@@ -41,11 +41,19 @@ class PIESequenceDataset(Dataset):
         for img_path, bbox in zip(seq['images'], seq['bboxes']):
             img_path = Path(img_path)
             if not img_path.exists():
-                alt_path = img_path.with_suffix('.jpg')
-                if alt_path.exists():
-                    img_path = alt_path
+                candidates = [img_path.with_suffix('.jpg')]
+                if img_path.stem.isdigit():
+                    padded = img_path.stem.zfill(6)
+                    candidates.append(img_path.with_name(padded + img_path.suffix))
+                    candidates.append(img_path.with_name(padded + '.jpg'))
+                for alt_path in candidates:
+                    if alt_path.exists():
+                        img_path = alt_path
+                        break
                 else:
-                    raise FileNotFoundError(f"Image not found: {img_path} or {alt_path}")
+                    raise FileNotFoundError(
+                        f"Image not found: {img_path} or any of {candidates}"
+                    )
             with open(img_path, 'rb') as in_file:
                 buff = in_file.read()
             try:
