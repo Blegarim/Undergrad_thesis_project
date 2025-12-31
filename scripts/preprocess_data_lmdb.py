@@ -1,19 +1,21 @@
 import os
 import torch
+from torch.utils.data import DataLoader
 from torchvision import transforms
+from torchvision.io import encode_jpeg
 import gc
 from PIE_sequence_Dataset_1 import PIESequenceDataset, load_sequences_from_pkl
-import io
 import lmdb
 import pickle
-from PIL import Image
 from tqdm import tqdm
 
 def save_dataset_in_chunks_lmdb(sequences, out_dir, chunk_size=5000,
                                 transform_tight=None, transform_context=None,
                                 start_idx=0, end_idx=None, context_scale=2.0,
-                                jpeg_quality=90):
+                                jpeg_quality=90, num_workers=12,
+                                prefetch_factor=2):
     """
+
     Saves preprocessed crops and metadata into LMDB chunks with JPEG compression.
     Each chunk ≈ 1–3 GB depending on sequence count and crop size.
     """
@@ -25,12 +27,24 @@ def save_dataset_in_chunks_lmdb(sequences, out_dir, chunk_size=5000,
 
     for i in range(start_idx, end_idx, chunk_size):
         chunk = sequences[i:i+chunk_size]
-        dataset = PIESequenceDataset(chunk, 
-                                     transform_tight=transform_tight, 
-                                     transform_context=transform_context,
-                                     crop=True, 
-                                     preload=True, 
-                                     context_scale=context_scale)
+        dataset = PIESequenceDataset(
+            chunk,
+            transform_tight=transform_tight,
+            transform_context=transform_context,
+            crop=True,
+            preload=False,
+            context_scale=context_scale,
+        )
+        loader_kwargs = {
+            "batch_size": 1,
+            "shuffle": False,
+            "num_workers": num_workers,
+            "pin_memory": False,
+        }
+        if num_workers > 0:
+            loader_kwargs["prefetch_factor"] = prefetch_factor
+            loader_kwargs["persistent_workers"] = True
+        loader = DataLoader(dataset, **loader_kwargs)
 
         lmdb_path = os.path.join(out_dir, f"chunk_{i:06d}.lmdb")
         print(f"Writing LMDB {lmdb_path} ...")
@@ -41,23 +55,29 @@ def save_dataset_in_chunks_lmdb(sequences, out_dir, chunk_size=5000,
 
         env = lmdb.open(lmdb_path, map_size=map_size)  # use calculated map_size
         with env.begin(write=True) as txn:
-            for j, sample in enumerate(tqdm(dataset.data, desc=f"Chunk {i}")):
-                # Encode tight/context crops as JPEG
+            for j, sample in enumerate(tqdm(loader, desc=f"Chunk {i}", total=len(chunk))):
+                def unbatch(value):
+                    if torch.is_tensor(value):
+                        return value[0]
+                    if isinstance(value, (list, tuple)) and len(value) == 1:
+                        return value[0]
+                    return value
+
+                sample = {k: unbatch(v) for k, v in sample.items()}
+
+                # Encode tight/context crops as JPEG (torchvision, no PIL roundtrip)
                 for k, img in enumerate(sample['images_tight']):
-                    buf = io.BytesIO()
-                    # Convert tensor -> uint8 image
-                    img_pil = Image.fromarray((img.permute(1,2,0).numpy() * 255).astype('uint8'))
-                    img_pil.save(buf, format='JPEG', quality=jpeg_quality)
-                    txn.put(f"{j}_{k}_tight".encode(), buf.getvalue())
+                    img_uint8 = (img * 255.0).clamp(0, 255).to(torch.uint8).contiguous()
+                    jpg = encode_jpeg(img_uint8, quality=jpeg_quality)
+                    txn.put(f"{j}_{k}_tight".encode(), jpg.numpy().tobytes())
 
                 for k, img in enumerate(sample['images_context']):
-                    buf = io.BytesIO()
-                    img_pil = Image.fromarray((img.permute(1,2,0).numpy() * 255).astype('uint8'))
-                    img_pil.save(buf, format='JPEG', quality=jpeg_quality)
-                    txn.put(f"{j}_{k}_context".encode(), buf.getvalue())
+                    img_uint8 = (img * 255.0).clamp(0, 255).to(torch.uint8).contiguous()
+                    jpg = encode_jpeg(img_uint8, quality=jpeg_quality)
+                    txn.put(f"{j}_{k}_context".encode(), jpg.numpy().tobytes())
 
                 # Save metadata (motions, actions, etc.)
-                meta = {key: val for key, val in sample.items() 
+                meta = {key: val for key, val in sample.items()
                         if not key.startswith("images")}
                 txn.put(f"{j}_meta".encode(), pickle.dumps(meta))
 

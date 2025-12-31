@@ -68,7 +68,7 @@ def class_weight(a, b, device):
     weight = compute_class_weight(class_weight='balanced', classes=np.unique(y), y=y)
     return torch.tensor(weight, dtype=torch.float).to(device)
 
-def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight=None):
+def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight=None, scaler=None, use_amp=False, use_pin_memory=False):
     model.train()
     total_loss = 0
     progress_bar = tqdm(dataloader, desc='Training', total=len(dataloader))
@@ -77,26 +77,33 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
         loss_weight = {'actions': 1.0, 'looks': 1.0, 'crosses': 1.0}
 
     for (images_tight, images_context, motions, labels) in progress_bar:
-        images_tight = images_tight.to(device, non_blocking=True)
-        images_context = images_context.to(device, non_blocking=True)
-        motions = motions.to(device, non_blocking=True)
-        labels = {k: v.to(device).long() for k, v in labels.items()}
+        images_tight = images_tight.to(device, non_blocking=use_pin_memory)
+        images_context = images_context.to(device, non_blocking=use_pin_memory)
+        motions = motions.to(device, non_blocking=use_pin_memory)
+        labels = {k: v.to(device, non_blocking=use_pin_memory).long() for k, v in labels.items()}
 
         remap_cross_labels(labels)
         optimizer.zero_grad(set_to_none=True)
-        outputs = model(images_tight, images_context, motions)
+        with torch.cuda.amp.autocast(enabled=use_amp):
+            outputs = model(images_tight, images_context, motions)
 
         total_batch_loss = 0.0
-        loss_dict = {}
         for name in outputs:
             logits = outputs[name]
+            if use_amp:
+                logits = logits.float()
             targets = labels[name]
             head_loss = criterion[name](logits, targets)
             weighted_loss = loss_weight.get(name, 1.0) * head_loss
             total_batch_loss += weighted_loss
-            loss_dict[name] = head_loss.item()
-        total_batch_loss.backward()
-        optimizer.step()
+
+        if scaler is not None:
+            scaler.scale(total_batch_loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            total_batch_loss.backward()
+            optimizer.step()
         total_loss += total_batch_loss.item()
 
         del outputs, logits, targets, head_loss, weighted_loss
@@ -110,7 +117,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
     tqdm.write(f"Average chunk Loss: {avg_loss:.4f}")
     return avg_loss
 
-def validate_one_epoch(model, dataloader, criterion, device):
+def validate_one_epoch(model, dataloader, criterion, device, use_amp=False, use_pin_memory=False):
     """
     Returns:
       - loss_sum: float (sum of per-sample losses across the dataloader)
@@ -123,21 +130,24 @@ def validate_one_epoch(model, dataloader, criterion, device):
     total = {}
     samples = 0
 
-    with torch.no_grad():
+    with torch.inference_mode():
         for images_tight, images_context, motions, labels in dataloader:
             batch_size = images_tight.size(0)
-            images_tight = images_tight.to(device)
-            images_context = images_context.to(device)
-            motions = motions.to(device)
-            labels = {k: v.to(device).long() for k, v in labels.items()}
+            images_tight = images_tight.to(device, non_blocking=use_pin_memory)
+            images_context = images_context.to(device, non_blocking=use_pin_memory)
+            motions = motions.to(device, non_blocking=use_pin_memory)
+            labels = {k: v.to(device, non_blocking=use_pin_memory).long() for k, v in labels.items()}
 
             remap_cross_labels(labels)
-            outputs = model(images_tight, images_context, motions)
+            with torch.cuda.amp.autocast(enabled=use_amp):
+                outputs = model(images_tight, images_context, motions)
 
             # accumulate loss as sum over samples (handles criterion reduction='mean')
             batch_loss = 0.0
             for name in outputs: 
                 logits = outputs[name]
+                if use_amp:
+                    logits = logits.float()
                 targets = labels[name]
                 loss_i = criterion[name](logits, targets)
                 # convert mean loss to sum
@@ -215,6 +225,15 @@ def get_hdd_temp(dev="/dev/sda"):
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+    use_amp = device.type == "cuda"
+    use_pin_memory = device.type == "cuda"
+
+    if device.type == "cuda":
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        if hasattr(torch, "set_float32_matmul_precision"):
+            torch.set_float32_matmul_precision("high")
 
     datetime_str = datetime.now().strftime("%m%d_%H%M")
     log_file = f'training_log/training_log_{datetime_str}.csv'
@@ -237,11 +256,11 @@ def main():
     # Configuration
     embedding_dim = 128
     learning_rate = 1e-5
-    batch_size = 1
+    batch_size = 4
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
     num_epochs = 10
-    num_workers = 0
+    num_workers = 8
     num_classes_dict = {
             'actions': 2,
             'looks': 2,
@@ -274,11 +293,13 @@ def main():
         "crosses": nn.CrossEntropyLoss(weight=class_weight((40141+1739), 10075, device))
     }
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
+    scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'
     )
 
-    os.makedirs('outputs', exist_ok=True)
+    os.makedirs('model_outputs', exist_ok=True)
+    os.makedirs('best_model_outputs', exist_ok=True)
 
     base_transforms = transforms.Compose([
         transforms.ToTensor(),
@@ -343,7 +364,7 @@ def main():
                 shuffle=True,
                 num_workers=num_workers,
                 collate_fn=collate_fn,
-                pin_memory=False,
+                pin_memory=use_pin_memory,
                 persistent_workers=False,
             )
             if num_workers > 0:
@@ -352,11 +373,22 @@ def main():
             loader = DataLoader(dataset, **loader_kwargs)
             print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] Training {len(loader)} batches from {chunk_path}")
             print(f"→ Training {len(loader)} batches in this chunk")
-            avg_loss = train_one_chunk(model, loader, criterion, optimizer, device, loss_weight=loss_weight)
+            avg_loss = train_one_chunk(
+                model,
+                loader,
+                criterion,
+                optimizer,
+                device,
+                loss_weight=loss_weight,
+                scaler=scaler,
+                use_amp=use_amp,
+                use_pin_memory=use_pin_memory,
+            )
             epoch_loss.append(avg_loss)
 
             del lmdb_path, dataset, loader
-            torch.cuda.empty_cache()
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
             trash = gc.collect()
             print(f"Unreachable trash: {trash}")
 
@@ -387,7 +419,8 @@ def main():
 
         # final cleanup
         gc.collect()
-        torch.cuda.empty_cache()
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
 
         # ---- end of chunks ----
         if len(epoch_loss) == 0:
@@ -395,6 +428,8 @@ def main():
         else:
             avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
         print(f"Epoch {epoch + 1} average loss: {avg_epoch_loss:.4f}")
+
+        torch.save(model.state_dict(), f'model_outputs/model_epoch{epoch+1}_{datetime_str}.pth')
 
         # ---- validation ----
         total_val_loss_sum = 0.0
@@ -416,10 +451,17 @@ def main():
                 shuffle=False,
                 num_workers=0,
                 collate_fn=collate_fn,
-                pin_memory=False
+                pin_memory=use_pin_memory
             )
 
-            chunk_loss_sum, chunk_n, chunk_corrects = validate_one_epoch(model, val_loader, criterion, device)
+            chunk_loss_sum, chunk_n, chunk_corrects = validate_one_epoch(
+                model,
+                val_loader,
+                criterion,
+                device,
+                use_amp=use_amp,
+                use_pin_memory=use_pin_memory,
+            )
 
             total_val_loss_sum += chunk_loss_sum
             total_val_samples += chunk_n
@@ -432,7 +474,8 @@ def main():
 
             del val_dataset, val_loader, chunk_corrects
             gc.collect()
-            torch.cuda.empty_cache()
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
 
         if total_val_samples == 0:
             raise RuntimeError("No validation samples found!")
@@ -450,7 +493,6 @@ def main():
 
         scheduler.step(val_loss)
 
-
         with open(log_file, mode='a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([
@@ -466,12 +508,12 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             print(f"New best validation loss: {best_val_loss:.4f}. Saving model...")
-            torch.save(model.state_dict(), f'outputs/best_model_epoch{epoch+1}_{datetime_str}.pth')
+            torch.save(model.state_dict(), f'best_model_outputs/best_model_epoch{epoch+1}_{datetime_str}.pth')
 
         early_stopping(val_loss)
         if early_stopping.early_stop:
             print("Early stopping triggered. Saving final model and stopping.")
-            torch.save(model.state_dict(), f'outputs/final_model_epoch{epoch+1}_{datetime_str}.pth')
+            torch.save(model.state_dict(), f'model_outputs/final_model_epoch{epoch+1}_{datetime_str}.pth')
             break
         
         temp = get_hdd_temp()
