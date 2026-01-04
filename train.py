@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
 from sklearn.utils.class_weight import compute_class_weight
 
@@ -19,6 +19,7 @@ import gc
 import random
 import csv
 import psutil
+from collections import Counter
 import multiprocessing as mp
 import multiprocessing.queues as mpq
 import subprocess
@@ -67,6 +68,57 @@ def class_weight(a, b, device):
     y = np.array([0]*a + [1]*b)
     weight = compute_class_weight(class_weight='balanced', classes=np.unique(y), y=y)
     return torch.tensor(weight, dtype=torch.float).to(device)
+
+def _inverse_class_weights(counts):
+    total = sum(counts.values())
+    n_classes = len(counts)
+    weights = {}
+    for k, v in counts.items():
+        if v == 0:
+            weights[k] = 0.0
+        else:
+            weights[k] = total / (n_classes * v)
+    return weights
+
+def build_sampler_weights(lmdb_path, seq_ids, cross_pow=1.0, action_pow=0.5, look_pow=0.5, min_weight=1e-6):
+    label_rows = []
+    counts = {
+        "actions": Counter(),
+        "looks": Counter(),
+        "crosses": Counter(),
+    }
+
+    env = lmdb.open(lmdb_path, readonly=True, lock=False)
+    try:
+        with env.begin(write=False) as txn:
+            for seq_id in seq_ids:
+                meta = pickle.loads(txn.get(f"{seq_id}_meta".encode()))
+                actions = int(meta["actions"])
+                looks = int(meta["looks"])
+                crosses = int(meta["crosses"])
+                if crosses < 0:
+                    crosses = 0
+                label_rows.append((actions, looks, crosses))
+                counts["actions"][actions] += 1
+                counts["looks"][looks] += 1
+                counts["crosses"][crosses] += 1
+    finally:
+        env.close()
+
+    action_w = _inverse_class_weights(counts["actions"])
+    look_w = _inverse_class_weights(counts["looks"])
+    cross_w = _inverse_class_weights(counts["crosses"])
+
+    weights = []
+    for actions, looks, crosses in label_rows:
+        weight = max(min_weight, cross_w.get(crosses, min_weight)) ** cross_pow
+        if action_pow > 0:
+            weight *= max(min_weight, action_w.get(actions, min_weight)) ** action_pow
+        if look_pow > 0:
+            weight *= max(min_weight, look_w.get(looks, min_weight)) ** look_pow
+        weights.append(weight)
+
+    return weights, counts
 
 def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight=None, scaler=None, use_amp=False, use_pin_memory=False):
     model.train()
@@ -255,33 +307,44 @@ def main():
 
     # Configuration
     embedding_dim = 128
-    learning_rate = 1e-5
+    learning_rate = 1e-4
     batch_size = 4
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
-    num_epochs = 10
+    num_epochs = 20
     num_workers = 8
     num_classes_dict = {
             'actions': 2,
             'looks': 2,
             'crosses': 2
         }
-    loss_weight = {'actions': 1.0, 'looks': 0.6, 'crosses': 1.2}
+    loss_weight = None
+    use_weighted_sampler = True
+    sampler_powers = {"crosses": 0.5, "actions": 0.0, "looks": 0.0}
     
-    early_stopping = EarlyStopping(patience=4, min_delta=0.001)
+    early_stopping = EarlyStopping(patience=7, min_delta=0.001)
     best_val_loss = float('inf')
 
     model = EnsembleModel(
         motion_enc=MotionEncoder(**motion_enc_args),
         vit=ViT_Hierarchical(**vit_args),
-        cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
+        cross_attention=CrossAttentionModule(
+            d_model=embedding_dim,
+            num_heads=4,
+            num_classes_dict=num_classes_dict,
+            use_frame_crosses=True,
+            frame_pool="logsumexp",
+        )
     ).to(device)
 
     # Load model
-    checkpoint_path = 'outputs/best_model_epoch.pth'
+    checkpoint_path = 'best_model_outputs/best_model_epoch1.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
-        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+        state_dict = torch.load(checkpoint_path, map_location=device)
+        missing, unexpected = model.load_state_dict(state_dict, strict=False)
+        if missing or unexpected:
+            print(f"Checkpoint mismatch: missing={missing}, unexpected={unexpected}")
     else:
         print(f'Checkpoint {checkpoint_path} not found. Starting from scratch.')
 
@@ -289,13 +352,13 @@ def main():
 
     criterion = {
         "actions": nn.CrossEntropyLoss(),
-        "looks": nn.CrossEntropyLoss(weight=class_weight(46921, 5034, device)),
-        "crosses": nn.CrossEntropyLoss(weight=class_weight((40141+1739), 10075, device))
+        "looks": nn.CrossEntropyLoss(),
+        "crosses": nn.CrossEntropyLoss()
     }
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
     scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=1, threshold=0.0001, threshold_mode='rel'
+        optimizer, mode='min', factor=0.5, patience=2, threshold=0.0001, threshold_mode='rel'
     )
 
     os.makedirs('model_outputs', exist_ok=True)
@@ -308,6 +371,7 @@ def main():
     ])
 
     # --- Training loop ---
+    weight_cache = {}
     train_chunk_folder = ['preprocessed_train_lmdb', 'preprocessed_train_lmdb_aug']
     val_chunk_folder = 'preprocessed_val_lmdb'
     train_chunk_files = gather_chunks(train_chunk_folder)
@@ -369,6 +433,35 @@ def main():
             )
             if num_workers > 0:
                 loader_kwargs['prefetch_factor'] = 2
+
+            if use_weighted_sampler:
+                cached = weight_cache.get(lmdb_path)
+                if cached is None:
+                    weights, counts = build_sampler_weights(
+                        lmdb_path,
+                        dataset.seq_ids,
+                        cross_pow=sampler_powers["crosses"],
+                        action_pow=sampler_powers["actions"],
+                        look_pow=sampler_powers["looks"],
+                    )
+                    weight_cache[lmdb_path] = (weights, counts)
+                else:
+                    weights, counts = cached
+
+                sampler = WeightedRandomSampler(
+                    weights=torch.DoubleTensor(weights),
+                    num_samples=len(weights),
+                    replacement=True,
+                )
+                loader_kwargs["sampler"] = sampler
+                loader_kwargs["shuffle"] = False
+                print(
+                    "Sampler counts: "
+                    f"actions={dict(counts['actions'])} "
+                    f"looks={dict(counts['looks'])} "
+                    f"crosses={dict(counts['crosses'])} "
+                    f"powers={sampler_powers}"
+                )
 
             loader = DataLoader(dataset, **loader_kwargs)
             print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] Training {len(loader)} batches from {chunk_path}")
@@ -441,8 +534,8 @@ def main():
             print(f"Loading validation chunk {chunk_path}")
             val_dataset = LMDBChunkDataset(
                 chunk_path,
-                transform_tight=None,   
-                transform_context=None
+                transform_tight=base_transforms,   
+                transform_context=base_transforms
             )
 
             val_loader = DataLoader(
@@ -516,15 +609,15 @@ def main():
             torch.save(model.state_dict(), f'model_outputs/final_model_epoch{epoch+1}_{datetime_str}.pth')
             break
         
-        temp = get_hdd_temp()
-        if temp and temp >= 50:
-            rest = 180
-        elif temp and temp >= 40:
-            rest = 120
-        else:
-            rest = 60
-        print(f"HDD at {temp}, resting for {rest}...")
-        time.sleep(rest)
+        # temp = get_hdd_temp()
+        # if temp and temp >= 50:
+        #     rest = 180
+        # elif temp and temp >= 40:
+        #     rest = 120
+        # else:
+        #     rest = 1
+        # print(f"HDD at {temp}, resting for {rest}...")
+        time.sleep(1)
 
 if __name__ == "__main__":
     mp.set_start_method('spawn', force=True)

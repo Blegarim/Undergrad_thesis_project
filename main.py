@@ -36,10 +36,16 @@ num_classes_dict = {
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Initialize the multimodal model
-model = EnsembleModel(
+    model = EnsembleModel(
         motion_enc=MotionEncoder(**motion_enc_args),
         vit=ViT_Hierarchical(**vit_args),
-        cross_attention=CrossAttentionModule(d_model=embedding_dim, num_heads=4, num_classes_dict=num_classes_dict)
+        cross_attention=CrossAttentionModule(
+            d_model=embedding_dim,
+            num_heads=4,
+            num_classes_dict=num_classes_dict,
+            use_frame_crosses=True,
+            frame_pool="logsumexp",
+        )
     ).to(device)
 
 model.load_state_dict(torch.load(model_path, map_location=device)) # Load the trained model

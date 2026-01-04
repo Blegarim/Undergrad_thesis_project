@@ -2,7 +2,15 @@ import torch
 import torch.nn as nn
 
 class CrossAttentionModule(nn.Module):
-    def __init__(self, d_model=128, num_heads=8, num_classes_dict=None, dropout=0.1):
+    def __init__(
+        self,
+        d_model=128,
+        num_heads=8,
+        num_classes_dict=None,
+        dropout=0.1,
+        use_frame_crosses=False,
+        frame_pool="logsumexp",
+    ):
         super().__init__()
         # Cross Attention: Query from motion, Key and Value from CNN features
         self.cross_attn = nn.MultiheadAttention(
@@ -11,6 +19,9 @@ class CrossAttentionModule(nn.Module):
             dropout = dropout,
             batch_first = True
         )
+
+        self.use_frame_crosses = use_frame_crosses
+        self.frame_pool = frame_pool
 
         self.pool_mlp = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
@@ -27,6 +38,10 @@ class CrossAttentionModule(nn.Module):
                 nn.Linear(d_model, num_classes)
             ) for name, num_classes in num_classes_dict.items()   
         })
+
+        self.crosses_frame_head = None
+        if self.use_frame_crosses and num_classes_dict and "crosses" in num_classes_dict:
+            self.crosses_frame_head = nn.Linear(d_model, num_classes_dict["crosses"])
 
     def forward(self, motion_feats, image_feats, key_padding_mask=None):
         """
@@ -47,7 +62,23 @@ class CrossAttentionModule(nn.Module):
 
         pooled = (attn_output * weights).sum(dim=1) # Shape: [batch_size, d_model]
 
-        logits = {key: head(pooled) for key, head in self.classifier.items()}
+        logits = {}
+        for key, head in self.classifier.items():
+            if key == "crosses" and self.use_frame_crosses:
+                continue
+            logits[key] = head(pooled)
+
+        if self.use_frame_crosses and self.crosses_frame_head is not None:
+            frame_logits = self.crosses_frame_head(attn_output)  # [B, T, C]
+            if self.frame_pool == "logsumexp":
+                crosses_logits = torch.logsumexp(frame_logits, dim=1)
+            elif self.frame_pool == "max":
+                crosses_logits = frame_logits.max(dim=1).values
+            elif self.frame_pool == "mean":
+                crosses_logits = frame_logits.mean(dim=1)
+            else:
+                raise ValueError(f"Unsupported frame_pool: {self.frame_pool}")
+            logits["crosses"] = crosses_logits
         return logits
 
 
