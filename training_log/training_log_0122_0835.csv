@@ -1,0 +1,2 @@
+Epoch,Avg Train Loss,Actions Acc,Looks Acc,Crosses Acc,Val Loss,Overall Val Acc
+1,0.9289,0.539,0.7786,0.9644,1.5995,0.7607

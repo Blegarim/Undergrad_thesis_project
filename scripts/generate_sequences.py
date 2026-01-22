@@ -94,7 +94,7 @@ if __name__ == '__main__':
     pie_path = ROOT_DIR / 'data'
     imdb = PIE(data_path=pie_path)
 
-    # generate_sequences(imdb, split='train', seq_type='all', out_path='sequences_train.pkl')
-    # generate_sequences(imdb, split='val', seq_type='all', out_path='sequences_val.pkl')
-    # generate_sequences(imdb, split='test', seq_type='all', out_path='sequences_test.pkl')
-    generate_sequences(imdb, split='all', seq_type='all', out_path='sequences_all.pkl')
+    generate_sequences(imdb, split='train', seq_type='all', out_path='sequences_train.pkl')
+    generate_sequences(imdb, split='val', seq_type='all', out_path='sequences_val.pkl')
+    generate_sequences(imdb, split='test', seq_type='all', out_path='sequences_test.pkl')
+    # generate_sequences(imdb, split='all', seq_type='all', out_path='sequences_all.pkl')

@@ -140,14 +140,18 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
             outputs = model(images_tight, images_context, motions)
 
         total_batch_loss = 0.0
-        for name in outputs:
-            logits = outputs[name]
-            if use_amp:
-                logits = logits.float()
+        for name in ["actions", "looks", "crosses"]:
+            if name == "crosses":
+                if model.cross_attention.use_frame_crosses:
+                    logits = outputs["crosses_frame"]
+                else:
+                    logits = outputs["crosses_pooled"]
+            else:
+                logits = outputs[name]
+
             targets = labels[name]
             head_loss = criterion[name](logits, targets)
-            weighted_loss = loss_weight.get(name, 1.0) * head_loss
-            total_batch_loss += weighted_loss
+            total_batch_loss += loss_weight.get(name, 1.0) * head_loss
 
         if scaler is not None:
             scaler.scale(total_batch_loss).backward()
@@ -158,7 +162,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
             optimizer.step()
         total_loss += total_batch_loss.item()
 
-        del outputs, logits, targets, head_loss, weighted_loss
+        del outputs, logits, targets, head_loss
 
         progress_bar.set_postfix({'loss':f'{total_batch_loss.item():.4f}'})
 
@@ -167,6 +171,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
         return float('nan')  
     avg_loss = total_loss / len(dataloader)
     tqdm.write(f"Average chunk Loss: {avg_loss:.4f}")
+    torch.cuda.empty_cache()
     return avg_loss
 
 def validate_one_epoch(model, dataloader, criterion, device, use_amp=False, use_pin_memory=False):
@@ -196,8 +201,14 @@ def validate_one_epoch(model, dataloader, criterion, device, use_amp=False, use_
 
             # accumulate loss as sum over samples (handles criterion reduction='mean')
             batch_loss = 0.0
-            for name in outputs: 
-                logits = outputs[name]
+            for name in ["actions", "looks", "crosses"]: 
+                if name == "crosses":
+                    if model.cross_attention.use_frame_crosses:
+                        logits = outputs["crosses_frame"]
+                    else:
+                        logits = outputs["crosses_pooled"]
+                else:
+                    logits = outputs[name]
                 if use_amp:
                     logits = logits.float()
                 targets = labels[name]
@@ -311,18 +322,18 @@ def main():
     batch_size = 4
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
-    num_epochs = 20
-    num_workers = 8
+    num_epochs = 30
+    num_workers = 2
     num_classes_dict = {
             'actions': 2,
             'looks': 2,
             'crosses': 2
         }
     loss_weight = None
-    use_weighted_sampler = True
-    sampler_powers = {"crosses": 0.5, "actions": 0.0, "looks": 0.0}
+    use_weighted_sampler = False 
+    sampler_powers = {"crosses": 1, "actions": 0.5, "looks": 0.5}
     
-    early_stopping = EarlyStopping(patience=7, min_delta=0.001)
+    early_stopping = EarlyStopping(patience=15, min_delta=0.001)
     best_val_loss = float('inf')
 
     model = EnsembleModel(
@@ -338,7 +349,7 @@ def main():
     ).to(device)
 
     # Load model
-    checkpoint_path = 'best_model_outputs/best_model_epoch1.pth'
+    checkpoint_path = 'best_model_outputs/best_model_epoch10_0121_2029.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
         state_dict = torch.load(checkpoint_path, map_location=device)
@@ -372,8 +383,8 @@ def main():
 
     # --- Training loop ---
     weight_cache = {}
-    train_chunk_folder = ['preprocessed_train_lmdb', 'preprocessed_train_lmdb_aug']
-    val_chunk_folder = 'preprocessed_val_lmdb'
+    train_chunk_folder = ['preprocessed_train', 'preprocessed_train_aug']
+    val_chunk_folder = 'preprocessed_val'
     train_chunk_files = gather_chunks(train_chunk_folder)
     val_chunk_files = gather_chunks(val_chunk_folder)
 
@@ -432,7 +443,7 @@ def main():
                 persistent_workers=False,
             )
             if num_workers > 0:
-                loader_kwargs['prefetch_factor'] = 2
+                loader_kwargs['prefetch_factor'] = 1
 
             if use_weighted_sampler:
                 cached = weight_cache.get(lmdb_path)
@@ -466,6 +477,7 @@ def main():
             loader = DataLoader(dataset, **loader_kwargs)
             print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] Training {len(loader)} batches from {chunk_path}")
             print(f"→ Training {len(loader)} batches in this chunk")
+            
             avg_loss = train_one_chunk(
                 model,
                 loader,
@@ -484,6 +496,8 @@ def main():
                 torch.cuda.empty_cache()
             trash = gc.collect()
             print(f"Unreachable trash: {trash}")
+
+            # Additional memory cleanup - removed duplicate empty_cache
 
             next_idx = chunk_idx + preload
             if next_idx < len(train_chunk_files):
@@ -512,8 +526,7 @@ def main():
 
         # final cleanup
         gc.collect()
-        if device.type == "cuda":
-            torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
 
         # ---- end of chunks ----
         if len(epoch_loss) == 0:

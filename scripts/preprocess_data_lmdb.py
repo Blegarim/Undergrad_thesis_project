@@ -50,7 +50,7 @@ def save_dataset_in_chunks_lmdb(sequences, out_dir, chunk_size=5000,
         print(f"Writing LMDB {lmdb_path} ...")
 
         est_bytes = len(chunk) * 2 * (512 * 512 * 3) * 0.25 * 5
-        map_size = max(int(est_bytes * 1.5), 20 * 1024**3)  
+        map_size = max(int(est_bytes * 1.5), 4 * 1024**3)  
         print(f"→ Allocating map_size ≈ {map_size / 1024**3:.2f} GB")
 
         env = lmdb.open(lmdb_path, map_size=map_size)  # use calculated map_size
@@ -105,7 +105,8 @@ def img_augment(height=160, width=160):
     ])
 
 def main(img_height=128, img_width=128, context_scale=2.0,
-         train=True, data_aug=False, val=True, test=True):
+         train=True, data_aug=False, val=True, test=True, 
+         chunk_size=4500):
     from PIE_sequence_Dataset_1 import load_sequences_from_pkl
     print("Starting LMDB preprocessing pipeline...")
 
@@ -116,41 +117,41 @@ def main(img_height=128, img_width=128, context_scale=2.0,
 
     # --- Load PKL sequences (only for preprocessing) ---
     if train:
-        train_sequences = load_sequences_from_pkl('sequences_all_train_balanced_30_70.pkl')
+        train_sequences = load_sequences_from_pkl('sequences_train_balanced.pkl')
     if val:
-        val_sequences = load_sequences_from_pkl('sequences_all_val_balanced_30_70.pkl')
+        val_sequences = load_sequences_from_pkl('sequences_val_balanced.pkl')
     if test:
-        test_sequences = load_sequences_from_pkl('sequences_all_test_balanced_30_70.pkl')
+        test_sequences = load_sequences_from_pkl('sequences_test_balanced.pkl')
 
     # --- Preprocess into LMDB ---
     if train:
         save_dataset_in_chunks_lmdb(train_sequences,
-            out_dir='preprocessed_all_train_lmdb_balanced',
-            chunk_size=7500,
+            out_dir='preprocessed_train_balanced',
+            chunk_size=chunk_size,
             transform_tight=transform_tight,
             transform_context=transform_context,
             context_scale=context_scale)
     
     if data_aug:
         save_dataset_in_chunks_lmdb(train_sequences,
-            out_dir='preprocessed_all_train_lmdb_aug_balanced',
-            chunk_size=7500,
+            out_dir='preprocessed_train_aug_balanced',
+            chunk_size=chunk_size,
             transform_tight=augmented_tight,
             transform_context=augmented_context,
             context_scale=context_scale)
     
     if val:
         save_dataset_in_chunks_lmdb(val_sequences,
-            out_dir='preprocessed_all_val_lmdb_balanced',
-            chunk_size=7500,
+            out_dir='preprocessed_val_balanced',
+            chunk_size=chunk_size,
             transform_tight=transform_tight,
             transform_context=transform_context,
             context_scale=context_scale)
     
     if test:
         save_dataset_in_chunks_lmdb(test_sequences,
-            out_dir='preprocessed_all_test_lmdb_balanced',
-            chunk_size=7500,
+            out_dir='preprocessed_test_balanced',
+            chunk_size=chunk_size,
             transform_tight=transform_tight,
             transform_context=transform_context,
             context_scale=context_scale)
@@ -162,4 +163,5 @@ if __name__ == "__main__":
          train=True,
          data_aug=True,
          val=True,
-         test=True)
+         test=True,
+         chunk_size=5060)
