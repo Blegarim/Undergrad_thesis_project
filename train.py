@@ -329,8 +329,8 @@ def main():
             'looks': 2,
             'crosses': 2
         }
-    loss_weight = None
-    use_weighted_sampler = False 
+    loss_weight = {'actions': 0.8, 'looks': 0.8, 'crosses': 1.2}
+    use_weighted_sampler = True 
     sampler_powers = {"crosses": 1, "actions": 0.5, "looks": 0.5}
     
     early_stopping = EarlyStopping(patience=15, min_delta=0.001)

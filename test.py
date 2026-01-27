@@ -185,8 +185,8 @@ def main():
         'looks': 2,
         'crosses': 2
     }
-    model_path = "best_model_outputs/best_model_epoch2_0102_1544.pth"
-    test_chunk_folder = "preprocessed_test_lmdb"
+    model_path = "best_model_outputs/best_model_epoch28_0122_1511.pth"
+    test_chunk_folder = "preprocessed_test"
     log_dir = "training_log"
     os.makedirs(log_dir, exist_ok=True)
     base_transforms = transforms.Compose([
