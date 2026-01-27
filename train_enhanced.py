@@ -218,11 +218,11 @@ def main():
     # Get configuration
     if args.enable_advanced:
         config = get_preset_config(args.preset)
-        print(f"🚀 Using {args.preset} preset with advanced imbalance handling")
+        print(f"Using {args.preset} preset with advanced imbalance handling")
     else:
         config = get_training_config()
         config['use_advanced_imbalance_handling'] = False
-        print("📚 Using original training pipeline (no advanced imbalance handling)")
+        print("Using original training pipeline (no advanced imbalance handling)")
     
     validate_config(config)
     
@@ -238,7 +238,7 @@ def main():
         ]
         writer.writerow(header)
     
-    print(f'📊 Logging enhanced training progress to {log_file}')
+    print(f'Logging enhanced training progress to {log_file}')
     
     # Model configuration
     embedding_dim = config['embedding_dim']
@@ -269,13 +269,13 @@ def main():
     
     # Load checkpoint
     if os.path.exists(args.checkpoint_path):
-        print(f'📂 Loading model from {args.checkpoint_path}')
+        print(f'Loading model from {args.checkpoint_path}')
         state_dict = torch.load(args.checkpoint_path, map_location=device)
         missing, unexpected = model.load_state_dict(state_dict, strict=False)
         if missing or unexpected:
             print(f"Checkpoint mismatch: missing={missing}, unexpected={unexpected}")
     else:
-        print(f'⚠️ Checkpoint {args.checkpoint_path} not found. Starting from scratch.')
+        print(f'Checkpoint {args.checkpoint_path} not found. Starting from scratch.')
     
     finetune(model, enable_finetune=args.finetune)
     
@@ -318,13 +318,16 @@ def main():
         
         # Extract components
         dynamic_weighting = advanced_components.get('dynamic_weighting')
+        if dynamic_weighting is not None:
+            dynamic_weighting = dynamic_weighting.to(device)
+        
         hard_negative_mining = None
         if config.get('use_hard_negative_mining', False):
             hard_negative_mining = HardNegativeMining(
                 ratio=config.get('hard_negative_ratio', 0.3)
             )
         
-        print("✅ Advanced imbalance handling configured")
+        print("Advanced imbalance handling configured")
     else:
         # Use original loss functions
         criterion = {
@@ -334,7 +337,7 @@ def main():
         }
         dynamic_weighting = None
         hard_negative_mining = None
-        print("📚 Using standard CrossEntropyLoss")
+        print("Using standard CrossEntropyLoss")
     
     # Optimizer and scheduler
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), 
@@ -371,11 +374,11 @@ def main():
     processes = {}
     results = {}
     
-    print(f'🧠 Total trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
+    print(f'Total trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
     
     # Training loop
     for epoch in range(num_epochs):
-        print(f"\n📈 Epoch {epoch + 1}/{num_epochs}")
+        print(f"\nEpoch {epoch + 1}/{num_epochs}")
         random.shuffle(train_chunk_files)
         epoch_loss = []
         
@@ -394,7 +397,7 @@ def main():
                     idx, status, payload = queue.get(timeout=300)
                     results[idx] = (status, payload)
             except Empty:
-                print(f"⏰ Timeout waiting for chunk {chunk_idx}")
+                print(f"Timeout waiting for chunk {chunk_idx}")
                 proc = processes.pop(chunk_idx, None)
                 if proc is not None:
                     proc.terminate()
@@ -407,7 +410,7 @@ def main():
                 proc.join()
             
             if status == 'err':
-                print(f'❌ Failed to preload {chunk_path}: {payload}')
+                print(f'Failed to preload {chunk_path}: {payload}')
                 continue
             
             lmdb_path = payload
@@ -448,7 +451,7 @@ def main():
                 loader_kwargs["sampler"] = sampler
                 loader_kwargs["shuffle"] = False
                 
-                print(f"📊 Sampler counts: actions={dict(counts['actions'])} "
+                print(f"Sampler counts: actions={dict(counts['actions'])} "
                      f"looks={dict(counts['looks'])} crosses={dict(counts['crosses'])}")
             
             loader = DataLoader(dataset, **loader_kwargs)
@@ -512,7 +515,7 @@ def main():
         torch.save(model.state_dict(), f'model_outputs/model_epoch{epoch+1}_{datetime_str}.pth')
         
         # Validation with enhanced metrics
-        print("🔍 Running validation with enhanced metrics...")
+        print("Running validation with enhanced metrics...")
         total_val_loss_sum = 0.0
         total_val_samples = 0
         all_val_predictions = {'actions': [], 'looks': [], 'crosses': []}
@@ -625,7 +628,7 @@ def main():
             writer.writerow(row)
         
         # Print metrics summary
-        print(f"\n📊 Epoch {epoch + 1} Validation Results:")
+        print(f"\nEpoch {epoch + 1} Validation Results:")
         print(f"  Actions: Acc={val_metrics['actions_accuracy']:.3f}, F1={val_metrics['actions_f1']:.3f}")
         print(f"  Looks:   Acc={val_metrics['looks_accuracy']:.3f}, F1={val_metrics['looks_f1']:.3f}")
         print(f"  Crosses: Acc={val_metrics['crosses_accuracy']:.3f}, F1={val_metrics['crosses_f1']:.3f}")
@@ -634,14 +637,14 @@ def main():
         # Save best model based on macro F1
         if macro_f1 > best_macro_f1:
             best_macro_f1 = macro_f1
-            print(f"🏆 New best macro F1: {best_macro_f1:.4f}. Saving model...")
+            print(f"New best macro F1: {best_macro_f1:.4f}. Saving model...")
             torch.save(model.state_dict(), 
                       f'best_model_outputs/best_model_macro_f1_{macro_f1:.3f}_epoch{epoch+1}_{datetime_str}.pth')
         
         # Early stopping based on validation loss
         early_stopping(val_loss)
         if early_stopping.early_stop:
-            print("⏹️ Early stopping triggered. Saving final model and stopping.")
+            print("Early stopping triggered. Saving final model and stopping.")
             torch.save(model.state_dict(), 
                       f'model_outputs/final_model_epoch{epoch+1}_{datetime_str}.pth')
             break

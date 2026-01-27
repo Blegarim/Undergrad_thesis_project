@@ -3,7 +3,7 @@ Training configuration with advanced class imbalance handling options.
 This file extends the existing config.py with toggleable imbalance strategies.
 """
 
-from class_imbalance_strategies import (
+from .class_imbalance_strategies import (
     FocalLoss, ClassBalancedFocalLoss, BatchBalancedSampler,
     DynamicLossWeighting, ThresholdOptimizer, create_class_balanced_loss,
     get_imbalance_config
@@ -169,16 +169,16 @@ def setup_imbalance_monitoring(config):
     Setup additional monitoring for imbalanced training.
     """
     if config.get('monitor_f1_score', False):
-        print("📊 Enabling F1-score monitoring for imbalanced tasks")
+        print("Enabling F1-score monitoring for imbalanced tasks")
         
     if config.get('use_dynamic_loss_weighting', False):
-        print("🔄 Enabling dynamic loss weighting")
+        print("Enabling dynamic loss weighting")
         
     if config.get('loss_types')['looks'] in ['focal', 'class_balanced_focal']:
-        print("🎯 Using focal loss for severely imbalanced 'looks' task")
+        print("Using focal loss for severely imbalanced 'looks' task")
         
     if config.get('loss_types')['crosses'] in ['focal', 'class_balanced_focal']:
-        print("🚨 Using class-balanced focal loss for extremely imbalanced 'crosses' task")
+        print("Using class-balanced focal loss for extremely imbalanced 'crosses' task")
 
 
 def get_recommended_config():

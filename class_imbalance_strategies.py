@@ -32,7 +32,9 @@ class FocalLoss(nn.Module):
             if isinstance(self.alpha, (float, int)):
                 alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
             elif isinstance(self.alpha, torch.Tensor):
-                alpha_t = self.alpha.gather(0, targets)
+                # Ensure alpha tensor is on the same device as inputs
+                alpha = self.alpha.to(inputs.device)
+                alpha_t = alpha.gather(0, targets)
             else:
                 alpha_t = 1.0
             focal_loss = alpha_t * focal_loss
@@ -182,6 +184,9 @@ class DynamicLossWeighting(nn.Module):
         self.performance_history = {'actions': [], 'looks': [], 'crosses': []}
         self.last_improvement = {'actions': 0, 'looks': [], 'crosses': 0}
         
+        # Device management - will be set to device later
+        self._device = None
+        
     def update_performance(self, metrics):
         """Update performance history and adjust weights if needed."""
         if not self.adaptive:
@@ -205,11 +210,32 @@ class DynamicLossWeighting(nn.Module):
                         self.weights[idx] *= 1.1
                     self.last_improvement[task] = 0
                     
+    def to(self, *args, **kwargs):
+        """Move dynamic weighting to specified device."""
+        result = super().to(*args, **kwargs)
+        # Extract device from args/kwargs
+        if args:
+            device = args[0]
+        elif 'device' in kwargs:
+            device = kwargs['device']
+        else:
+            device = None
+        
+        if device is not None:
+            self._device = device
+        return result
+    
     def get_weighted_loss(self, losses):
         """Apply dynamic weights to individual task losses."""
         weighted_loss = 0.0
         for i, (task, loss) in enumerate(losses.items()):
-            weighted_loss += self.weights[i] * loss
+            # Ensure weights are on the same device as the loss
+            weight = self.weights[i]
+            if hasattr(loss, 'device'):
+                weight = weight.to(loss.device)
+            elif self._device is not None:
+                weight = weight.to(self._device)
+            weighted_loss += weight * loss
         return weighted_loss
 
 
