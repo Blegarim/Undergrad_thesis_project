@@ -54,9 +54,28 @@ class ClassBalancedFocalLoss(nn.Module):
         self.beta = beta
         self.gamma = gamma
         self.samples_per_class = samples_per_class
-        self.effective_num = 1.0 - np.power(self.beta, self.samples_per_class)
-        self.class_weights = (1.0 - self.beta) / np.array(self.effective_num)
-        self.class_weights = self.class_weights / np.sum(self.class_weights) * len(self.class_weights)
+        
+        # Handle edge cases for class counts
+        samples_per_class = np.array(samples_per_class, dtype=np.float32)
+        
+        # Ensure no zero counts (avoid division by zero)
+        samples_per_class = np.maximum(samples_per_class, 1.0)
+        
+        # Calculate effective number of samples
+        self.effective_num = 1.0 - np.power(self.beta, samples_per_class)
+        
+        # Calculate class weights with safeguards
+        denominator = np.array(self.effective_num)
+        denominator = np.maximum(denominator, 1e-8)  # Avoid division by zero
+        
+        self.class_weights = (1.0 - self.beta) / denominator
+        
+        # Normalize weights
+        weight_sum = np.sum(self.class_weights)
+        if weight_sum > 0:
+            self.class_weights = self.class_weights / weight_sum * len(self.class_weights)
+        else:
+            self.class_weights = np.ones_like(self.class_weights)
         
     def forward(self, inputs, targets):
         ce_loss = F.cross_entropy(inputs, targets, reduction='none')
@@ -271,9 +290,10 @@ class ThresholdOptimizer:
         # Find optimal threshold for each task
         for task in task_names:
             if len(set(all_targets[task])) > 1:  # Only if both classes present
-                self.thresholds[task] = self._find_optimal_threshold(
+                threshold_value = self._find_optimal_threshold(
                     all_predictions[task], all_targets[task]
                 )
+                self.thresholds[task] = float(threshold_value)  # Ensure float type
                 
         return self.thresholds
     
@@ -310,9 +330,27 @@ def create_class_balanced_loss(dataset, task='crosses', loss_type='focal'):
     """
     Create a loss function that accounts for class imbalance.
     """
+    # Handle empty or invalid dataset
+    if not dataset:
+        print(f"Warning: Empty dataset for task {task}, using standard CrossEntropyLoss")
+        return nn.CrossEntropyLoss()
+    
     # Count class frequencies
-    labels = [int(item[task]) for item in dataset]
+    try:
+        labels = [int(item[task]) for item in dataset]
+    except (KeyError, TypeError, ValueError) as e:
+        print(f"Warning: Cannot extract labels for task {task} ({e}), using standard CrossEntropyLoss")
+        return nn.CrossEntropyLoss()
+    
     class_counts = Counter(labels)
+    
+    # Ensure we have both classes or handle gracefully
+    if len(class_counts) < 2:
+        print(f"Warning: Only {len(class_counts)} class(es) found for task {task}: {dict(class_counts)}")
+        if len(class_counts) == 1:
+            only_class = list(class_counts.keys())[0]
+            print(f"Using synthetic opposite class for balanced loss calculation")
+            class_counts[1 - only_class] = 1  # Add synthetic opposite class
     
     if loss_type == 'focal':
         # Use inverse class frequencies as alpha for focal loss
@@ -326,14 +364,57 @@ def create_class_balanced_loss(dataset, task='crosses', loss_type='focal'):
         return ClassBalancedFocalLoss(samples_per_class, beta=0.9999, gamma=2.0)
     
     elif loss_type == 'weighted_ce':
-        # Standard weighted cross entropy
-        class_weights = compute_class_weight(
-            class_weight='balanced',
-            classes=np.unique(labels),
-            y=np.array(labels)
-        )
-        class_weights = torch.tensor(class_weights, dtype=torch.float32)
-        return nn.CrossEntropyLoss(weight=class_weights)
+        # Standard weighted cross entropy with robust handling
+        try:
+            # Check if we have both classes
+            unique_classes = np.unique(labels)
+            if len(unique_classes) < 2:
+                print(f"Warning: Only one class found ({unique_classes}), using equal weights")
+                class_weights = np.array([1.0, 1.0])
+            else:
+                class_weights = compute_class_weight(
+                    class_weight='balanced',
+                    classes=unique_classes,
+                    y=np.array(labels)
+                )
+                
+                # Ensure we have weights for both classes (0 and 1)
+                if len(class_weights) == 1:
+                    if 0 in unique_classes:
+                        class_weights = np.array([class_weights[0], 1.0])
+                    else:
+                        class_weights = np.array([1.0, class_weights[0]])
+                elif len(class_weights) == 2:
+                    pass  # Good case
+                else:
+                    print(f"Warning: Unexpected number of classes ({len(class_weights)}), using equal weights")
+                    class_weights = np.array([1.0, 1.0])
+            
+            class_weights = torch.tensor(class_weights, dtype=torch.float32)
+            return nn.CrossEntropyLoss(weight=class_weights)
+            
+        except Exception as e:
+            print(f"Warning: compute_class_weight failed ({e}), using inverse frequency weighting")
+            # Fallback to manual calculation
+            class_counts = Counter(labels)
+            total = sum(class_counts.values())
+            n_classes = len(class_counts)
+            
+            if len(class_counts) == 1:
+                # Only one class present
+                weights = [1.0, 1.0]
+            else:
+                weights = []
+                for cls in [0, 1]:  # Ensure binary order
+                    count = class_counts.get(cls, 0)
+                    if count == 0:
+                        weights.append(1.0)  # Avoid division by zero
+                    else:
+                        weight = total / (n_classes * count)
+                        weights.append(weight)
+            
+            class_weights = torch.tensor(weights, dtype=torch.float32)
+            return nn.CrossEntropyLoss(weight=class_weights)
     
     else:
         return nn.CrossEntropyLoss()

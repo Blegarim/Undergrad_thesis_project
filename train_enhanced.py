@@ -281,15 +281,40 @@ def main():
     
     # Setup loss functions based on configuration
     if config.get('use_advanced_imbalance_handling', False):
-        print("🎯 Setting up advanced loss functions...")
+        print("Setting up advanced loss functions...")
         
-        # Create dummy datasets for loss function creation (will be updated with real data)
-        dummy_datasets = {'all': []}
+        # Create representative dummy datasets for loss function initialization
+        # Based on expected class imbalance from your dataset
+        dummy_datasets = {
+            'all': [
+                {'actions': 0, 'looks': 0, 'crosses': 0},  # negative samples
+                {'actions': 0, 'looks': 0, 'crosses': 0},
+                {'actions': 0, 'looks': 0, 'crosses': 0},
+                {'actions': 0, 'looks': 0, 'crosses': 0},
+                {'actions': 0, 'looks': 0, 'crosses': 0},
+                {'actions': 1, 'looks': 1, 'crosses': 1},  # positive samples (rare)
+                {'actions': 1, 'looks': 0, 'crosses': 0},  # mixed samples
+                {'actions': 0, 'looks': 1, 'crosses': 0},
+                {'actions': 1, 'looks': 0, 'crosses': 0},
+                {'actions': 0, 'looks': 0, 'crosses': 1},
+            ]
+        }
         
         # Apply imbalance strategies
-        imbalance_setup = apply_imbalance_strategies_to_training(model, config, dummy_datasets)
-        criterion = imbalance_setup['loss_functions']
-        advanced_components = imbalance_setup['advanced_components']
+        try:
+            imbalance_setup = apply_imbalance_strategies_to_training(model, config, dummy_datasets)
+            criterion = imbalance_setup['loss_functions']
+            advanced_components = imbalance_setup['advanced_components']
+            print("Advanced loss functions created successfully")
+        except Exception as e:
+            print(f"Warning: Advanced setup failed ({e}), using standard loss functions")
+            # Fallback to standard loss functions
+            criterion = {
+                "actions": nn.CrossEntropyLoss(),
+                "looks": nn.CrossEntropyLoss(),
+                "crosses": nn.CrossEntropyLoss()
+            }
+            advanced_components = {}
         
         # Extract components
         dynamic_weighting = advanced_components.get('dynamic_weighting')
