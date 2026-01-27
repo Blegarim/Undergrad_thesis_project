@@ -211,46 +211,44 @@ class WindowTransformerBlock(nn.Module):
         self.attn.init_relative_position_bias(Wh, Ww)
 
     def forward(self, x):
-        B, L, C = x.shape
+        '''
+        x: [B, C, H, W] - spatial feature map
+        Returns: [B, C, H, W]
+        '''
+        B, C, H, W = x.shape
 
-        # Dynamically infer H, W from sequence length
-        H = W = int(L ** 0.5)
-        if H * W != L:
-            raise ValueError(f"Non-square feature map: cannot reshape {L} tokens into H*W grid")
-
-        # If self.window_size is None -> global attention, use full feature map, else use configured window
+        # Infer window sizes
         if self.window_size is None:
             Wh, Ww = H, W
         else:
             Wh, Ww = self.window_size if isinstance(self.window_size, tuple) else (self.window_size, self.window_size)
         
-        # Validate that the windows tile the feature map evenly
+        # Validate window tiling
         if (H % Wh != 0) or (W % Ww != 0):
-            raise ValueError(f"Feature map ({H}x{W}) is not divisible by window size ({Wh}x{Ww}). "
-                             "Consider padding or choosing a compatible window size.")
+            raise ValueError(f"Feature map ({H}x{W}) not divisible by window ({Wh}x{Ww})")
         
-        # Update stored resolution to match runtime shape
-        self.input_resolution = (H, W)
+        # Permute to [B, H, W, C] for spatial operations
+        x_perm = x.permute(0, 2, 3, 1)  # [B, H, W, C]
+        shortcut = x_perm
 
-        shortcut = x
-        x = self.norm1(x)
-        x = x.view(B, H, W, C)
+        # First residual block: attention
+        x_perm = self.norm1(x_perm)
+        x_windows = window_partition(x_perm, Wh)  # [num_windows*B, Wh*Ww, C]
+        x_windows = self.attn(x_windows)
+        x_perm = x_windows.view(-1, Wh, Ww, C)
+        x_perm = window_reverse(x_perm, Wh, H, W)  # [B, H, W, C]
+        x_perm = shortcut + self.drop_path(x_perm)
 
-        # Partition windows
-        x = window_partition(x, Wh) # (num_windows*B, window_size*window_size, C)
+        # Second residual block: MLP
+        x_flat = x_perm.view(B, H * W, C)  # [B, H*W, C]
+        x_flat = self.norm2(x_flat)
+        x_flat = self.mlp(x_flat)
+        x_flat = self.dropout(x_flat)
+        x_flat = x_perm.view(B, H * W, C) + self.drop_path(x_flat)
+        x_perm = x_flat.view(B, H, W, C)
 
-        # W-MSA
-        x = self.attn(x) # (num_windows*B, window_size*window_size, C)
-
-        # Merge windows
-        x = x.view(-1, Wh, Ww, C) # (num_windows*B, window_size, window_size, C)
-        x = window_reverse(x, Wh, H, W) # (B, H, W, C)
-
-        x = x.view(B, H * W, C)
-        x = shortcut + self.drop_path(x)
-        x = x + self.dropout(self.drop_path(self.mlp(self.norm2(x))))
-
-        return x
+        # Permute back to [B, C, H, W]
+        return x_perm.permute(0, 3, 1, 2)
 
 class ViT_Hierarchical(nn.Module):
     '''
@@ -371,9 +369,7 @@ class ViT_Hierarchical(nn.Module):
                 if getattr(block, "window_size", None) is None:
                     block.init_relative_position_bias(H_s, W_s)
 
-                tokens = x.flatten(2).transpose(1, 2)   # [B*T, H_s*W_s, D]
-                tokens = block(tokens)
-                x = tokens.transpose(1, 2).view(B_T, D, H_s, W_s)
+                x = block(x)  # x: [B*T, D, H_s, W_s] -> same shape
         
         x = x.mean([2, 3]) # Global average pooling (B*T, D)
 #        print(f"[Global Avg Pool] -> {x.shape}")

@@ -26,7 +26,7 @@ from train import remap_cross_labels, collate_fn
 # === Evaluation Function ====================================
 # ============================================================
 
-def evaluate(model, dataloader, device):
+def evaluate(model, dataloader, device, use_amp=False):
     model.eval()
     correct, total = {}, {}
     all_preds, all_labels, all_probs = {}, {}, {}
@@ -36,12 +36,27 @@ def evaluate(model, dataloader, device):
             images_tight = images_tight.to(device, non_blocking=True)
             images_context = images_context.to(device, non_blocking=True)
             motions = motions.to(device, non_blocking=True)
-            labels = {k: v.to(device, non_blocking=True) for k, v in labels.items()}
+            labels = {k: v.to(device, non_blocking=True).long() for k, v in labels.items()}
 
             remap_cross_labels(labels)
-            outputs = model(images_tight, images_context, motions)
+            with torch.cuda.amp.autocast(enabled=use_amp):
+                outputs = model(images_tight, images_context, motions)
 
-            for name, logits in outputs.items():
+            # Process each head (actions, looks, crosses)
+            for name in ["actions", "looks", "crosses"]:
+                # Select appropriate crosses output (matches train.py logic)
+                if name == "crosses":
+                    if model.cross_attention.use_frame_crosses:
+                        logits = outputs["crosses_frame"]
+                    else:
+                        logits = outputs["crosses_pooled"]
+                else:
+                    logits = outputs[name]
+                
+                # Ensure float for softmax when using AMP
+                if use_amp:
+                    logits = logits.float()
+                
                 probs = F.softmax(logits, dim=1)
                 _, preds = torch.max(probs, 1)
 
@@ -55,7 +70,7 @@ def evaluate(model, dataloader, device):
                 all_probs.setdefault(name, []).append(probs.cpu())
 
     metrics = {}
-    for name in correct.keys():
+    for name in all_labels.keys():  # Only iterate over the 3 heads we processed
         y_true = torch.cat(all_labels[name]).numpy()
         y_pred = torch.cat(all_preds[name]).numpy()
         y_prob = torch.cat(all_probs[name]).numpy()
@@ -171,6 +186,7 @@ def _init_global_rel_pos_from_ckpt(model, state_dict):
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+    use_amp = device.type == "cuda"
 
     # ==== CONFIGURATION ====
     embedding_dim = 128
@@ -270,7 +286,7 @@ def main():
             collate_fn=collate_fn,
         )
 
-        metrics, all_labels_chunk, all_preds_chunk, all_probs_chunk = evaluate(model, dataloader, device)
+        metrics, all_labels_chunk, all_preds_chunk, all_probs_chunk = evaluate(model, dataloader, device, use_amp=use_amp)
         duration = time.time() - start
 
         for name in all_labels_chunk.keys():
