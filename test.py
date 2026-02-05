@@ -448,6 +448,9 @@ def main():
         'Parameters count:',
         f'{sum(p.numel() for p in model.parameters() if p.requires_grad)} params',
         '',
+        'Model Type:',
+        f'{args.model_type}',
+        '',
         'Per-frame FLOPs:',
         f'{flops_per_frame/1e6:.2f} MFLOPs',
         '',
@@ -471,6 +474,19 @@ def main():
     for k, v in avg_metrics.items():
         print(f"  {k}: {v:.2f}")
     print(f"Results logged to: {log_csv}")
+    
+    # Save results with model type suffix
+    if args.model_type != 'full':
+        base_log = log_csv.replace('.csv', '')
+        model_suffix = f"_{args.model_type}"
+        new_log = f"{base_log}{model_suffix}.csv"
+        if os.path.exists(log_csv):
+            # Copy existing log to new file with model suffix
+            import shutil
+            shutil.copy2(log_csv, new_log)
+            print(f"Results also copied to: {new_log}")
+        else:
+            print(f"Note: Original log file not found for copying")
 
 if __name__ == "__main__":
     main()

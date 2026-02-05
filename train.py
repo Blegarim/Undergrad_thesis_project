@@ -619,7 +619,9 @@ def main():
             avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
         print(f"Epoch {epoch + 1} average loss: {avg_epoch_loss:.4f}")
 
-        torch.save(model.state_dict(), f'model_outputs/model_epoch{epoch+1}_{datetime_str}.pth')
+        # Save model with model type suffix
+        model_suffix = f"_{args.model_type}" if args.model_type != 'full' else ""
+        torch.save(model.state_dict(), f'model_outputs/model_epoch{epoch+1}_{datetime_str}{model_suffix}.pth')
 
         # ---- validation ----
         total_val_loss_sum = 0.0
@@ -699,12 +701,14 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             print(f"New best validation loss: {best_val_loss:.4f}. Saving model...")
-            torch.save(model.state_dict(), f'best_model_outputs/best_model_epoch{epoch+1}_{datetime_str}.pth')
+            model_suffix = f"_{args.model_type}" if args.model_type != 'full' else ""
+            torch.save(model.state_dict(), f'best_model_outputs/best_model_epoch{epoch+1}_{datetime_str}{model_suffix}.pth')
 
         early_stopping(val_loss)
         if early_stopping.early_stop:
             print("Early stopping triggered. Saving final model and stopping.")
-            torch.save(model.state_dict(), f'model_outputs/final_model_epoch{epoch+1}_{datetime_str}.pth')
+            model_suffix = f"_{args.model_type}" if args.model_type != 'full' else ""
+            torch.save(model.state_dict(), f'model_outputs/final_model_epoch{epoch+1}_{datetime_str}{model_suffix}.pth')
             break
         
         # temp = get_hdd_temp()
