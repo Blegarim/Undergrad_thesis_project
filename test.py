@@ -18,15 +18,100 @@ from models.Vision_Transformer import ViT_Hierarchical
 from models.Motion_Encoder import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
+from models.AblationModels import MotionOnlyModel, VisualOnlyModel, VanillaConcatModel
 from scripts.lmdb_dataset import LMDBChunkDataset
-from config import vit_args_config, motion_enc_args_config
+from config import vit_args_config, motion_enc_args_config, get_unified_dim_model
 from train import remap_cross_labels, collate_fn
+import argparse
+
+# ============================================================
+# === Model Selection Function ==============================
+# ============================================================
+
+def get_model(model_type, motion_enc, vit, d_model, num_classes_dict):
+    """
+    Get specified model for ablation study.
+    
+    Args:
+        model_type: 'motion_only', 'visual_only', 'vanilla_concat', or 'full'
+        motion_enc: MotionEncoder instance
+        vit: ViT_Hierarchical instance  
+        d_model: model dimension
+        num_classes_dict: dictionary of class counts
+    
+    Returns:
+        Model instance
+    """
+    if model_type == 'motion_only':
+        return MotionOnlyModel(
+            motion_enc=motion_enc,
+            d_model=d_model,
+            num_classes_dict=num_classes_dict,
+            dropout=0.1
+        )
+    elif model_type == 'visual_only':
+        return VisualOnlyModel(
+            vit=vit,
+            d_model=d_model,
+            num_classes_dict=num_classes_dict,
+            dropout=0.1
+        )
+    elif model_type == 'vanilla_concat':
+        return VanillaConcatModel(
+            motion_enc=motion_enc,
+            vit=vit,
+            d_model=d_model,
+            num_classes_dict=num_classes_dict,
+            dropout=0.1
+        )
+    elif model_type == 'full':
+        # Original full model with cross-attention
+        cross_attention = CrossAttentionModule(
+            d_model=d_model,
+            num_heads=4,
+            num_classes_dict=num_classes_dict,
+            use_frame_crosses=True,
+            frame_pool="logsumexp",
+        )
+        return EnsembleModel(
+            motion_enc=motion_enc,
+            vit=vit,
+            cross_attention=cross_attention,
+            d_model=d_model
+        )
+    else:
+        raise ValueError(f"Unknown model type: {model_type}. Choose from: 'motion_only', 'visual_only', 'vanilla_concat', 'full'")
+
+def model_forward(model, model_type, images_tight, images_context, motions):
+    """
+    Forward pass wrapper for different model types.
+    
+    Args:
+        model: model instance
+        model_type: 'motion_only', 'visual_only', 'vanilla_concat', 'full'
+        images_tight: [B, T, C, H, W]
+        images_context: [B, T, C, H, W] 
+        motions: [B, T, motion_dim]
+    
+    Returns:
+        logits dict
+    """
+    if model_type == 'motion_only':
+        # Need to extract motion features first
+        motion_feats = model.motion_enc(motions, images_tight)
+        logits = model(motion_feats)
+    elif model_type == 'visual_only':
+        logits = model(images_context)
+    else:  # 'vanilla_concat' or 'full'
+        logits = model(images_tight, images_context, motions)
+    
+    return logits
 
 # ============================================================
 # === Evaluation Function ====================================
 # ============================================================
 
-def evaluate(model, dataloader, device, use_amp=False):
+def evaluate(model, dataloader, device, model_type, use_amp=False):
     model.eval()
     correct, total = {}, {}
     all_preds, all_labels, all_probs = {}, {}, {}
@@ -40,16 +125,21 @@ def evaluate(model, dataloader, device, use_amp=False):
 
             remap_cross_labels(labels)
             with torch.cuda.amp.autocast(enabled=use_amp):
-                outputs = model(images_tight, images_context, motions)
+                outputs = model_forward(model, model_type, images_tight, images_context, motions)
 
             # Process each head (actions, looks, crosses)
             for name in ["actions", "looks", "crosses"]:
-                # Select appropriate crosses output (matches train.py logic)
+                # Select appropriate crosses output
                 if name == "crosses":
-                    if model.cross_attention.use_frame_crosses:
-                        logits = outputs["crosses_frame"]
+                    if model_type == 'full' and hasattr(model, 'cross_attention'):
+                        # Only full model has cross_attention
+                        if model.cross_attention.use_frame_crosses:
+                            logits = outputs["crosses_frame"]
+                        else:
+                            logits = outputs["crosses_pooled"]
                     else:
-                        logits = outputs["crosses_pooled"]
+                        # Ablation models: use frame_crosses as default
+                        logits = outputs["crosses_frame"]
                 else:
                     logits = outputs[name]
                 
@@ -184,12 +274,23 @@ def _init_global_rel_pos_from_ckpt(model, state_dict):
 # ============================================================
 
 def main():
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='Test pedestrian behavior prediction model')
+    parser.add_argument('--model_type', type=str, default='full',
+                        choices=['motion_only', 'visual_only', 'vanilla_concat', 'full'],
+                        help='Model type for ablation study')
+    parser.add_argument('--model_path', type=str, 
+                        default="best_model_outputs/best_model_epoch28_0122_1511.pth",
+                        help='Path to model checkpoint')
+    args = parser.parse_args()
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+    print(f"Model type: {args.model_type}")
     use_amp = device.type == "cuda"
 
     # ==== CONFIGURATION ====
-    embedding_dim = 128
+    embedding_dim = get_unified_dim_model()
     batch_size = 16
     img_size = 128
     context_scale = 3
@@ -201,7 +302,7 @@ def main():
         'looks': 2,
         'crosses': 2
     }
-    model_path = "best_model_outputs/best_model_epoch28_0122_1511.pth"
+    model_path = args.model_path
     test_chunk_folder = "preprocessed_test"
     log_dir = "training_log"
     os.makedirs(log_dir, exist_ok=True)
@@ -232,17 +333,12 @@ def main():
     print(f"Loading model from {model_path}")
     assert os.path.exists(model_path), f"Model not found: {model_path}"
 
-    model = EnsembleModel(
-        motion_enc=MotionEncoder(**motion_enc_args),
-        vit=ViT_Hierarchical(**vit_args),
-        cross_attention=CrossAttentionModule(
-            d_model=embedding_dim,
-            num_heads=4,
-            num_classes_dict=num_classes_dict,
-            use_frame_crosses=True,
-            frame_pool="logsumexp",
-        ),
-    ).to(device)
+    # Initialize base components
+    motion_enc = MotionEncoder(**motion_enc_args)
+    vit = ViT_Hierarchical(**vit_args)
+    
+    # Get model based on type selection
+    model = get_model(args.model_type, motion_enc, vit, embedding_dim, num_classes_dict).to(device)
 
     state_dict = torch.load(model_path, map_location="cpu")
     _init_global_rel_pos_from_ckpt(model, state_dict)
@@ -286,7 +382,7 @@ def main():
             collate_fn=collate_fn,
         )
 
-        metrics, all_labels_chunk, all_preds_chunk, all_probs_chunk = evaluate(model, dataloader, device, use_amp=use_amp)
+        metrics, all_labels_chunk, all_preds_chunk, all_probs_chunk = evaluate(model, dataloader, device, args.model_type, use_amp=use_amp)
         duration = time.time() - start
 
         for name in all_labels_chunk.keys():

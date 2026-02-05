@@ -11,7 +11,8 @@ from models.Vision_Transformer import ViT_Hierarchical
 from models.Motion_Encoder import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
-from config import vit_args_config, motion_enc_args_config
+from models.AblationModels import MotionOnlyModel, VisualOnlyModel, VanillaConcatModel
+from config import vit_args_config, motion_enc_args_config, get_unified_dim_model
 from scripts.lmdb_dataset import LMDBChunkDataset
 
 import time
@@ -120,7 +121,7 @@ def build_sampler_weights(lmdb_path, seq_ids, cross_pow=1.0, action_pow=0.5, loo
 
     return weights, counts
 
-def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight=None, scaler=None, use_amp=False, use_pin_memory=False):
+def train_one_chunk(model, dataloader, criterion, optimizer, device, model_type, loss_weight=None, scaler=None, use_amp=False, use_pin_memory=False):
     model.train()
     total_loss = 0
     progress_bar = tqdm(dataloader, desc='Training', total=len(dataloader))
@@ -137,7 +138,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
         remap_cross_labels(labels)
         optimizer.zero_grad(set_to_none=True)
         with torch.cuda.amp.autocast(enabled=use_amp):
-            outputs = model(images_tight, images_context, motions)
+            outputs = model_forward(model, model_type, images_tight, images_context, motions)
 
         total_batch_loss = 0.0
         for name in ["actions", "looks", "crosses"]:
@@ -174,7 +175,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, loss_weight
     torch.cuda.empty_cache()
     return avg_loss
 
-def validate_one_epoch(model, dataloader, criterion, device, use_amp=False, use_pin_memory=False):
+def validate_one_epoch(model, dataloader, criterion, device, model_type, use_amp=False, use_pin_memory=False):
     """
     Returns:
       - loss_sum: float (sum of per-sample losses across the dataloader)
@@ -197,7 +198,7 @@ def validate_one_epoch(model, dataloader, criterion, device, use_amp=False, use_
 
             remap_cross_labels(labels)
             with torch.cuda.amp.autocast(enabled=use_amp):
-                outputs = model(images_tight, images_context, motions)
+                outputs = model_forward(model, model_type, images_tight, images_context, motions)
 
             # accumulate loss as sum over samples (handles criterion reduction='mean')
             batch_loss = 0.0
@@ -285,9 +286,96 @@ def get_hdd_temp(dev="/dev/sda"):
     except Exception:
         return None
 
+def get_model(model_type, motion_enc, vit, d_model, num_classes_dict):
+    """
+    Get specified model for ablation study.
+    
+    Args:
+        model_type: 'motion_only', 'visual_only', 'vanilla_concat', or 'full'
+        motion_enc: MotionEncoder instance
+        vit: ViT_Hierarchical instance  
+        d_model: model dimension
+        num_classes_dict: dictionary of class counts
+    
+    Returns:
+        Model instance
+    """
+    if model_type == 'motion_only':
+        return MotionOnlyModel(
+            motion_enc=motion_enc,
+            d_model=d_model,
+            num_classes_dict=num_classes_dict,
+            dropout=0.1
+        )
+    elif model_type == 'visual_only':
+        return VisualOnlyModel(
+            vit=vit,
+            d_model=d_model,
+            num_classes_dict=num_classes_dict,
+            dropout=0.1
+        )
+    elif model_type == 'vanilla_concat':
+        return VanillaConcatModel(
+            motion_enc=motion_enc,
+            vit=vit,
+            d_model=d_model,
+            num_classes_dict=num_classes_dict,
+            dropout=0.1
+        )
+    elif model_type == 'full':
+        # Original full model with cross-attention
+        cross_attention = CrossAttentionModule(
+            d_model=d_model,
+            num_heads=4,
+            num_classes_dict=num_classes_dict,
+            use_frame_crosses=True,
+            frame_pool="logsumexp",
+        )
+        return EnsembleModel(
+            motion_enc=motion_enc,
+            vit=vit,
+            cross_attention=cross_attention,
+            d_model=d_model
+        )
+    else:
+        raise ValueError(f"Unknown model type: {model_type}. Choose from: 'motion_only', 'visual_only', 'vanilla_concat', 'full'")
+
+def model_forward(model, model_type, images_tight, images_context, motions):
+    """
+    Forward pass wrapper for different model types.
+    
+    Args:
+        model: model instance
+        model_type: 'motion_only', 'visual_only', 'vanilla_concat', 'full'
+        images_tight: [B, T, C, H, W]
+        images_context: [B, T, C, H, W] 
+        motions: [B, T, motion_dim]
+    
+    Returns:
+        logits dict
+    """
+    if model_type == 'motion_only':
+        # Need to extract motion features first
+        motion_feats = model.motion_enc(motions, images_tight)
+        logits = model(motion_feats)
+    elif model_type == 'visual_only':
+        logits = model(images_context)
+    else:  # 'vanilla_concat' or 'full'
+        logits = model(images_tight, images_context, motions)
+    
+    return logits
+
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description='Train pedestrian behavior prediction model')
+    parser.add_argument('--model_type', type=str, default='full',
+                        choices=['motion_only', 'visual_only', 'vanilla_concat', 'full'],
+                        help='Model type for ablation study')
+    args = parser.parse_args()
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+    print(f"Model type: {args.model_type}")
     use_amp = device.type == "cuda"
     use_pin_memory = device.type == "cuda"
 
@@ -317,7 +405,7 @@ def main():
     print(f'Logging training progress to {log_file}')
 
     # Configuration
-    embedding_dim = 128
+    embedding_dim = get_unified_dim_model()
     learning_rate = 1e-4
     batch_size = 4
     vit_args = vit_args_config()
@@ -336,17 +424,12 @@ def main():
     early_stopping = EarlyStopping(patience=15, min_delta=0.001)
     best_val_loss = float('inf')
 
-    model = EnsembleModel(
-        motion_enc=MotionEncoder(**motion_enc_args),
-        vit=ViT_Hierarchical(**vit_args),
-        cross_attention=CrossAttentionModule(
-            d_model=embedding_dim,
-            num_heads=4,
-            num_classes_dict=num_classes_dict,
-            use_frame_crosses=True,
-            frame_pool="logsumexp",
-        )
-    ).to(device)
+    # Initialize base components
+    motion_enc = MotionEncoder(**motion_enc_args)
+    vit = ViT_Hierarchical(**vit_args)
+    
+    # Get model based on type selection
+    model = get_model(args.model_type, motion_enc, vit, embedding_dim, num_classes_dict).to(device)
 
     # Load model
     checkpoint_path = 'best_model_outputs/best_model_epoch10_0121_2029.pth'
@@ -484,6 +567,7 @@ def main():
                 criterion,
                 optimizer,
                 device,
+                args.model_type,
                 loss_weight=loss_weight,
                 scaler=scaler,
                 use_amp=use_amp,
@@ -565,6 +649,7 @@ def main():
                 val_loader,
                 criterion,
                 device,
+                args.model_type,
                 use_amp=use_amp,
                 use_pin_memory=use_pin_memory,
             )
