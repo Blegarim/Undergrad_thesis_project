@@ -143,7 +143,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, model_type,
         total_batch_loss = 0.0
         for name in ["actions", "looks", "crosses"]:
             if name == "crosses":
-                if model.cross_attention.use_frame_crosses:
+                if model_type in ['full', 'vanilla_concat'] and hasattr(model, 'cross_attention') and model.cross_attention.use_frame_crosses:
                     logits = outputs["crosses_frame"]
                 else:
                     logits = outputs["crosses_pooled"]
@@ -204,7 +204,7 @@ def validate_one_epoch(model, dataloader, criterion, device, model_type, use_amp
             batch_loss = 0.0
             for name in ["actions", "looks", "crosses"]: 
                 if name == "crosses":
-                    if model.cross_attention.use_frame_crosses:
+                    if model_type in ['full', 'vanilla_concat'] and hasattr(model, 'cross_attention') and model.cross_attention.use_frame_crosses:
                         logits = outputs["crosses_frame"]
                     else:
                         logits = outputs["crosses_pooled"]
