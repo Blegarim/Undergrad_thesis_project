@@ -411,7 +411,7 @@ def main():
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
     num_epochs = 30
-    num_workers = 2
+    num_workers = 4
     num_classes_dict = {
             'actions': 2,
             'looks': 2,
@@ -432,7 +432,7 @@ def main():
     model = get_model(args.model_type, motion_enc, vit, embedding_dim, num_classes_dict).to(device)
 
     # Load model
-    checkpoint_path = 'best_model_outputs/best_model_epoch10_0121_2029.pth'
+    checkpoint_path = 'best_model_outputs/best_model_epoch.pth'
     if os.path.exists(checkpoint_path):
         print(f'Loading model from {checkpoint_path}')
         state_dict = torch.load(checkpoint_path, map_location=device)
@@ -621,7 +621,7 @@ def main():
 
         # Save model with model type suffix
         model_suffix = f"_{args.model_type}" if args.model_type != 'full' else ""
-        torch.save(model.state_dict(), f'model_outputs/model_epoch{epoch+1}_{datetime_str}{model_suffix}.pth')
+        torch.save(model.state_dict(), f'model_outputs/checkpoint_{datetime_str}{model_suffix}.pth')
 
         # ---- validation ----
         total_val_loss_sum = 0.0

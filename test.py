@@ -191,47 +191,47 @@ def evaluate(model, dataloader, device, model_type, use_amp=False):
     # print(f"    Overall Accuracy: {overall:.2f}%")
     return metrics, all_labels, all_preds, all_probs
 
-def compute_flops(model, img_height, img_width, context_scale, device):
-    dummy_imgages_tight = torch.randn(1, 20, 3, img_height, img_width).to(device)
-    dummy_imgages_context = torch.randn(1, 20, 3, img_height * context_scale, img_width * context_scale).to(device)
-    dummy_motions = torch.randn(1, 20, 8).to(device)
-    model.eval()
-    flops = FlopCountAnalysis(model, (dummy_imgages_tight, dummy_imgages_context, dummy_motions))
-    flops = flops.unsupported_ops_warnings(False)
-    flops_total = flops.total()
-    flops_per_frame = flops_total / (dummy_imgages_tight.size(0) * dummy_imgages_tight.size(1))
+# def compute_flops(model, img_height, img_width, context_scale, device):
+#     dummy_imgages_tight = torch.randn(1, 20, 3, img_height, img_width).to(device)
+#     dummy_imgages_context = torch.randn(1, 20, 3, img_height * context_scale, img_width * context_scale).to(device)
+#     dummy_motions = torch.randn(1, 20, 8).to(device)
+#     model.eval()
+#     flops = FlopCountAnalysis(model, (dummy_imgages_tight, dummy_imgages_context, dummy_motions))
+#     flops = flops.unsupported_ops_warnings(False)
+#     flops_total = flops.total()
+#     flops_per_frame = flops_total / (dummy_imgages_tight.size(0) * dummy_imgages_tight.size(1))
 
-    print(f'Total FLOPs per {dummy_imgages_tight.size(0) * dummy_imgages_tight.size(1)}-frame input: {flops_total/1e9:.2f} GFLOPs')
-    print(f'Average FLOPs per frame: {flops_per_frame/1e6:.2f} MFLOPs\n')
-    return flops_per_frame
+#     print(f'Total FLOPs per {dummy_imgages_tight.size(0) * dummy_imgages_tight.size(1)}-frame input: {flops_total/1e9:.2f} GFLOPs')
+#     print(f'Average FLOPs per frame: {flops_per_frame/1e6:.2f} MFLOPs\n')
+#     return flops_per_frame
 
-def inference_latency(model, img_height, img_width, context_scale, device):
-    dummy_imgages_tight = torch.randn(1, 20, 3, img_height, img_width).to(device)
-    dummy_imgages_context = torch.randn(1, 20, 3, img_height * context_scale, img_width * context_scale).to(device)
-    dummy_motions = torch.randn(1, 20, 8).to(device)
-    model.eval()
-    # Warm up
-    for _ in range(10):
-        _ = model(dummy_imgages_tight, dummy_imgages_context, dummy_motions)
-        torch.cuda.synchronize()
+# def inference_latency(model, img_height, img_width, context_scale, device):
+#     dummy_imgages_tight = torch.randn(1, 20, 3, img_height, img_width).to(device)
+#     dummy_imgages_context = torch.randn(1, 20, 3, img_height * context_scale, img_width * context_scale).to(device)
+#     dummy_motions = torch.randn(1, 20, 8).to(device)
+#     model.eval()
+#     # Warm up
+#     for _ in range(10):
+#         _ = model(dummy_imgages_tight, dummy_imgages_context, dummy_motions)
+#         torch.cuda.synchronize()
     
-    torch.cuda.synchronize()
-    start = time.time()
-    num_trials = 50
-    for _ in range(num_trials):
-        _ = model(dummy_imgages_tight, dummy_imgages_context, dummy_motions)
-    torch.cuda.synchronize()
-    end = time.time()
+#     torch.cuda.synchronize()
+#     start = time.time()
+#     num_trials = 50
+#     for _ in range(num_trials):
+#         _ = model(dummy_imgages_tight, dummy_imgages_context, dummy_motions)
+#     torch.cuda.synchronize()
+#     end = time.time()
 
-    avg_latency = (end - start) / num_trials  # seconds per 20-frame sequence
-    avg_fps = 1.0 / avg_latency
-    avg_latency_per_frame = avg_latency / 20.0
+#     avg_latency = (end - start) / num_trials  # seconds per 20-frame sequence
+#     avg_fps = 1.0 / avg_latency
+#     avg_latency_per_frame = avg_latency / 20.0
 
-    print(f"\n Inference latency (averaged over {num_trials} runs):")
-    print(f"  {avg_latency*1000:.2f} ms per {dummy_imgages_tight.size(1)}-frame sequence")
-    print(f"  {avg_latency_per_frame*1000:.2f} ms per frame")
-    print(f"  {avg_fps:.2f} FPS equivalent\n")
-    return avg_fps, avg_latency_per_frame
+#     print(f"\n Inference latency (averaged over {num_trials} runs):")
+#     print(f"  {avg_latency*1000:.2f} ms per {dummy_imgages_tight.size(1)}-frame sequence")
+#     print(f"  {avg_latency_per_frame*1000:.2f} ms per frame")
+#     print(f"  {avg_fps:.2f} FPS equivalent\n")
+#     return avg_fps, avg_latency_per_frame
 
 def round_metric(metrics, key):
     return round(metrics.get(key, 0.0), 2)
@@ -345,8 +345,8 @@ def main():
     model.load_state_dict(state_dict)
     print("Model loaded successfully.")
 
-    flops_per_frame = compute_flops(model, img_size, img_size, context_scale, device)
-    fps, latency_per_frame = inference_latency(model, img_size, img_size, context_scale, device)
+    # flops_per_frame = compute_flops(model, img_size, img_size, context_scale, device)
+    # fps, latency_per_frame = inference_latency(model, img_size, img_size, context_scale, device)
 
     # ==== Find test chunks ====
     chunk_files = sorted(
@@ -452,13 +452,13 @@ def main():
         f'{args.model_type}',
         '',
         'Per-frame FLOPs:',
-        f'{flops_per_frame/1e6:.2f} MFLOPs',
-        '',
-        'Per-frame Latency:',
-        f'{latency_per_frame*1000:.2f} ms',
-        '',
-        'FPS Equivalent:',
-        f'{fps:.2f}'
+        # f'{flops_per_frame/1e6:.2f} MFLOPs',
+        # '',
+        # 'Per-frame Latency:',
+        # f'{latency_per_frame*1000:.2f} ms',
+        # '',
+        # 'FPS Equivalent:',
+        # f'{fps:.2f}'
     ]
 
     with open(log_csv, "a", newline="") as f:

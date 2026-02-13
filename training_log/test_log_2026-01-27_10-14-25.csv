@@ -1,0 +1,9 @@
+timestamp,chunk,actions_acc,actions_f1,actions_auc,actions_p,actions_r,looks_acc,looks_f1,looks_auc,looks_p,looks_r,crosses_acc,crosses_f1,crosses_auc,crosses_p,crosses_r,overall_acc
+2026-01-27 10:17:13,chunk_000000.lmdb,0.69,0.68,0.75,0.7,0.65,0.51,0.1,0.59,0.63,0.06,0.54,0.14,0.64,0.93,0.08,57.81
+
+Heads,Accuracy,F1,AUC,P,R
+Actions,0.69,0.68,0.75,0.7,0.65
+Looks,0.51,0.1,0.59,0.63,0.06
+Crosses,0.54,0.14,0.64,0.93,0.08
+Overall,57.81
+Parameters count:,6231701 params,,Per-frame FLOPs:,3650.58 MFLOPs,,Per-frame Latency:,2.24 ms,,FPS Equivalent:,22.30
