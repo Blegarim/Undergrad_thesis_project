@@ -9,7 +9,6 @@ def vit_args_config(in_channels=3,
                 head_nums=[2, 2, 16, 2],
                 window_size=[8, 4, 2, None],
                 mlp_ratio=[4, 4, 4, 4],
-                d_model=1,
                 drop_path=0.15,
                 attn_dropout=0.15,
                 proj_dropout=0.15,
@@ -28,10 +27,9 @@ def vit_args_config(in_channels=3,
             "proj_dropout": proj_dropout,
             "dropout": dropout}
 
-def motion_enc_args_config(motion_dim=8, 
-                        hidden_dim=168, 
-                        d_model=1, 
-                        num_layers=2, 
+def motion_enc_args_config(motion_dim=8,
+                        hidden_dim=168,
+                        num_layers=2,
                         num_heads=8, 
                         dropout=0.3):
     d_model = get_unified_dim_model()

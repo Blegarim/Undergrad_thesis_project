@@ -116,17 +116,18 @@ def main(img_height=128, img_width=128, context_scale=2.0,
     augmented_context = img_augment(int(img_height * context_scale), int(img_width * context_scale))
 
     # --- Load PKL sequences (only for preprocessing) ---
+    # Use augmented sequences for training, balanced for val/test
     if train:
-        train_sequences = load_sequences_from_pkl('sequences_train_balanced.pkl')
+        train_sequences = load_sequences_from_pkl('sequences_train_augmented.pkl')
     if val:
-        val_sequences = load_sequences_from_pkl('sequences_val_balanced.pkl')
+        val_sequences = load_sequences_from_pkl('sequences_val.pkl')
     if test:
-        test_sequences = load_sequences_from_pkl('sequences_test_balanced.pkl')
+        test_sequences = load_sequences_from_pkl('sequences_test.pkl')
 
     # --- Preprocess into LMDB ---
     if train:
         save_dataset_in_chunks_lmdb(train_sequences,
-            out_dir='preprocessed_train_balanced',
+            out_dir='preprocessed_train_augmented',
             chunk_size=chunk_size,
             transform_tight=transform_tight,
             transform_context=transform_context,
@@ -134,7 +135,7 @@ def main(img_height=128, img_width=128, context_scale=2.0,
     
     if data_aug:
         save_dataset_in_chunks_lmdb(train_sequences,
-            out_dir='preprocessed_train_aug_balanced',
+            out_dir='preprocessed_train_augmented_dataaug',
             chunk_size=chunk_size,
             transform_tight=augmented_tight,
             transform_context=augmented_context,
@@ -142,7 +143,7 @@ def main(img_height=128, img_width=128, context_scale=2.0,
     
     if val:
         save_dataset_in_chunks_lmdb(val_sequences,
-            out_dir='preprocessed_val_balanced',
+            out_dir='preprocessed_val',
             chunk_size=chunk_size,
             transform_tight=transform_tight,
             transform_context=transform_context,
@@ -150,7 +151,7 @@ def main(img_height=128, img_width=128, context_scale=2.0,
     
     if test:
         save_dataset_in_chunks_lmdb(test_sequences,
-            out_dir='preprocessed_test_balanced',
+            out_dir='preprocessed_test',
             chunk_size=chunk_size,
             transform_tight=transform_tight,
             transform_context=transform_context,

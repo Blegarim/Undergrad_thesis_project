@@ -7,11 +7,12 @@ import re
 from tqdm import tqdm
 from datetime import datetime
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torchvision import transforms
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, precision_score, recall_score
-from fvcore.nn import FlopCountAnalysis
+
+import argparse
 
 # ==== Model Imports ====
 from models.Vision_Transformer import ViT_Hierarchical
@@ -21,95 +22,10 @@ from models.Unified_Module import EnsembleModel
 from models.AblationModels import MotionOnlyModel, VisualOnlyModel, VanillaConcatModel
 from scripts.lmdb_dataset import LMDBChunkDataset
 from config import vit_args_config, motion_enc_args_config, get_unified_dim_model
+
+# ==== Shared utilities ====
 from train import remap_cross_labels, collate_fn
-import argparse
-
-# ============================================================
-# === Model Selection Function ==============================
-# ============================================================
-
-def get_model(model_type, motion_enc, vit, d_model, num_classes_dict):
-    """
-    Get specified model for ablation study.
-    
-    Args:
-        model_type: 'motion_only', 'visual_only', 'vanilla_concat', or 'full'
-        motion_enc: MotionEncoder instance
-        vit: ViT_Hierarchical instance  
-        d_model: model dimension
-        num_classes_dict: dictionary of class counts
-    
-    Returns:
-        Model instance
-    """
-    if model_type == 'motion_only':
-        return MotionOnlyModel(
-            motion_enc=motion_enc,
-            d_model=d_model,
-            num_classes_dict=num_classes_dict,
-            dropout=0.1
-        )
-    elif model_type == 'visual_only':
-        return VisualOnlyModel(
-            vit=vit,
-            d_model=d_model,
-            num_classes_dict=num_classes_dict,
-            dropout=0.1
-        )
-    elif model_type == 'vanilla_concat':
-        return VanillaConcatModel(
-            motion_enc=motion_enc,
-            vit=vit,
-            d_model=d_model,
-            num_classes_dict=num_classes_dict,
-            dropout=0.1
-        )
-    elif model_type == 'full':
-        # Original full model with cross-attention
-        cross_attention = CrossAttentionModule(
-            d_model=d_model,
-            num_heads=4,
-            num_classes_dict=num_classes_dict,
-            use_frame_crosses=True,
-            frame_pool="logsumexp",
-        )
-        return EnsembleModel(
-            motion_enc=motion_enc,
-            vit=vit,
-            cross_attention=cross_attention,
-            d_model=d_model
-        )
-    else:
-        raise ValueError(f"Unknown model type: {model_type}. Choose from: 'motion_only', 'visual_only', 'vanilla_concat', 'full'")
-
-def model_forward(model, model_type, images_tight, images_context, motions):
-    """
-    Forward pass wrapper for different model types.
-    
-    Args:
-        model: model instance
-        model_type: 'motion_only', 'visual_only', 'vanilla_concat', 'full'
-        images_tight: [B, T, C, H, W]
-        images_context: [B, T, C, H, W] 
-        motions: [B, T, motion_dim]
-    
-    Returns:
-        logits dict
-    """
-    if model_type == 'motion_only':
-        # Need to extract motion features first
-        motion_feats = model.motion_enc(motions, images_tight)
-        logits = model(motion_feats)
-    elif model_type == 'visual_only':
-        logits = model(images_context)
-    else:  # 'vanilla_concat' or 'full'
-        logits = model(images_tight, images_context, motions)
-    
-    return logits
-
-# ============================================================
-# === Evaluation Function ====================================
-# ============================================================
+from scripts.model_utils import get_model, model_forward
 
 def evaluate(model, dataloader, device, model_type, use_amp=False):
     model.eval()
@@ -191,50 +107,47 @@ def evaluate(model, dataloader, device, model_type, use_amp=False):
     # print(f"    Overall Accuracy: {overall:.2f}%")
     return metrics, all_labels, all_preds, all_probs
 
-# def compute_flops(model, img_height, img_width, context_scale, device):
-#     dummy_imgages_tight = torch.randn(1, 20, 3, img_height, img_width).to(device)
-#     dummy_imgages_context = torch.randn(1, 20, 3, img_height * context_scale, img_width * context_scale).to(device)
-#     dummy_motions = torch.randn(1, 20, 8).to(device)
-#     model.eval()
-#     flops = FlopCountAnalysis(model, (dummy_imgages_tight, dummy_imgages_context, dummy_motions))
-#     flops = flops.unsupported_ops_warnings(False)
-#     flops_total = flops.total()
-#     flops_per_frame = flops_total / (dummy_imgages_tight.size(0) * dummy_imgages_tight.size(1))
-
-#     print(f'Total FLOPs per {dummy_imgages_tight.size(0) * dummy_imgages_tight.size(1)}-frame input: {flops_total/1e9:.2f} GFLOPs')
-#     print(f'Average FLOPs per frame: {flops_per_frame/1e6:.2f} MFLOPs\n')
-#     return flops_per_frame
-
-# def inference_latency(model, img_height, img_width, context_scale, device):
-#     dummy_imgages_tight = torch.randn(1, 20, 3, img_height, img_width).to(device)
-#     dummy_imgages_context = torch.randn(1, 20, 3, img_height * context_scale, img_width * context_scale).to(device)
-#     dummy_motions = torch.randn(1, 20, 8).to(device)
-#     model.eval()
-#     # Warm up
-#     for _ in range(10):
-#         _ = model(dummy_imgages_tight, dummy_imgages_context, dummy_motions)
-#         torch.cuda.synchronize()
-    
-#     torch.cuda.synchronize()
-#     start = time.time()
-#     num_trials = 50
-#     for _ in range(num_trials):
-#         _ = model(dummy_imgages_tight, dummy_imgages_context, dummy_motions)
-#     torch.cuda.synchronize()
-#     end = time.time()
-
-#     avg_latency = (end - start) / num_trials  # seconds per 20-frame sequence
-#     avg_fps = 1.0 / avg_latency
-#     avg_latency_per_frame = avg_latency / 20.0
-
-#     print(f"\n Inference latency (averaged over {num_trials} runs):")
-#     print(f"  {avg_latency*1000:.2f} ms per {dummy_imgages_tight.size(1)}-frame sequence")
-#     print(f"  {avg_latency_per_frame*1000:.2f} ms per frame")
-#     print(f"  {avg_fps:.2f} FPS equivalent\n")
-#     return avg_fps, avg_latency_per_frame
 
 def round_metric(metrics, key):
     return round(metrics.get(key, 0.0), 2)
+
+def find_optimal_thresholds(y_true, y_prob, task_name=""):
+    """
+    Find optimal threshold that maximizes F1 score for binary classification.
+    Uses probability of positive class (column 1) for thresholding.
+    
+    Args:
+        y_true: Ground truth labels (numpy array)
+        y_prob: Probability predictions (numpy array, shape: [N, 2])
+        task_name: Name for logging
+    
+    Returns:
+        optimal_threshold: Float threshold value
+        best_f1: Best F1 score achieved
+    """
+    if y_prob.shape[1] != 2:
+        return 0.5, 0.0
+    
+    pos_probs = y_prob[:, 1]
+    
+    if len(set(y_true)) < 2:
+        return 0.5, 0.0
+    
+    thresholds = [round(t * 0.05, 2) for t in range(2, 19)]
+    best_threshold = 0.5
+    best_f1 = 0.0
+    
+    for thresh in thresholds:
+        preds = (pos_probs >= thresh).astype(int)
+        try:
+            f1 = f1_score(y_true, preds, zero_division=0)
+            if f1 > best_f1:
+                best_f1 = f1
+                best_threshold = thresh
+        except:
+            continue
+    
+    return best_threshold, best_f1
 
 def _infer_window_hw(index_tensor, table_size):
     if index_tensor.ndim != 2 or index_tensor.shape[0] != index_tensor.shape[1]:
@@ -269,6 +182,111 @@ def _init_global_rel_pos_from_ckpt(model, state_dict):
             continue
         if getattr(block, "window_size", None) is None:
             block.init_relative_position_bias(H, W)
+
+
+def compute_flops(model, model_type, img_height, img_width, context_scale, device):
+    """
+    Compute FLOPs for the model.
+    
+    Args:
+        model: The model instance
+        model_type: 'motion_only', 'visual_only', 'vanilla_concat', or 'full'
+        img_height: Image height for tight crop
+        img_width: Image width for tight crop
+        context_scale: Scale factor for context images
+        device: torch device
+    
+    Returns:
+        flops_per_frame: FLOPs per frame
+    """
+    from fvcore.nn import FlopCountAnalysis
+    
+    dummy_images_tight = torch.randn(1, 20, 3, img_height, img_width).to(device)
+    dummy_images_context = torch.randn(1, 20, 3, int(img_height * context_scale), int(img_width * context_scale)).to(device)
+    dummy_motions = torch.randn(1, 20, 8).to(device)
+    
+    model.eval()
+    
+    with torch.no_grad():
+        if model_type == 'motion_only':
+            inputs = (dummy_motions, dummy_images_tight)
+        elif model_type == 'visual_only':
+            inputs = (dummy_images_context,)
+        else:
+            inputs = (dummy_images_tight, dummy_images_context, dummy_motions)
+        
+        flops = FlopCountAnalysis(model, inputs)
+        flops = flops.unsupported_ops_warnings(False)
+        flops_total = flops.total()
+        flops_per_frame = flops_total / dummy_images_tight.size(1)
+    
+    print(f'Total FLOPs per {dummy_images_tight.size(1)}-frame input: {flops_total/1e9:.2f} GFLOPs')
+    print(f'Average FLOPs per frame: {flops_per_frame/1e6:.2f} MFLOPs')
+    return flops_per_frame
+
+
+def inference_latency(model, model_type, img_height, img_width, context_scale, device, num_trials=50):
+    """
+    Measure inference latency for the model.
+    
+    Args:
+        model: The model instance
+        model_type: 'motion_only', 'visual_only', 'vanilla_concat', or 'full'
+        img_height: Image height for tight crop
+        img_width: Image width for tight crop
+        context_scale: Scale factor for context images
+        device: torch device
+        num_trials: Number of trials for averaging
+    
+    Returns:
+        avg_fps: Average frames per second
+        avg_latency_per_frame: Average latency per frame in seconds
+    """
+    dummy_images_tight = torch.randn(1, 20, 3, img_height, img_width).to(device)
+    dummy_images_context = torch.randn(1, 20, 3, int(img_height * context_scale), int(img_width * context_scale)).to(device)
+    dummy_motions = torch.randn(1, 20, 8).to(device)
+    
+    model.eval()
+    
+    with torch.no_grad():
+        # Warm up
+        for _ in range(10):
+            if model_type == 'motion_only':
+                _ = model(model.motion_enc(dummy_motions, dummy_images_tight), dummy_images_tight)
+            elif model_type == 'visual_only':
+                _ = model(dummy_images_context)
+            else:
+                _ = model(dummy_images_tight, dummy_images_context, dummy_motions)
+        
+        if device.type == 'cuda':
+            torch.cuda.synchronize()
+        
+        # Measure
+        start = time.time()
+        for _ in range(num_trials):
+            if model_type == 'motion_only':
+                _ = model(model.motion_enc(dummy_motions, dummy_images_tight), dummy_images_tight)
+            elif model_type == 'visual_only':
+                _ = model(dummy_images_context)
+            else:
+                _ = model(dummy_images_tight, dummy_images_context, dummy_motions)
+        
+        if device.type == 'cuda':
+            torch.cuda.synchronize()
+        end = time.time()
+    
+    avg_latency = (end - start) / num_trials
+    avg_fps = 1.0 / avg_latency
+    avg_latency_per_frame = avg_latency / dummy_images_tight.size(1)
+    
+    print(f"\nInference latency (averaged over {num_trials} runs):")
+    print(f"  {avg_latency*1000:.2f} ms per {dummy_images_tight.size(1)}-frame sequence")
+    print(f"  {avg_latency_per_frame*1000:.2f} ms per frame")
+    print(f"  {avg_fps:.2f} FPS equivalent")
+    
+    return avg_fps, avg_latency_per_frame
+
+
 # ============================================================
 # === Main Testing Script ====================================
 # ============================================================
@@ -282,6 +300,8 @@ def main():
     parser.add_argument('--model_path', type=str, 
                         default="best_model_outputs/best_model_epoch28_0122_1511.pth",
                         help='Path to model checkpoint')
+    parser.add_argument('--save_predictions', action='store_true',
+                        help='Save detailed predictions with probabilities to CSV')
     args = parser.parse_args()
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -345,8 +365,9 @@ def main():
     model.load_state_dict(state_dict)
     print("Model loaded successfully.")
 
-    # flops_per_frame = compute_flops(model, img_size, img_size, context_scale, device)
-    # fps, latency_per_frame = inference_latency(model, img_size, img_size, context_scale, device)
+    # Compute FLOPs and latency
+    flops_per_frame = compute_flops(model, args.model_type, img_size, img_size, context_scale, device)
+    fps, latency_per_frame = inference_latency(model, args.model_type, img_size, img_size, context_scale, device)
 
     # ==== Find test chunks ====
     chunk_files = sorted(
@@ -437,6 +458,33 @@ def main():
         100 * sum(v for k, v in avg_metrics.items() if k.endswith("_acc")) / 3.0
     )
 
+    # ==== Threshold Optimization ====
+    optimal_thresholds = {}
+    optimized_metrics = {}
+    
+    print("\n=== Threshold Optimization ===")
+    for name in all_labels_global.keys():
+        y_true = torch.cat(all_labels_global[name]).numpy()
+        y_prob = torch.cat(all_probs_global[name]).numpy()
+        
+        if y_prob.shape[1] == 2:
+            opt_thresh, opt_f1 = find_optimal_thresholds(y_true, y_prob, name)
+            optimal_thresholds[name] = opt_thresh
+            
+            pos_probs = y_prob[:, 1]
+            opt_preds = (pos_probs >= opt_thresh).astype(int)
+            
+            optimized_metrics[f'{name}_f1'] = f1_score(y_true, opt_preds, average='binary', zero_division=0)
+            optimized_metrics[f'{name}_p'] = precision_score(y_true, opt_preds, average='binary', zero_division=0)
+            optimized_metrics[f'{name}_r'] = recall_score(y_true, opt_preds, average='binary', zero_division=0)
+            optimized_metrics[f'{name}_acc'] = accuracy_score(y_true, opt_preds)
+            
+            print(f"  {name}: threshold={opt_thresh:.2f}, F1={opt_f1:.4f} (default: {avg_metrics.get(f'{name}_f1', 0):.4f})")
+    
+    optimized_metrics["overall_acc"] = (
+        100 * sum(v for k, v in optimized_metrics.items() if k.endswith("_acc")) / 3.0
+    ) if any(k.endswith("_acc") for k in optimized_metrics) else 0.0
+
     # Summary Table
     score_row = ["Heads", "Accuracy", "F1", "AUC", "P", "R"]
     rows = [score_row]
@@ -444,6 +492,20 @@ def main():
         row = [h.capitalize()] + [round_metric(avg_metrics, f"{h}_{s}") for s in metric_suffixes]
         rows.append(row)
     overall_row = ['Overall', round_metric(avg_metrics, 'overall_acc')]
+    
+    # Threshold-optimized summary
+    opt_score_row = ["Heads (Optimized)", "Threshold", "Accuracy", "F1", "P", "R"]
+    opt_rows = [opt_score_row]
+    for h in heads:
+        thresh = optimal_thresholds.get(h, 0.5)
+        row = [h.capitalize(), thresh, 
+               round_metric(optimized_metrics, f"{h}_acc"),
+               round_metric(optimized_metrics, f"{h}_f1"),
+               round_metric(optimized_metrics, f"{h}_p"),
+               round_metric(optimized_metrics, f"{h}_r")]
+        opt_rows.append(row)
+    opt_overall_row = ['Overall (Optimized)', '', round_metric(optimized_metrics, 'overall_acc')]
+    
     computational = [
         'Parameters count:',
         f'{sum(p.numel() for p in model.parameters() if p.requires_grad)} params',
@@ -452,28 +514,79 @@ def main():
         f'{args.model_type}',
         '',
         'Per-frame FLOPs:',
-        # f'{flops_per_frame/1e6:.2f} MFLOPs',
-        # '',
-        # 'Per-frame Latency:',
-        # f'{latency_per_frame*1000:.2f} ms',
-        # '',
-        # 'FPS Equivalent:',
-        # f'{fps:.2f}'
+        f'{flops_per_frame/1e6:.2f} MFLOPs',
+        '',
+        'Per-frame Latency:',
+        f'{latency_per_frame*1000:.2f} ms',
+        '',
+        'FPS Equivalent:',
+        f'{fps:.2f}'
     ]
 
     with open(log_csv, "a", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([])
+        writer.writerow(["=== Default Threshold (0.5) ==="])
         for r in rows:
             writer.writerow(r)
         writer.writerow(overall_row)
-        writer.writerow(computational)
+        writer.writerow([])
+        writer.writerow(["=== Threshold-Optimized ==="])
+        for r in opt_rows:
+            writer.writerow(r)
+        writer.writerow(opt_overall_row)
+        writer.writerow([])
+        for r in computational:
+            writer.writerow(r)
 
     print("\nTesting complete.")
-    print("Average metrics:")
+    print("Average metrics (default threshold 0.5):")
     for k, v in avg_metrics.items():
         print(f"  {k}: {v:.2f}")
+    print("\nThreshold-optimized metrics:")
+    print(f"  Optimal thresholds: {optimal_thresholds}")
+    print(f"  Overall accuracy: {optimized_metrics.get('overall_acc', 0):.2f}%")
     print(f"Results logged to: {log_csv}")
+    
+    # Save detailed predictions with probabilities
+    if args.save_predictions:
+        pred_csv = os.path.join(log_dir, f"predictions_{timestamp}.csv")
+        print(f"\nSaving detailed predictions to: {pred_csv}")
+        
+        all_labels_flat = {}
+        all_preds_flat = {}
+        all_probs_flat = {}
+        for name in heads:
+            if all_labels_global.get(name):
+                all_labels_flat[name] = torch.cat(all_labels_global[name]).numpy()
+                all_preds_flat[name] = torch.cat(all_preds_global[name]).numpy()
+                all_probs_flat[name] = torch.cat(all_probs_global[name]).numpy()
+        
+        n_samples = len(all_labels_flat.get('actions', []))
+        
+        with open(pred_csv, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                'sample_idx',
+                'actions_true', 'actions_prob_0', 'actions_prob_1', 'actions_pred',
+                'looks_true', 'looks_prob_0', 'looks_prob_1', 'looks_pred',
+                'crosses_true', 'crosses_prob_0', 'crosses_prob_1', 'crosses_pred'
+            ])
+            
+            for i in range(n_samples):
+                row = [i]
+                for name in heads:
+                    if name in all_labels_flat:
+                        row.extend([
+                            int(all_labels_flat[name][i]),
+                            round(float(all_probs_flat[name][i][0]), 4),
+                            round(float(all_probs_flat[name][i][1]), 4),
+                            int(all_preds_flat[name][i])
+                        ])
+                    else:
+                        row.extend(['', '', '', ''])
+                writer.writerow(row)
+        print(f"Predictions saved: {n_samples} samples")
     
     # Save results with model type suffix
     if args.model_type != 'full':

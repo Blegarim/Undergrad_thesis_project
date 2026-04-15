@@ -3,7 +3,7 @@ Training configuration with advanced class imbalance handling options.
 This file extends the existing config.py with toggleable imbalance strategies.
 """
 
-from .class_imbalance_strategies import (
+from class_imbalance_strategies import (
     FocalLoss, ClassBalancedFocalLoss, BatchBalancedSampler,
     DynamicLossWeighting, ThresholdOptimizer, create_class_balanced_loss,
     get_imbalance_config

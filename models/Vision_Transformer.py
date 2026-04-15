@@ -319,17 +319,16 @@ class ViT_Hierarchical(nn.Module):
             )
 
             # build blocks
+            actual_w_size = None if w_size == "global" else w_size
             blocks = []
             for j in range(num_layers):
                 dp_rate = dpr[block_idx]
                 block_idx += 1
 
-                if w_size == "global":
-                    w_size = None
                 blocks.append(WindowTransformerBlock(
                         dim=dim,
                         num_heads=num_heads,
-                        window_size=w_size,            
+                        window_size=actual_w_size,
                         mlp_ratio=mlp_r,
                         dropout=dropout,
                         attn_dropout=attn_dp,

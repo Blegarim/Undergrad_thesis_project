@@ -32,8 +32,9 @@ class MotionOnlyModel(nn.Module):
         # Frame-level crosses head
         self.crosses_frame_head = nn.Linear(d_model, num_classes_dict["crosses"])
         
-    def forward(self, motion_feats, frame_pool="logsumexp"):
+    def forward(self, motions, images_tight, frame_pool="logsumexp"):
         """Forward pass with motion features only."""
+        motion_feats = self.motion_enc(motions, images_tight)
         motion_feats = self.norm(motion_feats)  # [B, T, D]
         
         # Temporal pooling

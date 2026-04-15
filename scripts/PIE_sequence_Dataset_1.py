@@ -2,8 +2,12 @@ import pickle
 import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
-from turbojpeg import TurboJPEG, TJPF_RGB
-jpeg = TurboJPEG(lib_path="C:\\libjpeg-turbo64\\bin\\turbojpeg.dll")
+try:
+    from turbojpeg import TurboJPEG, TJPF_RGB
+    jpeg = TurboJPEG(lib_path="C:\\libjpeg-turbo64\\bin\\turbojpeg.dll")
+except Exception:
+    jpeg = None
+    TJPF_RGB = None
 from pathlib import Path
 from tqdm import tqdm
 
@@ -54,11 +58,14 @@ class PIESequenceDataset(Dataset):
                     raise FileNotFoundError(
                         f"Image not found: {img_path} or any of {candidates}"
                     )
-            with open(img_path, 'rb') as in_file:
-                buff = in_file.read()
             try:
-                img_array = jpeg.decode(buff, pixel_format=TJPF_RGB)
-                img = Image.fromarray(img_array)
+                if jpeg is not None:
+                    with open(img_path, 'rb') as in_file:
+                        buff = in_file.read()
+                    img_array = jpeg.decode(buff, pixel_format=TJPF_RGB)
+                    img = Image.fromarray(img_array)
+                else:
+                    raise Exception("JPEG decoder not available")
             except Exception:
                 img = Image.open(img_path).convert('RGB')
             if self.crop:

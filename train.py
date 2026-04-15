@@ -5,25 +5,26 @@ import torch.optim as optim
 import numpy as np
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
-from sklearn.utils.class_weight import compute_class_weight
+from sklearn.metrics import f1_score, precision_score, recall_score
 
 from models.Vision_Transformer import ViT_Hierarchical
 from models.Motion_Encoder import MotionEncoder
 from models.Cross_Attention_Module import CrossAttentionModule
 from models.Unified_Module import EnsembleModel
-from models.AblationModels import MotionOnlyModel, VisualOnlyModel, VanillaConcatModel
 from config import vit_args_config, motion_enc_args_config, get_unified_dim_model
 from scripts.lmdb_dataset import LMDBChunkDataset
+from scripts.model_utils import get_model, model_forward
+from scripts.train_utils import (
+    collate_fn, EarlyStopping, remap_cross_labels,
+    gather_chunks, wait_for_memory, mp_async_load
+)
 
-import time
 import gc
 import random
 import csv
 import psutil
 from collections import Counter
 import multiprocessing as mp
-import multiprocessing.queues as mpq
-import subprocess
 import lmdb, pickle
 from queue import Empty
 from tqdm import tqdm
@@ -33,42 +34,42 @@ from datetime import datetime
 Training script for the PIE dataset using an Ensemble Model with Temporal ConvNet-GRU-Attention, Hierarchical Vision Transformer and Cross Attention.
 '''
 
-def collate_fn(batch):
-    images_tight = torch.stack([item['images_tight'] for item in batch], dim=0)
-    images_context = torch.stack([item['images_context'] for item in batch], dim=0)
-    motions = torch.stack([item['motions'] for item in batch], dim=0)[..., :8]
-    labels = {k: torch.stack([item[k] for item in batch], dim=0) for k in ['actions', 'looks', 'crosses']}
-    return images_tight, images_context, motions, labels
-
-class EarlyStopping:
-    def __init__(self, patience=3, min_delta=0.0):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.counter = 0
-        self.best_loss = float('inf')
-        self.early_stop = False
-
-    def __call__(self, val_loss):
-        if val_loss < self.best_loss - self.min_delta:
-            self.best_loss = val_loss
-            self.counter = 0
+def compute_class_weights_from_lmdb(lmdb_paths, device):
+    """
+    Compute per-task class weights from LMDB metadata.
+    Uses inverse frequency weighting: weight_i = total / (n_classes * count_i)
+    This upweights minority classes during loss computation.
+    """
+    counts = {task: [0, 0] for task in ['actions', 'looks', 'crosses']}
+    
+    for path in lmdb_paths:
+        env = lmdb.open(path, readonly=True, lock=False)
+        try:
+            with env.begin(write=False) as txn:
+                for key, value in txn.cursor():
+                    key_str = key.decode()
+                    if key_str.endswith('_meta'):
+                        meta = pickle.loads(value)
+                        for task in counts:
+                            label = int(meta.get(task, 0))
+                            if label in [0, 1]:
+                                counts[task][label] += 1
+        finally:
+            env.close()
+    
+    weights = {}
+    for task, cnt in counts.items():
+        total = sum(cnt)
+        if total > 0:
+            cnt0, cnt1 = cnt[0], cnt[1]
+            weights[task] = torch.tensor([
+                total / (2 * max(cnt0, 1)),
+                total / (2 * max(cnt1, 1))
+            ], dtype=torch.float32, device=device)
         else:
-            self.counter += 1
-            if self.counter >= self.patience:
-                self.early_stop = True
-
-def remap_cross_labels(labels):
-    crosses = labels['crosses']
-    crosses = torch.clamp(crosses, 0, 1)
-    labels['crosses'] = crosses
-
-def filter_irrelevant(data):
-    return [item for item in data if int(item['crosses'].item())==0 or int(item['crosses'].item())==1]
-
-def class_weight(a, b, device):
-    y = np.array([0]*a + [1]*b)
-    weight = compute_class_weight(class_weight='balanced', classes=np.unique(y), y=y)
-    return torch.tensor(weight, dtype=torch.float).to(device)
+            weights[task] = torch.tensor([1.0, 1.0], device=device)
+    
+    return weights
 
 def _inverse_class_weights(counts):
     total = sum(counts.values())
@@ -140,26 +141,29 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, model_type,
         with torch.cuda.amp.autocast(enabled=use_amp):
             outputs = model_forward(model, model_type, images_tight, images_context, motions)
 
-        total_batch_loss = 0.0
-        for name in ["actions", "looks", "crosses"]:
-            if name == "crosses":
-                if model_type in ['full', 'vanilla_concat'] and hasattr(model, 'cross_attention') and model.cross_attention.use_frame_crosses:
-                    logits = outputs["crosses_frame"]
+            total_batch_loss = torch.zeros(1, device=device)[0]
+            for name in ["actions", "looks", "crosses"]:
+                if name == "crosses":
+                    if model_type in ['full', 'vanilla_concat'] and hasattr(model, 'cross_attention') and model.cross_attention.use_frame_crosses:
+                        logits = outputs["crosses_frame"]
+                    else:
+                        logits = outputs["crosses_pooled"]
                 else:
-                    logits = outputs["crosses_pooled"]
-            else:
-                logits = outputs[name]
+                    logits = outputs[name]
 
-            targets = labels[name]
-            head_loss = criterion[name](logits, targets)
-            total_batch_loss += loss_weight.get(name, 1.0) * head_loss
+                targets = labels[name]
+                head_loss = criterion[name](logits.float(), targets)
+                total_batch_loss = total_batch_loss + loss_weight.get(name, 1.0) * head_loss
 
         if scaler is not None:
             scaler.scale(total_batch_loss).backward()
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             scaler.step(optimizer)
             scaler.update()
         else:
             total_batch_loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
         total_loss += total_batch_loss.item()
 
@@ -181,11 +185,15 @@ def validate_one_epoch(model, dataloader, criterion, device, model_type, use_amp
       - loss_sum: float (sum of per-sample losses across the dataloader)
       - n_samples: int (total number of samples seen)
       - correct_counts: dict mapping head -> number of correct predictions (ints)
+      - all_preds: dict mapping head -> list of predictions (for F1 computation)
+      - all_targets: dict mapping head -> list of targets (for F1 computation)
     """
     model.eval()
     loss_sum = 0.0
     correct = {}
     total = {}
+    all_preds = {name: [] for name in ["actions", "looks", "crosses"]}
+    all_targets = {name: [] for name in ["actions", "looks", "crosses"]}
     samples = 0
 
     with torch.inference_mode():
@@ -220,15 +228,18 @@ def validate_one_epoch(model, dataloader, criterion, device, model_type, use_amp
                 _, preds = torch.max(logits, 1)
                 correct[name] = correct.get(name, 0) + (preds == targets).sum().item()
                 total[name] = total.get(name, 0) + targets.size(0)
+                
+                all_preds[name].extend(preds.cpu().numpy().tolist())
+                all_targets[name].extend(targets.cpu().numpy().tolist())
 
             samples += batch_size
             loss_sum += batch_loss
 
     if samples == 0:
-        return 0.0, 0, {}
+        return 0.0, 0, {}, {}, {}
 
-    # Note: return raw correct counts (not per-chunk accuracies)
-    return loss_sum, samples, correct
+    # Note: return raw correct counts and predictions (not per-chunk accuracies)
+    return loss_sum, samples, correct, all_preds, all_targets
     
 def finetune(model, enable_finetune=False):
     if not enable_finetune:
@@ -237,133 +248,6 @@ def finetune(model, enable_finetune=False):
         param.requires_grad = False
         if ('cross_attention' in name) or ('classifier' in name) or ('cross_attn' in name):
             param.requires_grad = True
-
-def gather_chunks(folders):
-    if isinstance(folders, str):
-        folders = [folders]
-    all_files = []
-    for folder in folders:
-        chunk_files = sorted([os.path.join(folder, f) 
-                            for f in os.listdir(folder) 
-                            if f.endswith('.lmdb')])
-        all_files.extend(chunk_files)
-    
-    return all_files
-
-def wait_for_memory(threshold=96, interval=1):
-    while psutil.virtual_memory().percent > threshold:
-        print(f"RAM at {psutil.virtual_memory().percent:.1f}%, waiting...")
-        time.sleep(interval)
-
-def mp_async_load(idx, path, queue):
-    """
-    Warm LMDB chunk file (light read) in a background process, then return the path.
-    For .pt files this would torch.load; for LMDB we just open & read a tiny bit
-    to encourage the OS to cache the file, then pass back the path string.
-    """
-    try:
-        # Quick warm: open LMDB and read one _meta key if available
-        env = lmdb.open(path, readonly=True, lock=False)
-        with env.begin(write=False) as txn:
-            # iterate until we find a meta key, then break
-            cursor = txn.cursor()
-            for key, _ in cursor:
-                key_s = key.decode()
-                if key_s.endswith("_meta"):
-                    # read one meta to warm
-                    _ = txn.get(key)
-                    break
-        env.close()
-        # Return the path string as payload; parent will instantiate LMDBChunkDataset(path)
-        queue.put((idx, 'ok', path))
-    except Exception as e:
-        queue.put((idx, 'err', str(e)))
-
-def get_hdd_temp(dev="/dev/sda"):
-    try:
-        out = subprocess.check_output(["hdddtemp", dev]).decode()
-        return int(out.split(":")[2].strip().split("°")[0])
-    except Exception:
-        return None
-
-def get_model(model_type, motion_enc, vit, d_model, num_classes_dict):
-    """
-    Get specified model for ablation study.
-    
-    Args:
-        model_type: 'motion_only', 'visual_only', 'vanilla_concat', or 'full'
-        motion_enc: MotionEncoder instance
-        vit: ViT_Hierarchical instance  
-        d_model: model dimension
-        num_classes_dict: dictionary of class counts
-    
-    Returns:
-        Model instance
-    """
-    if model_type == 'motion_only':
-        return MotionOnlyModel(
-            motion_enc=motion_enc,
-            d_model=d_model,
-            num_classes_dict=num_classes_dict,
-            dropout=0.1
-        )
-    elif model_type == 'visual_only':
-        return VisualOnlyModel(
-            vit=vit,
-            d_model=d_model,
-            num_classes_dict=num_classes_dict,
-            dropout=0.1
-        )
-    elif model_type == 'vanilla_concat':
-        return VanillaConcatModel(
-            motion_enc=motion_enc,
-            vit=vit,
-            d_model=d_model,
-            num_classes_dict=num_classes_dict,
-            dropout=0.1
-        )
-    elif model_type == 'full':
-        # Original full model with cross-attention
-        cross_attention = CrossAttentionModule(
-            d_model=d_model,
-            num_heads=4,
-            num_classes_dict=num_classes_dict,
-            use_frame_crosses=True,
-            frame_pool="logsumexp",
-        )
-        return EnsembleModel(
-            motion_enc=motion_enc,
-            vit=vit,
-            cross_attention=cross_attention,
-            d_model=d_model
-        )
-    else:
-        raise ValueError(f"Unknown model type: {model_type}. Choose from: 'motion_only', 'visual_only', 'vanilla_concat', 'full'")
-
-def model_forward(model, model_type, images_tight, images_context, motions):
-    """
-    Forward pass wrapper for different model types.
-    
-    Args:
-        model: model instance
-        model_type: 'motion_only', 'visual_only', 'vanilla_concat', 'full'
-        images_tight: [B, T, C, H, W]
-        images_context: [B, T, C, H, W] 
-        motions: [B, T, motion_dim]
-    
-    Returns:
-        logits dict
-    """
-    if model_type == 'motion_only':
-        # Need to extract motion features first
-        motion_feats = model.motion_enc(motions, images_tight)
-        logits = model(motion_feats)
-    elif model_type == 'visual_only':
-        logits = model(images_context)
-    else:  # 'vanilla_concat' or 'full'
-        logits = model(images_tight, images_context, motions)
-    
-    return logits
 
 def main():
     import argparse
@@ -398,6 +282,10 @@ def main():
             'Actions Acc',
             'Looks Acc',
             'Crosses Acc',
+            'Actions F1',
+            'Looks F1',
+            'Crosses F1',
+            'Macro F1',
             'Val Loss',
             'Overall Val Acc'
         ])
@@ -419,7 +307,7 @@ def main():
         }
     loss_weight = {'actions': 0.8, 'looks': 0.8, 'crosses': 1.2}
     use_weighted_sampler = True 
-    sampler_powers = {"crosses": 1, "actions": 0.5, "looks": 0.5}
+    sampler_powers = {"crosses": 1.5, "actions": 0.3, "looks": 0.7}
     
     early_stopping = EarlyStopping(patience=15, min_delta=0.001)
     best_val_loss = float('inf')
@@ -444,10 +332,21 @@ def main():
 
     finetune(model, enable_finetune=False)
 
+    train_chunk_folder = ['preprocessed_train', 'preprocessed_train_aug']
+    val_chunk_folder = 'preprocessed_val'
+    train_chunk_files = gather_chunks(train_chunk_folder)
+    val_chunk_files = gather_chunks(val_chunk_folder)
+
+    print("Computing class weights from training data for severe imbalance handling...")
+    class_weights = compute_class_weights_from_lmdb(train_chunk_files, device)
+    for task in ['actions', 'looks', 'crosses']:
+        w = class_weights[task]
+        print(f"  {task}: class_0 weight={w[0].item():.2f}, class_1 weight={w[1].item():.2f}")
+
     criterion = {
-        "actions": nn.CrossEntropyLoss(),
-        "looks": nn.CrossEntropyLoss(),
-        "crosses": nn.CrossEntropyLoss()
+        "actions": nn.CrossEntropyLoss(weight=class_weights['actions']),
+        "looks": nn.CrossEntropyLoss(weight=class_weights['looks']),
+        "crosses": nn.CrossEntropyLoss(weight=class_weights['crosses'])
     }
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
     scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
@@ -466,11 +365,6 @@ def main():
 
     # --- Training loop ---
     weight_cache = {}
-    train_chunk_folder = ['preprocessed_train', 'preprocessed_train_aug']
-    val_chunk_folder = 'preprocessed_val'
-    train_chunk_files = gather_chunks(train_chunk_folder)
-    val_chunk_files = gather_chunks(val_chunk_folder)
-
     queue = mp.Queue(maxsize=3)
     processes = {}
     results = {}
@@ -558,8 +452,7 @@ def main():
                 )
 
             loader = DataLoader(dataset, **loader_kwargs)
-            print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] Training {len(loader)} batches from {chunk_path}")
-            print(f"→ Training {len(loader)} batches in this chunk")
+            print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] {len(loader)} batches from {chunk_path}")
             
             avg_loss = train_one_chunk(
                 model,
@@ -578,10 +471,7 @@ def main():
             del lmdb_path, dataset, loader
             if device.type == "cuda":
                 torch.cuda.empty_cache()
-            trash = gc.collect()
-            print(f"Unreachable trash: {trash}")
-
-            # Additional memory cleanup - removed duplicate empty_cache
+            gc.collect()
 
             next_idx = chunk_idx + preload
             if next_idx < len(train_chunk_files):
@@ -589,9 +479,7 @@ def main():
                 p = mp.Process(target=mp_async_load, args=(next_idx, train_chunk_files[next_idx], queue))
                 p.start()
                 processes[next_idx] = p
-            
-            preload = min(preload, 3)
-        
+
         # collect any remaining queue items and join remaining processes
         remaining = len(processes)
         for _ in range(remaining):
@@ -628,6 +516,8 @@ def main():
         total_val_samples = 0
         total_correct_counts = {}  # head -> total correct across all val chunks
         total_label_counts = {}    # head -> total labels across all val chunks
+        val_all_preds = {name: [] for name in ["actions", "looks", "crosses"]}
+        val_all_targets = {name: [] for name in ["actions", "looks", "crosses"]}
 
         for chunk_path in val_chunk_files:
             print(f"Loading validation chunk {chunk_path}")
@@ -646,7 +536,7 @@ def main():
                 pin_memory=use_pin_memory
             )
 
-            chunk_loss_sum, chunk_n, chunk_corrects = validate_one_epoch(
+            chunk_loss_sum, chunk_n, chunk_corrects, chunk_preds, chunk_targets = validate_one_epoch(
                 model,
                 val_loader,
                 criterion,
@@ -664,8 +554,13 @@ def main():
                 total_correct_counts[head] = total_correct_counts.get(head, 0) + int(corr_count)
                 # for per-head totals, assume chunk_n is the number of samples for that head
                 total_label_counts[head] = total_label_counts.get(head, 0) + chunk_n
+            
+            # aggregate predictions for F1 computation
+            for head in ["actions", "looks", "crosses"]:
+                val_all_preds[head].extend(chunk_preds.get(head, []))
+                val_all_targets[head].extend(chunk_targets.get(head, []))
 
-            del val_dataset, val_loader, chunk_corrects
+            del val_dataset, val_loader, chunk_corrects, chunk_preds, chunk_targets
             gc.collect()
             if device.type == "cuda":
                 torch.cuda.empty_cache()
@@ -680,6 +575,22 @@ def main():
         val_metric = {}
         for head in total_correct_counts:
             val_metric[head] = total_correct_counts[head] / total_label_counts[head] if total_label_counts[head] > 0 else 0.0
+        
+        # compute F1, precision, recall for each head
+        for head in ["actions", "looks", "crosses"]:
+            preds = val_all_preds[head]
+            targets = val_all_targets[head]
+            if len(set(targets)) > 1:
+                val_metric[f'{head}_f1'] = f1_score(targets, preds, average='binary', zero_division=0)
+                val_metric[f'{head}_precision'] = precision_score(targets, preds, average='binary', zero_division=0)
+                val_metric[f'{head}_recall'] = recall_score(targets, preds, average='binary', zero_division=0)
+            else:
+                val_metric[f'{head}_f1'] = 0.0
+                val_metric[f'{head}_precision'] = 0.0
+                val_metric[f'{head}_recall'] = 0.0
+        
+        # compute macro F1
+        macro_f1 = (val_metric.get('actions_f1', 0) + val_metric.get('looks_f1', 0) + val_metric.get('crosses_f1', 0)) / 3
 
         overall_acc = sum(total_correct_counts.values()) / sum(total_label_counts.values()) if sum(total_label_counts.values()) > 0 else 0.0
         val_metric['overall'] = overall_acc
@@ -694,6 +605,10 @@ def main():
                 round(val_metric.get('actions', 0.0), 4),
                 round(val_metric.get('looks', 0.0), 4),
                 round(val_metric.get('crosses', 0.0), 4),
+                round(val_metric.get('actions_f1', 0.0), 4),
+                round(val_metric.get('looks_f1', 0.0), 4),
+                round(val_metric.get('crosses_f1', 0.0), 4),
+                round(macro_f1, 4),
                 round(val_loss, 4),
                 round(val_metric.get('overall', 0.0), 4)
             ])
@@ -710,16 +625,6 @@ def main():
             model_suffix = f"_{args.model_type}" if args.model_type != 'full' else ""
             torch.save(model.state_dict(), f'model_outputs/final_model_epoch{epoch+1}_{datetime_str}{model_suffix}.pth')
             break
-        
-        # temp = get_hdd_temp()
-        # if temp and temp >= 50:
-        #     rest = 180
-        # elif temp and temp >= 40:
-        #     rest = 120
-        # else:
-        #     rest = 1
-        # print(f"HDD at {temp}, resting for {rest}...")
-        time.sleep(1)
 
 if __name__ == "__main__":
     mp.set_start_method('spawn', force=True)

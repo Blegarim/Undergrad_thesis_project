@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.metrics import f1_score as sklearn_f1_score
 from collections import Counter
 import random
 
@@ -19,6 +20,8 @@ class FocalLoss(nn.Module):
     """
     def __init__(self, alpha=None, gamma=2.0, reduction='mean'):
         super(FocalLoss, self).__init__()
+        if isinstance(alpha, (list, tuple)):
+            alpha = torch.tensor(alpha, dtype=torch.float32)
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
@@ -182,7 +185,7 @@ class DynamicLossWeighting(nn.Module):
             self.weights = nn.Parameter(torch.tensor(initial_weights))
             
         self.performance_history = {'actions': [], 'looks': [], 'crosses': []}
-        self.last_improvement = {'actions': 0, 'looks': [], 'crosses': 0}
+        self.last_improvement = {'actions': 0, 'looks': 0, 'crosses': 0}
         
         # Device management - will be set to device later
         self._device = None
@@ -328,28 +331,17 @@ class ThresholdOptimizer:
         thresholds = np.arange(0.1, 0.9, 0.05)
         best_threshold = 0.5
         best_f1 = 0.0
-        
+
+        targets = np.array(targets)
         for threshold in thresholds:
             pred_binary = (np.array(predictions) > threshold).astype(int)
-            precision = self._precision(pred_binary, targets)
-            recall = self._recall(pred_binary, targets)
-            f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
-            
+            f1 = sklearn_f1_score(targets, pred_binary, average='binary', zero_division=0)
+
             if f1 > best_f1:
                 best_f1 = f1
                 best_threshold = threshold
-                
+
         return best_threshold
-    
-    def _precision(self, predictions, targets):
-        tp = np.sum((predictions == 1) & (targets == 1))
-        fp = np.sum((predictions == 1) & (targets == 0))
-        return tp / (tp + fp) if (tp + fp) > 0 else 0
-    
-    def _recall(self, predictions, targets):
-        tp = np.sum((predictions == 1) & (targets == 1))
-        fn = np.sum((predictions == 0) & (targets == 1))
-        return tp / (tp + fn) if (tp + fn) > 0 else 0
 
 
 def create_class_balanced_loss(dataset, task='crosses', loss_type='focal'):
