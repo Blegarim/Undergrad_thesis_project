@@ -9,10 +9,13 @@ import psutil
 import torch
 
 
+MAX_SEQ_LEN = 16  # cap temporal length to bound VRAM across chunks
+
+
 def collate_fn(batch):
-    images_tight = torch.stack([item['images_tight'] for item in batch], dim=0)
-    images_context = torch.stack([item['images_context'] for item in batch], dim=0)
-    motions = torch.stack([item['motions'] for item in batch], dim=0)[..., :8]
+    images_tight = torch.stack([item['images_tight'][:MAX_SEQ_LEN] for item in batch], dim=0)
+    images_context = torch.stack([item['images_context'][:MAX_SEQ_LEN] for item in batch], dim=0)
+    motions = torch.stack([item['motions'][:MAX_SEQ_LEN] for item in batch], dim=0)[..., :8]
     labels = {k: torch.stack([item[k] for item in batch], dim=0) for k in ['actions', 'looks', 'crosses']}
     return images_tight, images_context, motions, labels
 

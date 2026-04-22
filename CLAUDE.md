@@ -1,0 +1,132 @@
+# CLAUDE.md
+
+Guidance for Claude Code when working in this repository.
+
+## Project Overview
+
+Undergraduate thesis: multimodal pedestrian behavior prediction from PIE dataset. Simultaneously predicts **actions** (walking/standing), **looks** (looking at traffic or not), and **crosses** (crossing behavior) from video frame sequences.
+
+## Commands
+
+```bash
+pip install -r requirements.txt
+python -c "import torch; print(torch.cuda.is_available())"  # verify CUDA
+
+python train.py
+python train_two_phase.py   # balanced subset → full fine-tune → decouple classifiers
+
+python test.py                                  # full model
+python test.py --model_type motion_only         # ablation
+python test.py --model_type visual_only
+python test.py --model_type vanilla_concat
+
+python main.py        # inference on video
+python label_count.py # check LMDB label distribution
+
+# Sanity-check imports after any model edit
+python -c "from models.Vision_Transformer import ViT_Hierarchical; print('OK')"
+python -c "from models.Motion_Encoder import MotionEncoder; print('OK')"
+python -c "from models.Cross_Attention_Module import CrossAttentionModule; print('OK')"
+python -c "from models.Unified_Module import EnsembleModel; print('OK')"
+```
+
+## Architecture
+
+```
+Video frames → ViT_Hierarchical (context crop)   ──┐
+                                                     ├→ CrossAttentionModule → EnsembleModel → {actions, looks, crosses}
+Motion seqs  → MotionEncoder (tight crop + motion) ──┘
+```
+
+| File | Class | Role |
+|---|---|---|
+| `models/Vision_Transformer.py` | `ViT_Hierarchical` | Hierarchical windowed-attention ViT on context crops; outputs `[B, T, D]` |
+| `models/Motion_Encoder.py` | `MotionEncoder` | Temporal ConvNet-GRU-Attention on motion sequences + tight crops; outputs `[B, T, D]` |
+| `models/Cross_Attention_Module.py` | `CrossAttentionModule` | Frame-level cross-attention fusion with logsumexp pooling; per-task logit dicts |
+| `models/Unified_Module.py` | `EnsembleModel` | Wires all components; applies LayerNorm before fusion |
+| `models/AblationModels.py` | `MotionOnlyModel`, `VisualOnlyModel`, `VanillaConcatModel` | Ablation variants; same output dict format |
+
+**Unified `d_model`**: `get_unified_dim_model()` → 128. All components share this — never change one without updating the others.
+
+**Output dict keys**: `actions`, `looks`, `crosses_pooled`, `crosses_frame`. `crosses_frame` only present in full model and ablation models that implement it.
+
+## Configuration (`config.py`)
+
+- `get_unified_dim_model()` → `d_model = 128`
+- `vit_args_config(...)` → kwargs for `ViT_Hierarchical`
+- `motion_enc_args_config(...)` → kwargs for `MotionEncoder`
+
+Both accept overrides; defaults tuned for PIE.
+
+## Data Pipeline
+
+- **Format**: LMDB — each sample has `<key>_meta` (pickle) + image frames
+- **Class**: `LMDBChunkDataset` in `scripts/lmdb_dataset.py`
+- **Collation**: `collate_fn` from `scripts/train_utils.py` (re-exported from `train.py`)
+- **Normalization**: ImageNet stats (`mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]`)
+- **Crosses labels**: call `remap_cross_labels()` on each batch before loss — normalizes raw PIE labels to 0/1
+- **Loading**: `pin_memory=True`; process large data in chunks
+
+## Shared Utilities
+
+| File | Key exports |
+|---|---|
+| `scripts/model_utils.py` | `get_model(model_type, ...)` — model factory; `model_forward(...)` — dispatch by model type |
+| `scripts/train_utils.py` | `collate_fn`, `EarlyStopping`, `remap_cross_labels`, `gather_chunks`, `wait_for_memory`, `mp_async_load` |
+
+## Training Patterns
+
+**AMP + gradient scaling** (always use):
+```python
+optimizer.zero_grad(set_to_none=True)
+with torch.cuda.amp.autocast(enabled=use_amp):
+    outputs = model(images_tight, images_context, motions)
+    loss = compute_loss(outputs, labels)
+scaler.scale(loss).backward()
+scaler.step(optimizer)
+scaler.update()
+```
+
+**Performance flags** (set at startup):
+```python
+torch.backends.cudnn.benchmark = True
+torch.set_float32_matmul_precision("high")
+```
+
+**Memory management** (after each chunk):
+```python
+gc.collect()
+torch.cuda.empty_cache()
+```
+
+**Inference**: wrap in `torch.no_grad()`; call `model.eval()` / `model.train()` correctly.
+
+## Evaluation Metrics
+
+Must report: **Accuracy, F1, AUC, Precision, Recall**. Logged to CSV. Also track FLOPs, latency, FPS.
+
+## PIE Dataset (`PIE/`)
+
+Use `PIE/utilities/pie_data.py` for loading and annotation access. Do not modify `PIE/` unless working on preprocessing.
+
+## Code Style
+
+- **Naming**: PascalCase classes, snake_case functions/variables, UPPER_SNAKE_CASE constants, `_underscore` prefix for private.
+- **Imports**: stdlib → third-party → local.
+- **Quality**: type hints on signatures, docstrings on classes/complex functions, comments for non-obvious logic, functions ≤50 lines, lines ≤120 chars.
+
+## Debugging
+
+1. Check tensor shapes and dtypes first
+2. Verify device placement — CPU/CUDA mixing causes silent failures
+3. Isolate: data loading → forward pass → loss computation
+4. Fix first, refactor later — never combine both in one change
+
+## Core Development Rules
+
+- **Minimal, surgical changes** — touch only what the task requires.
+- **Read before editing** — understand existing code before proposing changes.
+- **One feature per change** — keep diffs focused.
+- **Explain before acting** — briefly state what you're changing and why.
+- **State assumptions explicitly** — ask rather than guess silently.
+- After modifying a model component, verify the import still works.

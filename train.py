@@ -138,7 +138,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, model_type,
 
         remap_cross_labels(labels)
         optimizer.zero_grad(set_to_none=True)
-        with torch.cuda.amp.autocast(enabled=use_amp):
+        with torch.amp.autocast('cuda', enabled=use_amp):
             outputs = model_forward(model, model_type, images_tight, images_context, motions)
 
             total_batch_loss = torch.zeros(1, device=device)[0]
@@ -205,7 +205,7 @@ def validate_one_epoch(model, dataloader, criterion, device, model_type, use_amp
             labels = {k: v.to(device, non_blocking=use_pin_memory).long() for k, v in labels.items()}
 
             remap_cross_labels(labels)
-            with torch.cuda.amp.autocast(enabled=use_amp):
+            with torch.amp.autocast('cuda', enabled=use_amp):
                 outputs = model_forward(model, model_type, images_tight, images_context, motions)
 
             # accumulate loss as sum over samples (handles criterion reduction='mean')
@@ -349,7 +349,7 @@ def main():
         "crosses": nn.CrossEntropyLoss(weight=class_weights['crosses'])
     }
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, weight_decay=1e-5)
-    scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+    scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=2, threshold=0.0001, threshold_mode='rel'
     )
@@ -357,7 +357,14 @@ def main():
     os.makedirs('model_outputs', exist_ok=True)
     os.makedirs('best_model_outputs', exist_ok=True)
 
-    base_transforms = transforms.Compose([
+    transform_tight = transforms.Compose([
+        transforms.Resize((128, 128)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])
+    ])
+    transform_context = transforms.Compose([
+        transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
@@ -410,7 +417,7 @@ def main():
 
             del payload
 
-            dataset = LMDBChunkDataset(lmdb_path, transform_tight=base_transforms, transform_context=base_transforms)
+            dataset = LMDBChunkDataset(lmdb_path, transform_tight=transform_tight, transform_context=transform_context)
             loader_kwargs = dict(
                 batch_size=batch_size,
                 shuffle=True,
@@ -420,7 +427,7 @@ def main():
                 persistent_workers=False,
             )
             if num_workers > 0:
-                loader_kwargs['prefetch_factor'] = 1
+                loader_kwargs['prefetch_factor'] = 2
 
             if use_weighted_sampler:
                 cached = weight_cache.get(lmdb_path)
@@ -496,7 +503,8 @@ def main():
             proc.join()
             processes.pop(idx, None)
 
-        # final cleanup
+        # final cleanup — clear results to prevent stale entries bleeding into the next epoch
+        results.clear()
         gc.collect()
         torch.cuda.empty_cache()
 
@@ -523,8 +531,8 @@ def main():
             print(f"Loading validation chunk {chunk_path}")
             val_dataset = LMDBChunkDataset(
                 chunk_path,
-                transform_tight=base_transforms,   
-                transform_context=base_transforms
+                transform_tight=transform_tight,
+                transform_context=transform_context
             )
 
             val_loader = DataLoader(

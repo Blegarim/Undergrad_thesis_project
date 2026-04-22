@@ -84,6 +84,13 @@ class LMDBChunkDataset(Dataset):
                 imgs_tight.append(timg)
                 imgs_context.append(cimg)
 
+            if len(imgs_tight) != T:
+                raise ValueError(
+                    f"[LMDBChunkDataset] Sequence {seq_id!r}: expected {T} frames, "
+                    f"found {len(imgs_tight)} — missing LMDB frame keys. "
+                    f"Chunk may be corrupted: {self.lmdb_path}"
+                )
+
         return {
             "images_tight": torch.stack(imgs_tight),
             "images_context": torch.stack(imgs_context),

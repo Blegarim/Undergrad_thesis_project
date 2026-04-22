@@ -54,8 +54,8 @@ def evaluate(model, dataloader, device, model_type, use_amp=False):
                         else:
                             logits = outputs["crosses_pooled"]
                     else:
-                        # Ablation models: use frame_crosses as default
-                        logits = outputs["crosses_frame"]
+                        # Ablation models: trained with crosses_pooled (no cross_attention)
+                        logits = outputs["crosses_pooled"]
                 else:
                     logits = outputs[name]
                 
@@ -252,20 +252,20 @@ def inference_latency(model, model_type, img_height, img_width, context_scale, d
         # Warm up
         for _ in range(10):
             if model_type == 'motion_only':
-                _ = model(model.motion_enc(dummy_motions, dummy_images_tight), dummy_images_tight)
+                _ = model(dummy_motions, dummy_images_tight)
             elif model_type == 'visual_only':
                 _ = model(dummy_images_context)
             else:
                 _ = model(dummy_images_tight, dummy_images_context, dummy_motions)
-        
+
         if device.type == 'cuda':
             torch.cuda.synchronize()
-        
+
         # Measure
         start = time.time()
         for _ in range(num_trials):
             if model_type == 'motion_only':
-                _ = model(model.motion_enc(dummy_motions, dummy_images_tight), dummy_images_tight)
+                _ = model(dummy_motions, dummy_images_tight)
             elif model_type == 'visual_only':
                 _ = model(dummy_images_context)
             else:

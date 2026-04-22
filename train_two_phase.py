@@ -53,7 +53,7 @@ def train_epoch(model, dataloader, criterion, optimizer, device, scaler, use_amp
         remap_cross_labels(labels)
         optimizer.zero_grad(set_to_none=True)
         
-        with torch.cuda.amp.autocast(enabled=use_amp):
+        with torch.amp.autocast('cuda', enabled=use_amp):
             outputs = model(images_tight, images_context, motions)
             loss = sum(criterion[t](outputs['crosses_frame'] if t == 'crosses' else outputs[t], labels[t])
                       for t in ['actions', 'looks', 'crosses'])
@@ -84,7 +84,7 @@ def validate(model, dataloader, criterion, device, use_amp=True):
             
             remap_cross_labels(labels)
             
-            with torch.cuda.amp.autocast(enabled=use_amp):
+            with torch.amp.autocast('cuda', enabled=use_amp):
                 outputs = model(images_tight, images_context, motions)
             
             for t in ['actions', 'looks', 'crosses']:
@@ -129,7 +129,13 @@ def main():
             'Phase', 'Epoch', 'Actions_F1', 'Looks_F1', 'Crosses_F1', 'Macro_F1'
         ])
     
-    transforms_base = transforms.Compose([
+    transform_tight = transforms.Compose([
+        transforms.Resize((128, 128)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    transform_context = transforms.Compose([
+        transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
@@ -157,11 +163,13 @@ def main():
     print(f"Val chunks: {len(val_chunks)}")
     
     criterion = build_criterion(device)
-    scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+    scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
 
     best_macro_f1 = 0
-    best_model_path = None
-    
+    os.makedirs('model_outputs', exist_ok=True)
+    best_model_path = f'model_outputs/phase1_baseline_{datetime_str}.pth'
+    torch.save(model.state_dict(), best_model_path)
+
     # ==================== PHASE 1: Balanced Training ====================
     print("\n" + "="*50)
     print("PHASE 1: Balanced Training")
@@ -177,7 +185,7 @@ def main():
         
         epoch_losses = []
         for chunk_path in tqdm(phase1_chunks, desc='Phase 1'):
-            dataset = LMDBChunkDataset(chunk_path, transforms_base, transforms_base)
+            dataset = LMDBChunkDataset(chunk_path, transform_tight, transform_context)
             loader = DataLoader(dataset, batch_size=batch_size, shuffle=True,
                               num_workers=num_workers, collate_fn=collate_fn)
             loss = train_epoch(model, loader, criterion, optimizer, device, scaler, use_amp=use_amp)
@@ -188,7 +196,7 @@ def main():
         
         val_metrics = []
         for chunk_path in val_chunks:
-            dataset = LMDBChunkDataset(chunk_path, transforms_base, transforms_base)
+            dataset = LMDBChunkDataset(chunk_path, transform_tight, transform_context)
             loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0, collate_fn=collate_fn)
             val_metrics.append(validate(model, loader, criterion, device, use_amp=use_amp))
             del dataset, loader
@@ -221,8 +229,6 @@ def main():
     print("PHASE 2: Full Data Fine-tuning")
     print("="*50)
 
-    if best_model_path is None:
-        raise RuntimeError("Phase 1 produced no improvement over 0 F1 — no checkpoint was saved.")
     model.load_state_dict(torch.load(best_model_path, map_location=device))
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-5)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2)
@@ -234,7 +240,7 @@ def main():
         
         epoch_losses = []
         for chunk_path in tqdm(phase2_chunks, desc='Phase 2'):
-            dataset = LMDBChunkDataset(chunk_path, transforms_base, transforms_base)
+            dataset = LMDBChunkDataset(chunk_path, transform_tight, transform_context)
             loader = DataLoader(dataset, batch_size=batch_size, shuffle=True,
                               num_workers=num_workers, collate_fn=collate_fn)
             loss = train_epoch(model, loader, criterion, optimizer, device, scaler, use_amp=use_amp)
@@ -245,7 +251,7 @@ def main():
         
         val_metrics = []
         for chunk_path in val_chunks:
-            dataset = LMDBChunkDataset(chunk_path, transforms_base, transforms_base)
+            dataset = LMDBChunkDataset(chunk_path, transform_tight, transform_context)
             loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0, collate_fn=collate_fn)
             val_metrics.append(validate(model, loader, criterion, device, use_amp=use_amp))
             del dataset, loader
@@ -278,8 +284,6 @@ def main():
     print("PHASE 3: Decoupled Training")
     print("="*50)
 
-    if best_model_path is None:
-        raise RuntimeError("No checkpoint was saved through Phase 2 — cannot start Phase 3.")
     model.load_state_dict(torch.load(best_model_path, map_location=device))
     freeze_backbone(model)
     
@@ -287,7 +291,7 @@ def main():
     print(f"Training {len(classifier_params)} classifier parameters")
     
     optimizer = optim.Adam(classifier_params, lr=5e-5, weight_decay=1e-5)
-    scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+    scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
     early_stopping = EarlyStopping(patience=3, min_delta=0.001)
 
     for epoch in range(5):
@@ -296,7 +300,7 @@ def main():
         
         epoch_losses = []
         for chunk_path in tqdm(phase2_chunks, desc='Phase 3'):
-            dataset = LMDBChunkDataset(chunk_path, transforms_base, transforms_base)
+            dataset = LMDBChunkDataset(chunk_path, transform_tight, transform_context)
             loader = DataLoader(dataset, batch_size=batch_size, shuffle=True,
                               num_workers=num_workers, collate_fn=collate_fn)
             loss = train_epoch(model, loader, criterion, optimizer, device, scaler, use_amp=use_amp)
@@ -307,7 +311,7 @@ def main():
         
         val_metrics = []
         for chunk_path in val_chunks:
-            dataset = LMDBChunkDataset(chunk_path, transforms_base, transforms_base)
+            dataset = LMDBChunkDataset(chunk_path, transform_tight, transform_context)
             loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0, collate_fn=collate_fn)
             val_metrics.append(validate(model, loader, criterion, device, use_amp=use_amp))
             del dataset, loader

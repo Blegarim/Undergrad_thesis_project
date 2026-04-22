@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python smoke_sanity.py)",
+      "Bash(python train.py*)",
+      "Bash(python train_two_phase.py*)",
+      "Bash(python test.py*)",
+      "Bash(python label_count.py*)",
+      "Bash(python -c *)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(grep \"\\\\.py$\")"
+    ]
+  }
+}

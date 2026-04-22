@@ -61,21 +61,19 @@ class CrossAttentionModule(nn.Module):
             if key != "crosses":
                 logits[key] = head(pooled)
 
-        pooled_crosses = self.classifier["crosses"](pooled)
+        logits["crosses_pooled"] = self.classifier["crosses"](pooled)
 
-        frame_logits = self.crosses_frame_head(attn_output)  # [B, T, C]
+        if self.use_frame_crosses:
+            frame_logits = self.crosses_frame_head(attn_output)  # [B, T, C]
 
-        if self.frame_pool == "logsumexp":
-            frame_crosses = torch.logsumexp(frame_logits, dim=1)
-        elif self.frame_pool == "max":
-            frame_crosses = frame_logits.max(dim=1).values
-        elif self.frame_pool == "mean":
-            frame_crosses = frame_logits.mean(dim=1)
-        else:
-            raise ValueError(f"Unsupported frame_pool: {self.frame_pool}")
-
-        logits["crosses_pooled"] = pooled_crosses
-        logits["crosses_frame"] = frame_crosses
+            if self.frame_pool == "logsumexp":
+                logits["crosses_frame"] = torch.logsumexp(frame_logits, dim=1)
+            elif self.frame_pool == "max":
+                logits["crosses_frame"] = frame_logits.max(dim=1).values
+            elif self.frame_pool == "mean":
+                logits["crosses_frame"] = frame_logits.mean(dim=1)
+            else:
+                raise ValueError(f"Unsupported frame_pool: {self.frame_pool}")
 
         return logits
 
