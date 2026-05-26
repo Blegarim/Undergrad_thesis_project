@@ -1,0 +1,4578 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "Undergrad_thesis_project",
+    "languages": [
+      "batch",
+      "json",
+      "markdown",
+      "python",
+      "txt",
+      "unknown"
+    ],
+    "frameworks": [],
+    "description": "Multimodal deep learning for pedestrian behavior prediction on the PIE dataset, jointly predicting actions (walking/standing), looks (attending to traffic), and crosses (crossing behavior) from short video-frame sequences using a hierarchical ViT and temporal motion encoder with cross-attention fusion.",
+    "analyzedAt": "2026-05-26T06:15:43.025Z",
+    "gitCommitHash": "5bc0a794b0d481a18a8f11caa5f806ec7089b615"
+  },
+  "nodes": [
+    {
+      "id": "file:ablation_usage_example.py",
+      "type": "file",
+      "name": "ablation_usage_example.py",
+      "filePath": "ablation_usage_example.py",
+      "summary": "Demonstrates how to instantiate and run different ablation model variants (motion-only, visual-only, vanilla concat, full) with example training loops for ablation studies.",
+      "tags": [
+        "utility",
+        "example",
+        "ablation",
+        "factory"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ablation_usage_example.py:get_ablation_model",
+      "type": "function",
+      "name": "get_ablation_model",
+      "filePath": "ablation_usage_example.py",
+      "lineRange": [
+        14,
+        68
+      ],
+      "summary": "Factory function that returns the appropriate model instance based on model_type string, supporting all ablation variants and the full ensemble model.",
+      "tags": [
+        "factory",
+        "ablation",
+        "model-selection"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ablation_usage_example.py:train_model_with_ablation",
+      "type": "function",
+      "name": "train_model_with_ablation",
+      "filePath": "ablation_usage_example.py",
+      "lineRange": [
+        71,
+        119
+      ],
+      "summary": "Example training loop that demonstrates model instantiation, forward pass dispatch by model type, and loss computation for ablation experiments.",
+      "tags": [
+        "training",
+        "example",
+        "ablation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:models/AblationModels.py",
+      "type": "file",
+      "name": "AblationModels.py",
+      "filePath": "models/AblationModels.py",
+      "summary": "Defines ablation model variants (MotionOnlyModel, VisualOnlyModel, VanillaConcatModel) that isolate individual modalities or use naive fusion, all producing the same output dict format as the full model for fair comparison.",
+      "tags": [
+        "data-model",
+        "ablation",
+        "component",
+        "neural-network"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:models/AblationModels.py:MotionOnlyModel",
+      "type": "class",
+      "name": "MotionOnlyModel",
+      "filePath": "models/AblationModels.py",
+      "lineRange": [
+        5,
+        69
+      ],
+      "summary": "Ablation model using only the motion encoder branch with attention pooling and per-task classifiers, including frame-level crossing predictions.",
+      "tags": [
+        "ablation",
+        "neural-network",
+        "motion"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:models/AblationModels.py:VisualOnlyModel",
+      "type": "class",
+      "name": "VisualOnlyModel",
+      "filePath": "models/AblationModels.py",
+      "lineRange": [
+        72,
+        136
+      ],
+      "summary": "Ablation model using only the ViT visual encoder branch with attention pooling and per-task classifiers, mirroring the full model output format.",
+      "tags": [
+        "ablation",
+        "neural-network",
+        "vision"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:models/AblationModels.py:VanillaConcatModel",
+      "type": "class",
+      "name": "VanillaConcatModel",
+      "filePath": "models/AblationModels.py",
+      "lineRange": [
+        139,
+        223
+      ],
+      "summary": "Ablation model that concatenates motion and visual features with a simple linear fusion layer instead of cross-attention, serving as a naive multimodal baseline.",
+      "tags": [
+        "ablation",
+        "neural-network",
+        "fusion",
+        "baseline"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:models/Cross_Attention_Module.py",
+      "type": "file",
+      "name": "Cross_Attention_Module.py",
+      "filePath": "models/Cross_Attention_Module.py",
+      "summary": "Implements the cross-attention fusion module that attends from motion features to visual features, applies learned attention pooling, and produces per-task logits including frame-level crossing predictions with configurable temporal pooling.",
+      "tags": [
+        "component",
+        "neural-network",
+        "attention",
+        "fusion"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:models/Cross_Attention_Module.py:CrossAttentionModule",
+      "type": "class",
+      "name": "CrossAttentionModule",
+      "filePath": "models/Cross_Attention_Module.py",
+      "lineRange": [
+        4,
+        78
+      ],
+      "summary": "Multi-head cross-attention module where motion queries attend to visual keys/values, followed by learned attention pooling and per-task classification heads with frame-level logsumexp pooling for crossing prediction.",
+      "tags": [
+        "attention",
+        "fusion",
+        "classification",
+        "neural-network"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Uses PyTorch MultiheadAttention with batch_first=True and logsumexp pooling as a smooth approximation of max pooling for frame-level temporal aggregation."
+    },
+    {
+      "id": "file:models/Unified_Module.py",
+      "type": "file",
+      "name": "Unified_Module.py",
+      "filePath": "models/Unified_Module.py",
+      "summary": "Top-level ensemble model that wires the ViT visual encoder, motion encoder, and cross-attention fusion module together with LayerNorm normalization before fusion.",
+      "tags": [
+        "entry-point",
+        "neural-network",
+        "component",
+        "orchestration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:models/Unified_Module.py:EnsembleModel",
+      "type": "class",
+      "name": "EnsembleModel",
+      "filePath": "models/Unified_Module.py",
+      "lineRange": [
+        4,
+        28
+      ],
+      "summary": "Orchestrates the full multimodal pipeline: ViT processes context crops, MotionEncoder processes tight crops and motion sequences, both are LayerNormed, then fused via cross-attention to produce task logits.",
+      "tags": [
+        "orchestration",
+        "neural-network",
+        "multimodal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/model_utils.py",
+      "type": "file",
+      "name": "model_utils.py",
+      "filePath": "scripts/model_utils.py",
+      "summary": "Shared model factory and forward-pass dispatch utilities that abstract model instantiation and input routing across all ablation variants and the full ensemble model.",
+      "tags": [
+        "utility",
+        "factory",
+        "service",
+        "ablation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/model_utils.py:get_model",
+      "type": "function",
+      "name": "get_model",
+      "filePath": "scripts/model_utils.py",
+      "lineRange": [
+        14,
+        66
+      ],
+      "summary": "Model factory that instantiates the appropriate ablation or full model variant based on model_type string, wiring subcomponents (motion encoder, ViT, cross-attention) as needed.",
+      "tags": [
+        "factory",
+        "ablation",
+        "model-selection"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/model_utils.py:model_forward",
+      "type": "function",
+      "name": "model_forward",
+      "filePath": "scripts/model_utils.py",
+      "lineRange": [
+        69,
+        90
+      ],
+      "summary": "Forward-pass dispatcher that routes inputs to the correct model signature depending on model type, since ablation variants accept different input subsets.",
+      "tags": [
+        "utility",
+        "dispatch",
+        "ablation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:test.py",
+      "type": "file",
+      "name": "test.py",
+      "filePath": "test.py",
+      "summary": "Comprehensive evaluation script that loads a trained model checkpoint, runs inference on LMDB test chunks, computes per-task metrics (accuracy, F1, AUC, precision, recall), finds optimal classification thresholds, measures FLOPs and inference latency, and exports results to CSV.",
+      "tags": [
+        "entry-point",
+        "evaluation",
+        "metrics",
+        "test"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses fvcore FlopCountAnalysis for computational cost profiling and supports mixed-precision inference via torch.amp.autocast."
+    },
+    {
+      "id": "function:test.py:evaluate",
+      "type": "function",
+      "name": "evaluate",
+      "filePath": "test.py",
+      "lineRange": [
+        30,
+        99
+      ],
+      "summary": "Core evaluation loop that runs model inference on a dataloader, accumulates predictions and labels, and computes per-task classification metrics including accuracy, F1, AUC, precision, and recall.",
+      "tags": [
+        "evaluation",
+        "metrics",
+        "inference"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test.py:find_optimal_thresholds",
+      "type": "function",
+      "name": "find_optimal_thresholds",
+      "filePath": "test.py",
+      "lineRange": [
+        105,
+        141
+      ],
+      "summary": "Searches over threshold values for binary classification to find the threshold that maximizes F1 score for each task, particularly useful for the imbalanced crosses prediction.",
+      "tags": [
+        "optimization",
+        "threshold",
+        "metrics"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test.py:_init_global_rel_pos_from_ckpt",
+      "type": "function",
+      "name": "_init_global_rel_pos_from_ckpt",
+      "filePath": "test.py",
+      "lineRange": [
+        155,
+        175
+      ],
+      "summary": "Initializes relative position bias tables in ViT blocks from checkpoint state_dict, handling window size inference and interpolation for compatibility across configurations.",
+      "tags": [
+        "checkpoint",
+        "initialization",
+        "vision-transformer"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test.py:compute_flops",
+      "type": "function",
+      "name": "compute_flops",
+      "filePath": "test.py",
+      "lineRange": [
+        178,
+        216
+      ],
+      "summary": "Profiles model computational cost in FLOPs using fvcore FlopCountAnalysis with dummy inputs matching the expected input shapes.",
+      "tags": [
+        "profiling",
+        "flops",
+        "performance"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test.py:inference_latency",
+      "type": "function",
+      "name": "inference_latency",
+      "filePath": "test.py",
+      "lineRange": [
+        219,
+        278
+      ],
+      "summary": "Measures model inference latency and throughput (FPS) with CUDA synchronization, warmup passes, and configurable trial count for accurate timing.",
+      "tags": [
+        "profiling",
+        "latency",
+        "performance"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "test.py",
+      "lineRange": [
+        285,
+        593
+      ],
+      "summary": "Main evaluation pipeline that parses CLI arguments, loads model checkpoint, iterates over LMDB test chunks, aggregates global metrics, finds optimal thresholds, generates per-sample prediction CSV, and copies best results.",
+      "tags": [
+        "entry-point",
+        "pipeline",
+        "evaluation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:test_ablation_models.py",
+      "type": "file",
+      "name": "test_ablation_models.py",
+      "filePath": "test_ablation_models.py",
+      "summary": "Unit test script that verifies all ablation model variants produce correct output dict keys and matching tensor shapes, ensuring architectural consistency across the full model and its ablation subsets.",
+      "tags": [
+        "test",
+        "validation",
+        "ablation",
+        "smoke-test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_ablation_models.py:test_ablation_models",
+      "type": "function",
+      "name": "test_ablation_models",
+      "filePath": "test_ablation_models.py",
+      "lineRange": [
+        10,
+        174
+      ],
+      "summary": "Instantiates and tests all model variants (full, motion-only, visual-only, vanilla-concat) with random inputs, verifying output dict keys and tensor shapes match the expected format.",
+      "tags": [
+        "test",
+        "validation",
+        "ablation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:visualize_comparison.py",
+      "type": "file",
+      "name": "visualize_comparison.py",
+      "filePath": "visualize_comparison.py",
+      "summary": "Visualization tool that renders model predictions vs ground-truth annotations on PIE dataset video frames or custom videos, producing annotated output videos with bounding boxes and behavioral labels for qualitative evaluation.",
+      "tags": [
+        "visualization",
+        "inference",
+        "evaluation",
+        "entry-point"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses OpenCV for video I/O and frame annotation, with xml.etree.ElementTree for parsing PIE XML annotations."
+    },
+    {
+      "id": "function:visualize_comparison.py:load_model",
+      "type": "function",
+      "name": "load_model",
+      "filePath": "visualize_comparison.py",
+      "lineRange": [
+        80,
+        104
+      ],
+      "summary": "Loads the full EnsembleModel from a checkpoint path, instantiating all subcomponents (ViT, MotionEncoder, CrossAttentionModule) and restoring state dict.",
+      "tags": [
+        "model-loading",
+        "checkpoint",
+        "initialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:visualize_comparison.py:get_pie_annotations",
+      "type": "function",
+      "name": "get_pie_annotations",
+      "filePath": "visualize_comparison.py",
+      "lineRange": [
+        107,
+        184
+      ],
+      "summary": "Parses PIE dataset XML annotation files to extract pedestrian bounding boxes, behavioral attributes (action, look, cross), and video metadata for a specific set/video combination.",
+      "tags": [
+        "data-loading",
+        "parsing",
+        "annotations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:visualize_comparison.py:generate_sequences_from_annotations",
+      "type": "function",
+      "name": "generate_sequences_from_annotations",
+      "filePath": "visualize_comparison.py",
+      "lineRange": [
+        187,
+        238
+      ],
+      "summary": "Generates sliding-window observation sequences from raw annotations, applying the same temporal windowing logic (seq_len, stride, future_offset) as the training pipeline for consistent inference.",
+      "tags": [
+        "preprocessing",
+        "windowing",
+        "sequences"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:visualize_comparison.py:draw_labels",
+      "type": "function",
+      "name": "draw_labels",
+      "filePath": "visualize_comparison.py",
+      "lineRange": [
+        241,
+        270
+      ],
+      "summary": "Draws behavioral prediction labels (action, look, cross) and bounding boxes onto a video frame using OpenCV, with color-coded confidence indicators.",
+      "tags": [
+        "visualization",
+        "rendering",
+        "annotation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:visualize_comparison.py:process_pie_dataset",
+      "type": "function",
+      "name": "process_pie_dataset",
+      "filePath": "visualize_comparison.py",
+      "lineRange": [
+        310,
+        537
+      ],
+      "summary": "End-to-end pipeline that loads a PIE video, extracts annotations, runs model inference on observation sequences, and produces an annotated output video comparing predictions to ground truth.",
+      "tags": [
+        "pipeline",
+        "visualization",
+        "inference"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:visualize_comparison.py:process_custom_video",
+      "type": "function",
+      "name": "process_custom_video",
+      "filePath": "visualize_comparison.py",
+      "lineRange": [
+        540,
+        661
+      ],
+      "summary": "Processes a user-provided custom video (non-PIE) with pedestrian detection and model inference, rendering predictions without ground-truth comparison.",
+      "tags": [
+        "pipeline",
+        "visualization",
+        "inference",
+        "custom-input"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:visualize_comparison.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "visualize_comparison.py",
+      "lineRange": [
+        664,
+        682
+      ],
+      "summary": "Entry point that dispatches to either PIE dataset visualization or custom video processing based on command-line arguments.",
+      "tags": [
+        "entry-point",
+        "dispatch"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:config.py",
+      "type": "file",
+      "name": "config.py",
+      "filePath": "config.py",
+      "summary": "Central configuration module providing unified d_model dimension (128) and default hyperparameter dictionaries for ViT_Hierarchical and MotionEncoder components.",
+      "tags": [
+        "configuration",
+        "utility",
+        "entry-point"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:config.py:vit_args_config",
+      "type": "function",
+      "name": "vit_args_config",
+      "filePath": "config.py",
+      "lineRange": [
+        6,
+        28
+      ],
+      "summary": "Returns a kwargs dictionary for ViT_Hierarchical with tuned defaults for the PIE dataset, including stage dimensions, layer counts, window sizes, and dropout rates.",
+      "tags": [
+        "configuration",
+        "factory",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:config.py:motion_enc_args_config",
+      "type": "function",
+      "name": "motion_enc_args_config",
+      "filePath": "config.py",
+      "lineRange": [
+        30,
+        41
+      ],
+      "summary": "Returns a kwargs dictionary for MotionEncoder with motion dimension, hidden size, layer count, head count, and dropout defaults.",
+      "tags": [
+        "configuration",
+        "factory",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:main.py",
+      "type": "file",
+      "name": "main.py",
+      "filePath": "main.py",
+      "summary": "End-to-end inference pipeline that detects pedestrians in a video using YOLO tracking, runs the multimodal prediction model on extracted sequences, and renders an annotated output video with action/look/cross predictions.",
+      "tags": [
+        "entry-point",
+        "inference",
+        "pipeline",
+        "video-processing"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Script-style top-level execution without a main() guard; all logic runs on import. Uses PIE utility for label-to-text mapping."
+    },
+    {
+      "id": "file:models/Vision_Transformer.py",
+      "type": "file",
+      "name": "Vision_Transformer.py",
+      "filePath": "models/Vision_Transformer.py",
+      "summary": "Implements a hierarchical Vision Transformer with windowed self-attention, relative position bias, and multi-stage downsampling that processes context-crop video frames into per-frame embeddings of shape [B, T, 128].",
+      "tags": [
+        "model",
+        "vision-transformer",
+        "attention",
+        "component"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses timm's DropPath for stochastic depth. Window partitioning operates in (B*T, C, H, W) space to process video frame batches efficiently. Supports dynamic/global attention windows via None window_size with lazy position bias initialization."
+    },
+    {
+      "id": "function:models/Vision_Transformer.py:window_partition",
+      "type": "function",
+      "name": "window_partition",
+      "filePath": "models/Vision_Transformer.py",
+      "lineRange": [
+        16,
+        27
+      ],
+      "summary": "Partitions a spatial feature map into non-overlapping windows of the given size, reshaping from (B, H, W, C) to (num_windows*B, window_size^2, C).",
+      "tags": [
+        "utility",
+        "attention",
+        "spatial-ops"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:models/Vision_Transformer.py:window_reverse",
+      "type": "function",
+      "name": "window_reverse",
+      "filePath": "models/Vision_Transformer.py",
+      "lineRange": [
+        29,
+        45
+      ],
+      "summary": "Reverses window partitioning, reconstructing the spatial feature map from windowed tokens back to (B, H, W, C) layout.",
+      "tags": [
+        "utility",
+        "attention",
+        "spatial-ops"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:models/Vision_Transformer.py:WindowAttention",
+      "type": "class",
+      "name": "WindowAttention",
+      "filePath": "models/Vision_Transformer.py",
+      "lineRange": [
+        47,
+        169
+      ],
+      "summary": "Window-based multi-head self-attention module with learnable relative position bias, supporting both fixed and dynamically-initialized window sizes for global attention stages.",
+      "tags": [
+        "attention",
+        "model",
+        "component"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:models/Vision_Transformer.py:WindowTransformerBlock",
+      "type": "class",
+      "name": "WindowTransformerBlock",
+      "filePath": "models/Vision_Transformer.py",
+      "lineRange": [
+        171,
+        251
+      ],
+      "summary": "Transformer block applying windowed self-attention followed by an MLP with residual connections, layer normalization, and stochastic depth.",
+      "tags": [
+        "model",
+        "transformer-block",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:models/Vision_Transformer.py:ViT_Hierarchical",
+      "type": "class",
+      "name": "ViT_Hierarchical",
+      "filePath": "models/Vision_Transformer.py",
+      "lineRange": [
+        253,
+        378
+      ],
+      "summary": "Hierarchical Vision Transformer that processes context-crop video frames through a convolutional stem, multiple downsampling stages with windowed attention blocks, global average pooling, and a final projection to produce [B, T, d_model] temporal embeddings.",
+      "tags": [
+        "model",
+        "vision-transformer",
+        "entry-point",
+        "component"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:onnx/onnx_export.py",
+      "type": "file",
+      "name": "onnx_export.py",
+      "filePath": "onnx/onnx_export.py",
+      "summary": "Exports the trained EnsembleModel to ONNX format with dynamic batch axes, wrapping it in a simplified forward interface that returns only the three task logit tensors.",
+      "tags": [
+        "export",
+        "onnx",
+        "deployment",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:onnx/onnx_export.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "onnx/onnx_export.py",
+      "lineRange": [
+        22,
+        67
+      ],
+      "summary": "Instantiates the full model pipeline, loads a checkpoint, wraps it in an ONNX-compatible module, and exports to onnx/pedestrian_model.onnx with dynamic batch size support at opset 17.",
+      "tags": [
+        "export",
+        "onnx",
+        "deployment"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/pedestrian_detection.py",
+      "type": "file",
+      "name": "pedestrian_detection.py",
+      "filePath": "scripts/pedestrian_detection.py",
+      "summary": "Provides YOLO-based pedestrian detection and tracking utilities that extract bounding-box tracks from video, smooth trajectories, and produce fixed-length image+motion sequences for model inference.",
+      "tags": [
+        "detection",
+        "tracking",
+        "preprocessing",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/pedestrian_detection.py:extract_tracks_from_video",
+      "type": "function",
+      "name": "extract_tracks_from_video",
+      "filePath": "scripts/pedestrian_detection.py",
+      "lineRange": [
+        17,
+        67
+      ],
+      "summary": "Runs YOLO tracking on a video to detect pedestrians frame-by-frame, accumulating per-track dictionaries of cropped images, bounding boxes, and center coordinates.",
+      "tags": [
+        "detection",
+        "tracking",
+        "video-processing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/pedestrian_detection.py:extract_sequences_from_track",
+      "type": "function",
+      "name": "extract_sequences_from_track",
+      "filePath": "scripts/pedestrian_detection.py",
+      "lineRange": [
+        82,
+        108
+      ],
+      "summary": "Applies a sliding window over a smoothed track to produce fixed-length (T=20) sequences of transformed image tensors and motion vectors ready for model input.",
+      "tags": [
+        "preprocessing",
+        "sequence-extraction",
+        "data-pipeline"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/pedestrian_detection.py:smooth_track",
+      "type": "function",
+      "name": "smooth_track",
+      "filePath": "scripts/pedestrian_detection.py",
+      "lineRange": [
+        69,
+        80
+      ],
+      "summary": "Applies a moving average to track center coordinates for temporal smoothing of pedestrian trajectories.",
+      "tags": [
+        "preprocessing",
+        "smoothing",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:models/Motion_Encoder.py",
+      "type": "file",
+      "name": "Motion_Encoder.py",
+      "filePath": "models/Motion_Encoder.py",
+      "summary": "Implements the MotionEncoder module that fuses tight-crop image features (via a small CNN) with normalized motion sequences (via 1D convolutions), then applies GRU temporal modeling and multi-head self-attention to produce per-frame embeddings of shape [B, T, d_model].",
+      "tags": [
+        "data-model",
+        "component",
+        "temporal-processing",
+        "feature-extraction"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Uses nn.Parameter for learnable positional encoding and nn.Identity as a conditional no-op projection when hidden_dim equals d_model."
+    },
+    {
+      "id": "class:models/Motion_Encoder.py:MotionEncoder",
+      "type": "class",
+      "name": "MotionEncoder",
+      "filePath": "models/Motion_Encoder.py",
+      "lineRange": [
+        5,
+        100
+      ],
+      "summary": "nn.Module that encodes tight-crop pedestrian images and motion vectors into a unified temporal representation using CNN feature extraction, 1D temporal convolutions, GRU recurrence, and multi-head self-attention with positional encoding.",
+      "tags": [
+        "component",
+        "encoder",
+        "temporal-processing",
+        "feature-fusion"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/lmdb_dataset.py",
+      "type": "file",
+      "name": "lmdb_dataset.py",
+      "filePath": "scripts/lmdb_dataset.py",
+      "summary": "Provides the LMDBChunkDataset class that reads pre-chunked LMDB files containing video frame sequences and metadata for the PIE dataset, returning tight crops, context crops, motion vectors, and multi-task labels per sample.",
+      "tags": [
+        "data-model",
+        "utility",
+        "data-loading",
+        "dataset"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Implements fork-safe LMDB access by tracking PIDs and reopening environments in child processes, avoiding the LMDB single-process restriction."
+    },
+    {
+      "id": "class:scripts/lmdb_dataset.py:LMDBChunkDataset",
+      "type": "class",
+      "name": "LMDBChunkDataset",
+      "filePath": "scripts/lmdb_dataset.py",
+      "lineRange": [
+        10,
+        101
+      ],
+      "summary": "PyTorch Dataset that lazily reads pedestrian video sequences from a single LMDB chunk file, decoding JPEG tight/context crops and loading pickled metadata (motion vectors and multi-task labels) per sequence.",
+      "tags": [
+        "data-model",
+        "dataset",
+        "data-loading",
+        "lmdb"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/train_utils.py",
+      "type": "file",
+      "name": "train_utils.py",
+      "filePath": "scripts/train_utils.py",
+      "summary": "Shared training utilities providing batch collation with temporal length capping, early stopping, cross-label remapping, LMDB chunk discovery across directories, memory-pressure gating, and background LMDB pre-warming via multiprocessing.",
+      "tags": [
+        "utility",
+        "training",
+        "data-loading",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/train_utils.py:gather_chunks",
+      "type": "function",
+      "name": "gather_chunks",
+      "filePath": "scripts/train_utils.py",
+      "lineRange": [
+        46,
+        71
+      ],
+      "summary": "Collects all .lmdb files from one or more directories, gracefully skipping missing folders and raising only if no chunks are found at all.",
+      "tags": [
+        "utility",
+        "data-loading",
+        "file-discovery"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/train_utils.py:mp_async_load",
+      "type": "function",
+      "name": "mp_async_load",
+      "filePath": "scripts/train_utils.py",
+      "lineRange": [
+        80,
+        97
+      ],
+      "summary": "Background process function that opens an LMDB file and reads one metadata key to warm the OS file cache, then reports success or failure via a multiprocessing queue.",
+      "tags": [
+        "utility",
+        "data-loading",
+        "multiprocessing",
+        "caching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:train.py",
+      "type": "file",
+      "name": "train.py",
+      "filePath": "train.py",
+      "summary": "Primary training script for the multimodal pedestrian behavior prediction model, orchestrating LMDB chunk-based data loading with background pre-warming, weighted random sampling for class imbalance, AMP training with gradient scaling, per-epoch validation with F1/accuracy metrics, CSV logging, and checkpoint management across full and ablation model types.",
+      "tags": [
+        "entry-point",
+        "training",
+        "pipeline",
+        "experiment-tracking"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses multiprocessing.Process for LMDB pre-warming to overlap I/O with GPU training, and WeightedRandomSampler with inverse-frequency weights raised to configurable powers per task."
+    },
+    {
+      "id": "function:train.py:compute_class_weights_from_lmdb",
+      "type": "function",
+      "name": "compute_class_weights_from_lmdb",
+      "filePath": "train.py",
+      "lineRange": [
+        37,
+        72
+      ],
+      "summary": "Scans all LMDB training chunks to compute inverse-frequency class weights per task (actions, looks, crosses), returning a dict of weight tensors for CrossEntropyLoss.",
+      "tags": [
+        "utility",
+        "class-imbalance",
+        "data-analysis"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:train.py:build_sampler_weights",
+      "type": "function",
+      "name": "build_sampler_weights",
+      "filePath": "train.py",
+      "lineRange": [
+        85,
+        123
+      ],
+      "summary": "Computes per-sample sampling weights from LMDB metadata by combining inverse class weights across all three tasks with configurable power exponents, enabling oversampling of rare crossing events.",
+      "tags": [
+        "utility",
+        "class-imbalance",
+        "sampling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:train.py:train_one_chunk",
+      "type": "function",
+      "name": "train_one_chunk",
+      "filePath": "train.py",
+      "lineRange": [
+        125,
+        177
+      ],
+      "summary": "Runs one training pass over a single LMDB chunk's DataLoader using AMP autocast, gradient scaling, gradient clipping, and per-task weighted loss accumulation with the model_forward dispatch.",
+      "tags": [
+        "training",
+        "gradient-scaling",
+        "amp"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:train.py:validate_one_epoch",
+      "type": "function",
+      "name": "validate_one_epoch",
+      "filePath": "train.py",
+      "lineRange": [
+        179,
+        236
+      ],
+      "summary": "Evaluates the model on a validation chunk under inference mode, accumulating per-task accuracy counts and collecting predictions/targets for downstream F1/precision/recall computation.",
+      "tags": [
+        "evaluation",
+        "validation",
+        "metrics"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:train.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "train.py",
+      "lineRange": [
+        246,
+        642
+      ],
+      "summary": "End-to-end training orchestrator: parses CLI args, builds model from config, loads optional checkpoint, pre-warms LMDB chunks via multiprocessing, iterates epochs with chunk-level training and validation, computes F1/precision/recall, manages learning rate scheduling, early stopping, and checkpoint saving.",
+      "tags": [
+        "entry-point",
+        "training",
+        "orchestration",
+        "experiment-tracking"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:train.py:_inverse_class_weights",
+      "type": "function",
+      "name": "_inverse_class_weights",
+      "filePath": "train.py",
+      "lineRange": [
+        74,
+        83
+      ],
+      "summary": "Computes inverse-frequency weights for a Counter of class labels, returning a dict mapping each class to total/(n_classes * count).",
+      "tags": [
+        "utility",
+        "class-imbalance"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:train_two_phase.py",
+      "type": "file",
+      "name": "train_two_phase.py",
+      "filePath": "train_two_phase.py",
+      "summary": "Implements a three-phase training strategy for handling severe class imbalance: Phase 1 trains on a balanced subset with FocalLoss, Phase 2 fine-tunes on full augmented data, and Phase 3 freezes the backbone to decouple and retrain only the classification heads.",
+      "tags": [
+        "entry-point",
+        "training",
+        "class-imbalance",
+        "pipeline"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses FocalLoss with per-task alpha weighting (1:20 for crosses) and a three-phase curriculum that progressively refines decision boundaries on imbalanced data."
+    },
+    {
+      "id": "function:train_two_phase.py:train_epoch",
+      "type": "function",
+      "name": "train_epoch",
+      "filePath": "train_two_phase.py",
+      "lineRange": [
+        43,
+        70
+      ],
+      "summary": "Runs one full training epoch with AMP, FocalLoss per task, gradient clipping, and returns the average loss per batch.",
+      "tags": [
+        "training",
+        "amp",
+        "focal-loss"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:train_two_phase.py:validate",
+      "type": "function",
+      "name": "validate",
+      "filePath": "train_two_phase.py",
+      "lineRange": [
+        73,
+        104
+      ],
+      "summary": "Evaluates model under inference mode, computing per-task F1 scores and macro-averaged F1 across actions, looks, and crosses.",
+      "tags": [
+        "evaluation",
+        "validation",
+        "metrics"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:train_two_phase.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "train_two_phase.py",
+      "lineRange": [
+        118,
+        342
+      ],
+      "summary": "Orchestrates the three-phase training curriculum: builds the EnsembleModel, runs balanced-subset training (Phase 1), full-data fine-tuning (Phase 2), and decoupled classifier-only training (Phase 3), with per-phase early stopping, LR scheduling, and CSV logging.",
+      "tags": [
+        "entry-point",
+        "training",
+        "orchestration",
+        "curriculum-learning"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:class_imbalance_strategies.py",
+      "type": "file",
+      "name": "class_imbalance_strategies.py",
+      "filePath": "class_imbalance_strategies.py",
+      "summary": "Provides advanced class imbalance handling strategies including focal loss, class-balanced focal loss, batch-balanced sampling, dynamic loss weighting, hard negative mining, and threshold optimization for the pedestrian behavior prediction tasks.",
+      "tags": [
+        "class-imbalance",
+        "loss-function",
+        "sampling",
+        "training-strategy",
+        "utility",
+        "tested"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Implements multiple nn.Module subclasses for custom loss functions and a custom Sampler for PyTorch DataLoader integration."
+    },
+    {
+      "id": "class:class_imbalance_strategies.py:FocalLoss",
+      "type": "class",
+      "name": "FocalLoss",
+      "filePath": "class_imbalance_strategies.py",
+      "lineRange": [
+        16,
+        50
+      ],
+      "summary": "Focal loss implementation that down-weights easy examples and focuses learning on hard-to-classify samples, addressing severe class imbalance in multi-class classification.",
+      "tags": [
+        "loss-function",
+        "focal-loss",
+        "class-imbalance"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:class_imbalance_strategies.py:ClassBalancedFocalLoss",
+      "type": "class",
+      "name": "ClassBalancedFocalLoss",
+      "filePath": "class_imbalance_strategies.py",
+      "lineRange": [
+        53,
+        95
+      ],
+      "summary": "Combines focal loss with class-balanced re-weighting based on effective number of samples per class, providing stronger compensation for highly imbalanced distributions.",
+      "tags": [
+        "loss-function",
+        "focal-loss",
+        "class-imbalance",
+        "class-balanced"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:class_imbalance_strategies.py:BatchBalancedSampler",
+      "type": "class",
+      "name": "BatchBalancedSampler",
+      "filePath": "class_imbalance_strategies.py",
+      "lineRange": [
+        98,
+        170
+      ],
+      "summary": "Custom PyTorch Sampler that ensures balanced representation of positive and negative samples per task within each batch, using oversampling for minority classes.",
+      "tags": [
+        "sampling",
+        "data-loader",
+        "class-imbalance",
+        "oversampling"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:class_imbalance_strategies.py:DynamicLossWeighting",
+      "type": "class",
+      "name": "DynamicLossWeighting",
+      "filePath": "class_imbalance_strategies.py",
+      "lineRange": [
+        173,
+        242
+      ],
+      "summary": "Learnable multi-task loss weighting module that dynamically adjusts task loss weights based on performance history, increasing emphasis on underperforming tasks.",
+      "tags": [
+        "multi-task-learning",
+        "loss-weighting",
+        "dynamic",
+        "nn-module"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:class_imbalance_strategies.py:HardNegativeMining",
+      "type": "class",
+      "name": "HardNegativeMining",
+      "filePath": "class_imbalance_strategies.py",
+      "lineRange": [
+        245,
+        276
+      ],
+      "summary": "Selects the hardest misclassified negative examples for focused training, improving decision boundary learning for the minority class.",
+      "tags": [
+        "hard-negative-mining",
+        "training-strategy",
+        "class-imbalance"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:class_imbalance_strategies.py:ThresholdOptimizer",
+      "type": "class",
+      "name": "ThresholdOptimizer",
+      "filePath": "class_imbalance_strategies.py",
+      "lineRange": [
+        279,
+        341
+      ],
+      "summary": "Post-training threshold optimization that finds optimal classification thresholds per task by maximizing F1 score on validation data.",
+      "tags": [
+        "threshold-optimization",
+        "evaluation",
+        "f1-score",
+        "post-processing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:class_imbalance_strategies.py:create_class_balanced_loss",
+      "type": "function",
+      "name": "create_class_balanced_loss",
+      "filePath": "class_imbalance_strategies.py",
+      "lineRange": [
+        344,
+        435
+      ],
+      "summary": "Factory function that creates appropriately weighted loss functions (focal, class-balanced focal, or weighted cross-entropy) by analyzing the class distribution in the dataset.",
+      "tags": [
+        "factory",
+        "loss-function",
+        "class-imbalance"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:class_imbalance_strategies.py:get_imbalance_config",
+      "type": "function",
+      "name": "get_imbalance_config",
+      "filePath": "class_imbalance_strategies.py",
+      "lineRange": [
+        439,
+        467
+      ],
+      "summary": "Returns a default configuration dictionary specifying imbalance handling parameters for all three prediction tasks (actions, looks, crosses).",
+      "tags": [
+        "configuration",
+        "utility",
+        "class-imbalance"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:imbalance_config.py",
+      "type": "file",
+      "name": "imbalance_config.py",
+      "filePath": "imbalance_config.py",
+      "summary": "Training configuration module that orchestrates class imbalance strategies, providing preset configurations, validation, and factory functions to wire imbalance-aware loss functions and components into the training pipeline.",
+      "tags": [
+        "configuration",
+        "training-strategy",
+        "factory",
+        "class-imbalance",
+        "orchestration",
+        "tested"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:imbalance_config.py:get_training_config",
+      "type": "function",
+      "name": "get_training_config",
+      "filePath": "imbalance_config.py",
+      "lineRange": [
+        12,
+        84
+      ],
+      "summary": "Constructs the main training configuration dictionary with imbalance handling options including loss types, focal parameters, dynamic weighting, and sampler settings.",
+      "tags": [
+        "configuration",
+        "factory",
+        "training-strategy"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:imbalance_config.py:create_loss_functions",
+      "type": "function",
+      "name": "create_loss_functions",
+      "filePath": "imbalance_config.py",
+      "lineRange": [
+        87,
+        111
+      ],
+      "summary": "Creates per-task loss functions based on the config, dispatching between standard cross-entropy, focal loss, and class-balanced focal loss.",
+      "tags": [
+        "factory",
+        "loss-function",
+        "class-imbalance"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:imbalance_config.py:create_advanced_components",
+      "type": "function",
+      "name": "create_advanced_components",
+      "filePath": "imbalance_config.py",
+      "lineRange": [
+        114,
+        142
+      ],
+      "summary": "Instantiates advanced imbalance components (DynamicLossWeighting, BatchBalancedSampler, ThresholdOptimizer) based on configuration flags.",
+      "tags": [
+        "factory",
+        "class-imbalance",
+        "component-creation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:imbalance_config.py:apply_imbalance_strategies_to_training",
+      "type": "function",
+      "name": "apply_imbalance_strategies_to_training",
+      "filePath": "imbalance_config.py",
+      "lineRange": [
+        145,
+        164
+      ],
+      "summary": "Top-level orchestrator that applies all configured imbalance strategies to a model and dataset, returning loss functions and advanced components ready for training.",
+      "tags": [
+        "orchestration",
+        "training-strategy",
+        "entry-point"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:imbalance_config.py:validate_config",
+      "type": "function",
+      "name": "validate_config",
+      "filePath": "imbalance_config.py",
+      "lineRange": [
+        217,
+        245
+      ],
+      "summary": "Validates a training configuration dictionary, checking for required keys, valid loss types, and sensible focal parameter ranges.",
+      "tags": [
+        "validation",
+        "configuration",
+        "error-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:imbalance_config.py:get_preset_config",
+      "type": "function",
+      "name": "get_preset_config",
+      "filePath": "imbalance_config.py",
+      "lineRange": [
+        270,
+        282
+      ],
+      "summary": "Retrieves a named preset configuration (e.g., aggressive, conservative) and merges it with the base training config.",
+      "tags": [
+        "configuration",
+        "preset",
+        "factory"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:test_imbalance_setup.py",
+      "type": "file",
+      "name": "test_imbalance_setup.py",
+      "filePath": "test_imbalance_setup.py",
+      "summary": "Verification test script that validates the class imbalance handling components work correctly, testing focal losses, dynamic weighting, hard negative mining, threshold optimization, and preset configurations without running full training.",
+      "tags": [
+        "test",
+        "validation",
+        "class-imbalance",
+        "smoke-test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_imbalance_setup.py:test_imbalance_strategies",
+      "type": "function",
+      "name": "test_imbalance_strategies",
+      "filePath": "test_imbalance_setup.py",
+      "lineRange": [
+        25,
+        173
+      ],
+      "summary": "Comprehensive test function that exercises all imbalance strategy components (FocalLoss, ClassBalancedFocalLoss, DynamicLossWeighting, HardNegativeMining, ThresholdOptimizer, create_class_balanced_loss) with synthetic data.",
+      "tags": [
+        "test",
+        "integration-test",
+        "class-imbalance"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_imbalance_setup.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "test_imbalance_setup.py",
+      "lineRange": [
+        226,
+        259
+      ],
+      "summary": "Test runner that orchestrates execution of all verification tests (strategy tests, preset config tests, training scenario simulation) with error handling.",
+      "tags": [
+        "entry-point",
+        "test-runner",
+        "orchestration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/PIE_sequence_Dataset_1.py",
+      "type": "file",
+      "name": "PIE_sequence_Dataset_1.py",
+      "filePath": "scripts/PIE_sequence_Dataset_1.py",
+      "summary": "Core dataset class that loads PIE pedestrian sequences from pickle files, crops tight and context regions from video frames, computes motion deltas (position, size changes), and provides PyTorch DataLoader integration with variable-length padding support.",
+      "tags": [
+        "data-model",
+        "utility",
+        "data-pipeline",
+        "dataset"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses TurboJPEG with fallback to PIL for fast image decoding; preload mode trades RAM for I/O throughput during training."
+    },
+    {
+      "id": "class:scripts/PIE_sequence_Dataset_1.py:PIESequenceDataset",
+      "type": "class",
+      "name": "PIESequenceDataset",
+      "filePath": "scripts/PIE_sequence_Dataset_1.py",
+      "lineRange": [
+        21,
+        141
+      ],
+      "summary": "PyTorch Dataset that processes raw PIE pedestrian sequences into tight crops, context crops, and 8-dimensional motion vectors (cx, cy, dx, dy, w, h, dw, dh), with optional preloading into RAM for faster iteration.",
+      "tags": [
+        "data-model",
+        "dataset",
+        "pytorch"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/PIE_sequence_Dataset_1.py:pad_sequence_tensor",
+      "type": "function",
+      "name": "pad_sequence_tensor",
+      "filePath": "scripts/PIE_sequence_Dataset_1.py",
+      "lineRange": [
+        143,
+        159
+      ],
+      "summary": "Pads a list of tensors with variable first-dimension lengths into a uniform batch tensor by zero-filling shorter sequences to match the longest.",
+      "tags": [
+        "utility",
+        "tensor-operations",
+        "padding"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/PIE_sequence_Dataset_1.py:collate_with_padding",
+      "type": "function",
+      "name": "collate_with_padding",
+      "filePath": "scripts/PIE_sequence_Dataset_1.py",
+      "lineRange": [
+        161,
+        185
+      ],
+      "summary": "Custom collate function for DataLoader that pads variable-length image sequences and motion tensors into uniform batches while stacking fixed-size label tensors.",
+      "tags": [
+        "utility",
+        "data-pipeline",
+        "collation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/PIE_sequence_Dataset_1.py:build_dataloader",
+      "type": "function",
+      "name": "build_dataloader",
+      "filePath": "scripts/PIE_sequence_Dataset_1.py",
+      "lineRange": [
+        187,
+        201
+      ],
+      "summary": "Factory function that wraps PIESequenceDataset and configures a PyTorch DataLoader with optional padding collation, shuffling, and preloading.",
+      "tags": [
+        "factory",
+        "data-pipeline",
+        "pytorch"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/preprocess_data.py",
+      "type": "file",
+      "name": "preprocess_data.py",
+      "filePath": "scripts/preprocess_data.py",
+      "summary": "Preprocessing script that loads PIE sequence pickles, applies image transforms (resize or augmentation), and saves preprocessed tensor chunks to disk as .pt files for faster training data loading.",
+      "tags": [
+        "script",
+        "data-pipeline",
+        "preprocessing",
+        "entry-point"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/preprocess_data.py:save_dataset_in_chunks",
+      "type": "function",
+      "name": "save_dataset_in_chunks",
+      "filePath": "scripts/preprocess_data.py",
+      "lineRange": [
+        7,
+        31
+      ],
+      "summary": "Processes raw sequences in fixed-size chunks using PIESequenceDataset with preloading, then atomically saves each chunk as a .pt file with explicit memory cleanup between chunks.",
+      "tags": [
+        "data-pipeline",
+        "preprocessing",
+        "serialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/preprocess_data.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/preprocess_data.py",
+      "lineRange": [
+        47,
+        104
+      ],
+      "summary": "Entry point that configures image transforms, loads train/val/test pickle sequences, and dispatches chunked preprocessing with configurable splits and optional data augmentation.",
+      "tags": [
+        "entry-point",
+        "orchestration",
+        "preprocessing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/preprocess_data_lmdb.py",
+      "type": "file",
+      "name": "preprocess_data_lmdb.py",
+      "filePath": "scripts/preprocess_data_lmdb.py",
+      "summary": "LMDB-based preprocessing script that converts PIE sequence data into JPEG-compressed LMDB databases, providing compact storage with fast random-access reads suitable for large-scale training.",
+      "tags": [
+        "script",
+        "data-pipeline",
+        "preprocessing",
+        "entry-point"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses torchvision encode_jpeg for GPU-friendly JPEG encoding without PIL roundtrip; LMDB map_size is dynamically estimated from expected data volume."
+    },
+    {
+      "id": "function:scripts/preprocess_data_lmdb.py:save_dataset_in_chunks_lmdb",
+      "type": "function",
+      "name": "save_dataset_in_chunks_lmdb",
+      "filePath": "scripts/preprocess_data_lmdb.py",
+      "lineRange": [
+        12,
+        91
+      ],
+      "summary": "Processes raw sequences through PIESequenceDataset with multi-worker DataLoader, JPEG-encodes tight and context crops, and writes each chunk into a size-estimated LMDB database with pickled metadata.",
+      "tags": [
+        "data-pipeline",
+        "preprocessing",
+        "serialization",
+        "lmdb"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/preprocess_data_lmdb.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/preprocess_data_lmdb.py",
+      "lineRange": [
+        107,
+        160
+      ],
+      "summary": "Entry point that configures transforms and dispatches LMDB chunk creation for train/val/test splits with configurable context scaling and chunk sizes.",
+      "tags": [
+        "entry-point",
+        "orchestration",
+        "preprocessing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:CLAUDE.md",
+      "type": "document",
+      "name": "CLAUDE.md",
+      "filePath": "CLAUDE.md",
+      "summary": "Comprehensive developer reference for Claude Code covering architecture invariants, training patterns, data pipeline conventions, dataset statistics, shared utilities, evaluation metrics, code style, and debugging checklist.",
+      "tags": [
+        "documentation",
+        "developer-reference",
+        "architecture",
+        "conventions",
+        "entry-point"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:GUIDELINE.md",
+      "type": "document",
+      "name": "GUIDELINE.md",
+      "filePath": "GUIDELINE.md",
+      "summary": "Behavioral guidelines for LLM-assisted coding that emphasize thinking before coding, simplicity, surgical changes, and goal-driven execution with verifiable success criteria.",
+      "tags": [
+        "documentation",
+        "development",
+        "guidelines",
+        "best-practices"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "README.md",
+      "summary": "Project overview documentation describing the multimodal pedestrian behavior prediction system, its architecture, setup instructions, training/evaluation commands, data pipeline, and project structure.",
+      "tags": [
+        "documentation",
+        "entry-point",
+        "overview",
+        "architecture"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:requirements.txt",
+      "type": "document",
+      "name": "requirements.txt",
+      "filePath": "requirements.txt",
+      "summary": "Python dependency manifest pinning 50 packages including PyTorch 2.7.1, torchvision, timm, ultralytics, scikit-learn, OpenCV, LMDB, and visualization libraries for the pedestrian prediction pipeline.",
+      "tags": [
+        "configuration",
+        "dependencies",
+        "build-system",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:run_env.bat",
+      "type": "file",
+      "name": "run_env.bat",
+      "filePath": "run_env.bat",
+      "summary": "Windows batch script that activates the project's Python virtual environment by prepending its Scripts directory to PATH and opening a command prompt.",
+      "tags": [
+        "script",
+        "environment",
+        "development",
+        "windows"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.claude/settings.local.json",
+      "type": "config",
+      "name": "settings.local.json",
+      "filePath": ".claude/settings.local.json",
+      "summary": "Claude Code local permissions configuration granting shell access to training scripts, test scripts, git commands, and node execution.",
+      "tags": [
+        "configuration",
+        "permissions",
+        "development"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.claude/skills/code-review-protocol/SKILL.md",
+      "type": "document",
+      "name": "SKILL.md",
+      "filePath": ".claude/skills/code-review-protocol/SKILL.md",
+      "summary": "Structured code review protocol defining a two-pass review methodology with severity levels, reporting format, fix protocol, and honesty rules for thorough bug detection.",
+      "tags": [
+        "documentation",
+        "code-review",
+        "development",
+        "methodology"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.claude/skills/debugging-playbook/references/debug-checklist.md",
+      "type": "document",
+      "name": "debug-checklist.md",
+      "filePath": ".claude/skills/debugging-playbook/references/debug-checklist.md",
+      "summary": "Four-stage debugging checklist covering reproduce, locate, isolate, and fix stages for systematic PyTorch error diagnosis.",
+      "tags": [
+        "documentation",
+        "debugging",
+        "checklist",
+        "reference"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.claude/skills/debugging-playbook/SKILL.md",
+      "type": "document",
+      "name": "SKILL.md",
+      "filePath": ".claude/skills/debugging-playbook/SKILL.md",
+      "summary": "Decision-tree debugging guide covering OOM, NaN loss, shape mismatch, CUDA errors, slow training, non-convergence, and import errors specific to the pedestrian prediction PyTorch project.",
+      "tags": [
+        "documentation",
+        "debugging",
+        "pytorch",
+        "troubleshooting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.claude/skills/experiment-tracking/references/baseline-results.md",
+      "type": "document",
+      "name": "baseline-results.md",
+      "filePath": ".claude/skills/experiment-tracking/references/baseline-results.md",
+      "summary": "Records current best training run metrics and run history for the pedestrian prediction model, serving as a baseline comparison reference.",
+      "tags": [
+        "documentation",
+        "experiment-tracking",
+        "baseline",
+        "metrics"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.claude/skills/experiment-tracking/SKILL.md",
+      "type": "document",
+      "name": "SKILL.md",
+      "filePath": ".claude/skills/experiment-tracking/SKILL.md",
+      "summary": "Experiment tracking conventions covering run naming, directory structure, CSV log schema, checkpoint save/load patterns, and criteria for determining model improvement.",
+      "tags": [
+        "documentation",
+        "experiment-tracking",
+        "conventions",
+        "training"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:.gitattributes",
+      "type": "file",
+      "name": ".gitattributes",
+      "filePath": ".gitattributes",
+      "summary": "Git line-ending normalization configuration enabling auto-detection of text files with LF normalization.",
+      "tags": [
+        "configuration",
+        "git",
+        "line-endings"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:.understand-anything/.understandignore",
+      "type": "file",
+      "name": ".understandignore",
+      "filePath": ".understand-anything/.understandignore",
+      "summary": "Exclusion patterns for the understand-anything analysis tool, filtering out large binary files (models, datasets, LMDB), the PIE dataset directory, and generated output folders.",
+      "tags": [
+        "configuration",
+        "analysis-tooling",
+        "ignore-patterns"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:extract_frames.py",
+      "type": "file",
+      "name": "extract_frames.py",
+      "filePath": "extract_frames.py",
+      "summary": "CLI utility for extracting frames from MP4 video files at a configurable FPS rate, saving them as JPEG images for dataset preprocessing.",
+      "tags": [
+        "utility",
+        "video-processing",
+        "data-preprocessing",
+        "script"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:extract_frames.py:extract_frames",
+      "type": "function",
+      "name": "extract_frames",
+      "filePath": "extract_frames.py",
+      "lineRange": [
+        5,
+        36
+      ],
+      "summary": "Opens a video file with OpenCV and extracts frames at the specified FPS interval, saving each as a high-quality JPEG to the output directory.",
+      "tags": [
+        "video-processing",
+        "frame-extraction",
+        "opencv"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:final_ablation_verification.py",
+      "type": "file",
+      "name": "final_ablation_verification.py",
+      "filePath": "final_ablation_verification.py",
+      "summary": "Verification test script that checks ablation model integration by testing model suffix logic, file structure, and keyword presence in train.py and test.py.",
+      "tags": [
+        "test",
+        "verification",
+        "ablation",
+        "integration-test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:final_ablation_verification.py:test_model_suffix_logic",
+      "type": "function",
+      "name": "test_model_suffix_logic",
+      "filePath": "final_ablation_verification.py",
+      "lineRange": [
+        6,
+        29
+      ],
+      "summary": "Validates that model type names produce the correct filename suffixes for each ablation variant (full, motion_only, visual_only, vanilla_concat).",
+      "tags": [
+        "test",
+        "validation",
+        "ablation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:final_ablation_verification.py:test_file_structure",
+      "type": "function",
+      "name": "test_file_structure",
+      "filePath": "final_ablation_verification.py",
+      "lineRange": [
+        31,
+        52
+      ],
+      "summary": "Checks that required model files exist on disk for the ablation study architecture.",
+      "tags": [
+        "test",
+        "file-check",
+        "ablation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:final_ablation_verification.py:test_keyword_presence",
+      "type": "function",
+      "name": "test_keyword_presence",
+      "filePath": "final_ablation_verification.py",
+      "lineRange": [
+        54,
+        98
+      ],
+      "summary": "Reads train.py and test.py source files to verify presence of critical keywords and patterns needed for ablation model support.",
+      "tags": [
+        "test",
+        "source-analysis",
+        "ablation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:final_ablation_verification.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "final_ablation_verification.py",
+      "lineRange": [
+        100,
+        129
+      ],
+      "summary": "Orchestrates all verification tests and reports overall pass/fail status with a detailed summary.",
+      "tags": [
+        "test",
+        "entry-point",
+        "orchestrator"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:label_count.py",
+      "type": "file",
+      "name": "label_count.py",
+      "filePath": "label_count.py",
+      "summary": "Counts label distributions (actions, looks, crosses) across preprocessed .pt chunk files and writes the results to a CSV for dataset analysis.",
+      "tags": [
+        "utility",
+        "data-analysis",
+        "label-distribution",
+        "script"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:label_count.py:label_counts",
+      "type": "function",
+      "name": "label_counts",
+      "filePath": "label_count.py",
+      "lineRange": [
+        6,
+        15
+      ],
+      "summary": "Aggregates per-class label frequencies for actions, looks, and crosses from a list of sequence dictionaries using Counter objects.",
+      "tags": [
+        "utility",
+        "counting",
+        "label-distribution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:models/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "models/__init__.py",
+      "summary": "Empty package initializer marking the models directory as a Python package for module imports.",
+      "tags": [
+        "entry-point",
+        "package-init",
+        "models"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "scripts/__init__.py",
+      "summary": "Empty package initializer marking the scripts directory as a Python package for module imports.",
+      "tags": [
+        "entry-point",
+        "package-init",
+        "scripts"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/augment_sequences.py",
+      "type": "file",
+      "name": "augment_sequences.py",
+      "filePath": "scripts/augment_sequences.py",
+      "summary": "Data augmentation pipeline for minority-class sequences (crosses=1, looks=1) applying horizontal flips, color jitter, motion noise, and random frame erasure to expand the training dataset.",
+      "tags": [
+        "data-augmentation",
+        "class-imbalance",
+        "preprocessing",
+        "training"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:scripts/augment_sequences.py:SequenceAugmenter",
+      "type": "class",
+      "name": "SequenceAugmenter",
+      "filePath": "scripts/augment_sequences.py",
+      "lineRange": [
+        13,
+        73
+      ],
+      "summary": "Applies stochastic augmentation transforms (horizontal flip, color jitter, motion noise, random frame erasure) to pedestrian sequences while preserving label validity.",
+      "tags": [
+        "data-augmentation",
+        "transform",
+        "class-imbalance"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/augment_sequences.py:augment_minority_sequences",
+      "type": "function",
+      "name": "augment_minority_sequences",
+      "filePath": "scripts/augment_sequences.py",
+      "lineRange": [
+        76,
+        128
+      ],
+      "summary": "Loads a pickled sequence dataset, expands minority-class subsets (crosses and looks positives) by a configurable multiplier via augmentation, and saves the balanced result.",
+      "tags": [
+        "data-augmentation",
+        "class-imbalance",
+        "pipeline"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/balance_sequences.py",
+      "type": "file",
+      "name": "balance_sequences.py",
+      "filePath": "scripts/balance_sequences.py",
+      "summary": "Balances the training dataset by subsampling majority classes using stratified group-based selection that maintains target ratios for actions, looks, and crosses labels simultaneously.",
+      "tags": [
+        "data-balancing",
+        "class-imbalance",
+        "preprocessing",
+        "script"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/balance_sequences.py:balance_dataset",
+      "type": "function",
+      "name": "balance_dataset",
+      "filePath": "scripts/balance_sequences.py",
+      "lineRange": [
+        54,
+        95
+      ],
+      "summary": "Computes balanced subset indices by grouping samples by label combinations and solving for target counts that equalize the crosses class while respecting actions and looks ratios.",
+      "tags": [
+        "data-balancing",
+        "stratified-sampling",
+        "algorithm"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/balance_sequences.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/balance_sequences.py",
+      "lineRange": [
+        111,
+        142
+      ],
+      "summary": "CLI entry point that loads a pickle dataset, applies balance_dataset, prints a summary of class distributions, and saves the balanced subset.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "data-balancing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/generate_sequences.py",
+      "type": "file",
+      "name": "generate_sequences.py",
+      "filePath": "scripts/generate_sequences.py",
+      "summary": "Generates sliding-window observation sequences from PIE dataset trajectories with future-window binary labels for actions, looks, and crosses prediction tasks.",
+      "tags": [
+        "data-generation",
+        "preprocessing",
+        "sequence-extraction",
+        "pie-dataset"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/generate_sequences.py:generate_sequences",
+      "type": "function",
+      "name": "generate_sequences",
+      "filePath": "scripts/generate_sequences.py",
+      "lineRange": [
+        9,
+        91
+      ],
+      "summary": "Extracts fixed-length sub-sequences from PIE trajectories using a sliding window, applies onset filtering, and assigns binary future labels based on whether actions/looks/crosses occur within a future offset window.",
+      "tags": [
+        "data-generation",
+        "sliding-window",
+        "label-assignment",
+        "pie-dataset"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:scripts/split_balance_sequences_all.py",
+      "type": "file",
+      "name": "split_balance_sequences_all.py",
+      "filePath": "scripts/split_balance_sequences_all.py",
+      "summary": "Splits a unified sequence dataset into train/val/test partitions, then balances each split to achieve target class ratios using exact or approximate constraint solvers.",
+      "tags": [
+        "data-splitting",
+        "data-balancing",
+        "preprocessing",
+        "class-imbalance"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/split_balance_sequences_all.py:balance_split",
+      "type": "function",
+      "name": "balance_split",
+      "filePath": "scripts/split_balance_sequences_all.py",
+      "lineRange": [
+        100,
+        153
+      ],
+      "summary": "Balances a single data split by solving for target cross-positive ratios, selecting from stratified groups, and falling back to approximate solutions when exact allocation is infeasible.",
+      "tags": [
+        "data-balancing",
+        "constraint-solving",
+        "stratified-sampling"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/split_balance_sequences_all.py:solve_approx",
+      "type": "function",
+      "name": "solve_approx",
+      "filePath": "scripts/split_balance_sequences_all.py",
+      "lineRange": [
+        67,
+        97
+      ],
+      "summary": "Iteratively searches for approximate group allocation counts that minimize deviation from target actions and looks ratios when exact solutions are infeasible.",
+      "tags": [
+        "optimization",
+        "constraint-solving",
+        "approximation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/split_balance_sequences_all.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/split_balance_sequences_all.py",
+      "lineRange": [
+        174,
+        224
+      ],
+      "summary": "CLI entry point that loads sequences, splits into train/val/test, balances each split independently, prints distribution summaries, and saves results as pickle files.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "data-pipeline"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:test_ablation_structure_clean.py",
+      "type": "file",
+      "name": "test_ablation_structure_clean.py",
+      "filePath": "test_ablation_structure_clean.py",
+      "summary": "Lightweight structural test that reads test.py source to verify the presence of ablation model imports, functions, and CLI parameters needed for multi-model evaluation.",
+      "tags": [
+        "test",
+        "verification",
+        "ablation",
+        "structural-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_ablation_structure_clean.py:test_structure",
+      "type": "function",
+      "name": "test_structure",
+      "filePath": "test_ablation_structure_clean.py",
+      "lineRange": [
+        6,
+        34
+      ],
+      "summary": "Checks test.py source code for the presence of key components (get_model, model_forward, ablation imports, argparse, model_type, unified dim) needed for ablation model support.",
+      "tags": [
+        "test",
+        "source-verification",
+        "ablation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:visualize_gt.py",
+      "type": "file",
+      "name": "visualize_gt.py",
+      "filePath": "visualize_gt.py",
+      "summary": "Ground-truth visualization tool that renders pedestrian observation sequences as annotated video with bounding boxes, frame indices, and color-coded future prediction labels for actions, looks, and crosses.",
+      "tags": [
+        "visualization",
+        "ground-truth",
+        "video-generation",
+        "debugging"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses OpenCV VideoWriter for frame-by-frame video composition with overlay annotations. Supports three modes: pickle-based, live generation from PIE, and synthetic blank frames."
+    },
+    {
+      "id": "function:visualize_gt.py:draw_sequence_frame",
+      "type": "function",
+      "name": "draw_sequence_frame",
+      "filePath": "visualize_gt.py",
+      "lineRange": [
+        42,
+        66
+      ],
+      "summary": "Draws a bounding box and frame counter overlay on a single video frame for sequence visualization.",
+      "tags": [
+        "visualization",
+        "opencv",
+        "annotation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:visualize_gt.py:draw_future_labels",
+      "type": "function",
+      "name": "draw_future_labels",
+      "filePath": "visualize_gt.py",
+      "lineRange": [
+        69,
+        108
+      ],
+      "summary": "Renders color-coded future prediction labels (action, look, cross) as rectangles with text overlays at the bottom of a video frame.",
+      "tags": [
+        "visualization",
+        "label-overlay",
+        "annotation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:visualize_gt.py:visualize_from_pickle",
+      "type": "function",
+      "name": "visualize_from_pickle",
+      "filePath": "visualize_gt.py",
+      "lineRange": [
+        111,
+        202
+      ],
+      "summary": "Loads pre-generated sequences from a pickle file and renders them as an annotated video showing observation frames with bounding boxes and future labels.",
+      "tags": [
+        "visualization",
+        "video-generation",
+        "pickle-loading"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:visualize_gt.py:generate_and_visualize",
+      "type": "function",
+      "name": "generate_and_visualize",
+      "filePath": "visualize_gt.py",
+      "lineRange": [
+        205,
+        338
+      ],
+      "summary": "Generates sequences directly from PIE dataset annotations and renders them as an annotated visualization video, combining data generation and video output in one pass.",
+      "tags": [
+        "visualization",
+        "data-generation",
+        "video-generation",
+        "pie-dataset"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:visualize_gt.py:visualize_blank_with_labels",
+      "type": "function",
+      "name": "visualize_blank_with_labels",
+      "filePath": "visualize_gt.py",
+      "lineRange": [
+        341,
+        394
+      ],
+      "summary": "Creates a demo visualization video using blank frames with randomly generated labels to demonstrate the annotation overlay format without requiring actual PIE data.",
+      "tags": [
+        "visualization",
+        "demo",
+        "synthetic-data"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:visualize_gt.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "visualize_gt.py",
+      "lineRange": [
+        397,
+        433
+      ],
+      "summary": "Entry point that selects visualization mode based on available data: uses pickle if found, falls back to live PIE generation, or creates a blank demo video.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "visualization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:visualize_comparison.py:draw_comparison",
+      "type": "function",
+      "name": "draw_comparison",
+      "filePath": "visualize_comparison.py",
+      "lineRange": [
+        273,
+        307
+      ],
+      "summary": "Draws a side-by-side comparison overlay on a video frame with ground-truth vs predicted action/look/cross labels, highlighting mismatches with a different background color.",
+      "tags": [
+        "visualization",
+        "rendering",
+        "annotation",
+        "comparison"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:train_two_phase.py:build_criterion",
+      "type": "function",
+      "name": "build_criterion",
+      "filePath": "train_two_phase.py",
+      "lineRange": [
+        35,
+        40
+      ],
+      "summary": "Builds per-task FocalLoss criteria (actions, looks, crosses) with task-specific alpha and gamma values tuned for the severe class imbalance on the crossing task.",
+      "tags": [
+        "factory",
+        "loss-function",
+        "focal-loss",
+        "class-imbalance"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:ablation_usage_example.py",
+      "target": "file:models/AblationModels.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/model_utils.py",
+      "target": "file:models/AblationModels.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/model_utils.py",
+      "target": "file:models/Cross_Attention_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/model_utils.py",
+      "target": "file:models/Unified_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test.py",
+      "target": "file:config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test.py",
+      "target": "file:models/AblationModels.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test.py",
+      "target": "file:models/Cross_Attention_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test.py",
+      "target": "file:models/Motion_Encoder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test.py",
+      "target": "file:models/Unified_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test.py",
+      "target": "file:models/Vision_Transformer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test.py",
+      "target": "file:scripts/lmdb_dataset.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test.py",
+      "target": "file:scripts/model_utils.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test.py",
+      "target": "file:train.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "file:config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "file:models/AblationModels.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "file:models/Cross_Attention_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "file:models/Motion_Encoder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "file:models/Unified_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "file:models/Vision_Transformer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "file:config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "file:models/AblationModels.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "file:models/Cross_Attention_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "file:models/Motion_Encoder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "file:models/Unified_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "file:models/Vision_Transformer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "file:scripts/model_utils.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "file:scripts/PIE_sequence_Dataset_1.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:ablation_usage_example.py",
+      "target": "function:ablation_usage_example.py:get_ablation_model",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ablation_usage_example.py",
+      "target": "function:ablation_usage_example.py:train_model_with_ablation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/AblationModels.py",
+      "target": "class:models/AblationModels.py:MotionOnlyModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/AblationModels.py",
+      "target": "class:models/AblationModels.py:VisualOnlyModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/AblationModels.py",
+      "target": "class:models/AblationModels.py:VanillaConcatModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/Cross_Attention_Module.py",
+      "target": "class:models/Cross_Attention_Module.py:CrossAttentionModule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/Unified_Module.py",
+      "target": "class:models/Unified_Module.py:EnsembleModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/model_utils.py",
+      "target": "function:scripts/model_utils.py:get_model",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/model_utils.py",
+      "target": "function:scripts/model_utils.py:model_forward",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test.py",
+      "target": "function:test.py:evaluate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test.py",
+      "target": "function:test.py:find_optimal_thresholds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test.py",
+      "target": "function:test.py:_init_global_rel_pos_from_ckpt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test.py",
+      "target": "function:test.py:compute_flops",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test.py",
+      "target": "function:test.py:inference_latency",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test.py",
+      "target": "function:test.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "function:test_ablation_models.py:test_ablation_models",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "function:visualize_comparison.py:load_model",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "function:visualize_comparison.py:get_pie_annotations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "function:visualize_comparison.py:generate_sequences_from_annotations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "function:visualize_comparison.py:draw_labels",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "function:visualize_comparison.py:process_pie_dataset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "function:visualize_comparison.py:process_custom_video",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "function:visualize_comparison.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/AblationModels.py",
+      "target": "class:models/AblationModels.py:MotionOnlyModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:models/AblationModels.py",
+      "target": "class:models/AblationModels.py:VisualOnlyModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:models/AblationModels.py",
+      "target": "class:models/AblationModels.py:VanillaConcatModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:models/Cross_Attention_Module.py",
+      "target": "class:models/Cross_Attention_Module.py:CrossAttentionModule",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:models/Unified_Module.py",
+      "target": "class:models/Unified_Module.py:EnsembleModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/model_utils.py",
+      "target": "function:scripts/model_utils.py:get_model",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/model_utils.py",
+      "target": "function:scripts/model_utils.py:model_forward",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:scripts/model_utils.py:get_model",
+      "target": "class:models/AblationModels.py:MotionOnlyModel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:scripts/model_utils.py:get_model",
+      "target": "class:models/AblationModels.py:VisualOnlyModel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:scripts/model_utils.py:get_model",
+      "target": "class:models/AblationModels.py:VanillaConcatModel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:scripts/model_utils.py:get_model",
+      "target": "class:models/Cross_Attention_Module.py:CrossAttentionModule",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:scripts/model_utils.py:get_model",
+      "target": "class:models/Unified_Module.py:EnsembleModel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:test.py:main",
+      "target": "function:scripts/model_utils.py:get_model",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:test.py:evaluate",
+      "target": "function:scripts/model_utils.py:model_forward",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:test.py:main",
+      "target": "function:test.py:evaluate",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:test.py:main",
+      "target": "function:test.py:find_optimal_thresholds",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:test.py:main",
+      "target": "function:test.py:compute_flops",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:test.py:main",
+      "target": "function:test.py:inference_latency",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:test.py:main",
+      "target": "function:test.py:_init_global_rel_pos_from_ckpt",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:visualize_comparison.py:main",
+      "target": "function:visualize_comparison.py:process_pie_dataset",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:visualize_comparison.py:main",
+      "target": "function:visualize_comparison.py:process_custom_video",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:visualize_comparison.py:process_pie_dataset",
+      "target": "function:visualize_comparison.py:load_model",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:visualize_comparison.py:process_pie_dataset",
+      "target": "function:visualize_comparison.py:get_pie_annotations",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:visualize_comparison.py:process_pie_dataset",
+      "target": "function:visualize_comparison.py:generate_sequences_from_annotations",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:visualize_comparison.py:process_custom_video",
+      "target": "function:visualize_comparison.py:load_model",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:visualize_comparison.py:process_custom_video",
+      "target": "function:visualize_comparison.py:draw_labels",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "class:models/AblationModels.py:MotionOnlyModel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "class:models/AblationModels.py:VisualOnlyModel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "class:models/AblationModels.py:VanillaConcatModel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "class:models/Unified_Module.py:EnsembleModel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ablation_models.py",
+      "target": "class:models/Cross_Attention_Module.py:CrossAttentionModule",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test.py",
+      "target": "file:test_ablation_models.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:visualize_comparison.py:load_model",
+      "target": "class:models/Unified_Module.py:EnsembleModel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:visualize_comparison.py:load_model",
+      "target": "class:models/Cross_Attention_Module.py:CrossAttentionModule",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:config.py",
+      "target": "function:config.py:vit_args_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:config.py",
+      "target": "function:config.py:motion_enc_args_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:config.py",
+      "target": "function:config.py:vit_args_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:config.py",
+      "target": "function:config.py:motion_enc_args_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:models/Cross_Attention_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:models/Motion_Encoder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:models/Unified_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:models/Vision_Transformer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:scripts/pedestrian_detection.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:scripts/PIE_sequence_Dataset_1.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:scripts/pedestrian_detection.py:extract_tracks_from_video",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:scripts/pedestrian_detection.py:smooth_track",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:config.py:vit_args_config",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:config.py:motion_enc_args_config",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:models/Vision_Transformer.py",
+      "target": "function:models/Vision_Transformer.py:window_partition",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/Vision_Transformer.py",
+      "target": "function:models/Vision_Transformer.py:window_reverse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/Vision_Transformer.py",
+      "target": "class:models/Vision_Transformer.py:WindowAttention",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/Vision_Transformer.py",
+      "target": "class:models/Vision_Transformer.py:WindowTransformerBlock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/Vision_Transformer.py",
+      "target": "class:models/Vision_Transformer.py:ViT_Hierarchical",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/Vision_Transformer.py",
+      "target": "function:models/Vision_Transformer.py:window_partition",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:models/Vision_Transformer.py",
+      "target": "function:models/Vision_Transformer.py:window_reverse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:models/Vision_Transformer.py",
+      "target": "class:models/Vision_Transformer.py:WindowAttention",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:models/Vision_Transformer.py",
+      "target": "class:models/Vision_Transformer.py:WindowTransformerBlock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:models/Vision_Transformer.py",
+      "target": "class:models/Vision_Transformer.py:ViT_Hierarchical",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:onnx/onnx_export.py",
+      "target": "file:config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:onnx/onnx_export.py",
+      "target": "file:models/Motion_Encoder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:onnx/onnx_export.py",
+      "target": "file:models/Unified_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:onnx/onnx_export.py",
+      "target": "file:models/Vision_Transformer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:onnx/onnx_export.py",
+      "target": "function:onnx/onnx_export.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:onnx/onnx_export.py",
+      "target": "function:onnx/onnx_export.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:onnx/onnx_export.py",
+      "target": "function:config.py:vit_args_config",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:onnx/onnx_export.py",
+      "target": "function:config.py:motion_enc_args_config",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/pedestrian_detection.py",
+      "target": "function:scripts/pedestrian_detection.py:extract_tracks_from_video",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/pedestrian_detection.py",
+      "target": "function:scripts/pedestrian_detection.py:smooth_track",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/pedestrian_detection.py",
+      "target": "function:scripts/pedestrian_detection.py:extract_sequences_from_track",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/pedestrian_detection.py",
+      "target": "function:scripts/pedestrian_detection.py:extract_tracks_from_video",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/pedestrian_detection.py",
+      "target": "function:scripts/pedestrian_detection.py:smooth_track",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/pedestrian_detection.py",
+      "target": "function:scripts/pedestrian_detection.py:extract_sequences_from_track",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:models/Motion_Encoder.py",
+      "target": "class:models/Motion_Encoder.py:MotionEncoder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:models/Motion_Encoder.py",
+      "target": "class:models/Motion_Encoder.py:MotionEncoder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/lmdb_dataset.py",
+      "target": "class:scripts/lmdb_dataset.py:LMDBChunkDataset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/lmdb_dataset.py",
+      "target": "class:scripts/lmdb_dataset.py:LMDBChunkDataset",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/train_utils.py",
+      "target": "function:scripts/train_utils.py:gather_chunks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/train_utils.py",
+      "target": "function:scripts/train_utils.py:gather_chunks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/train_utils.py",
+      "target": "function:scripts/train_utils.py:mp_async_load",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/train_utils.py",
+      "target": "function:scripts/train_utils.py:mp_async_load",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:compute_class_weights_from_lmdb",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:compute_class_weights_from_lmdb",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:build_sampler_weights",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:build_sampler_weights",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:train_one_chunk",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:train_one_chunk",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:validate_one_epoch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:validate_one_epoch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:_inverse_class_weights",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train.py",
+      "target": "function:train.py:_inverse_class_weights",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "function:train_two_phase.py:train_epoch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "function:train_two_phase.py:train_epoch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "function:train_two_phase.py:validate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "function:train_two_phase.py:validate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "function:train_two_phase.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "function:train_two_phase.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:train.py",
+      "target": "file:config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train.py",
+      "target": "file:models/Cross_Attention_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train.py",
+      "target": "file:models/Motion_Encoder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train.py",
+      "target": "file:models/Unified_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train.py",
+      "target": "file:models/Vision_Transformer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train.py",
+      "target": "file:scripts/lmdb_dataset.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train.py",
+      "target": "file:scripts/model_utils.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train.py",
+      "target": "file:scripts/train_utils.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "file:class_imbalance_strategies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "file:config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "file:models/Cross_Attention_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "file:models/Motion_Encoder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "file:models/Unified_Module.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "file:models/Vision_Transformer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "file:scripts/lmdb_dataset.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "file:scripts/train_utils.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:train.py:main",
+      "target": "function:train.py:compute_class_weights_from_lmdb",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train.py:main",
+      "target": "function:train.py:build_sampler_weights",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train.py:main",
+      "target": "function:train.py:train_one_chunk",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train.py:main",
+      "target": "function:train.py:validate_one_epoch",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train.py:build_sampler_weights",
+      "target": "function:train.py:_inverse_class_weights",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train.py:main",
+      "target": "function:scripts/train_utils.py:gather_chunks",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train.py:main",
+      "target": "function:scripts/train_utils.py:mp_async_load",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train.py:main",
+      "target": "class:scripts/lmdb_dataset.py:LMDBChunkDataset",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train.py:main",
+      "target": "class:models/Motion_Encoder.py:MotionEncoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train_two_phase.py:main",
+      "target": "function:scripts/train_utils.py:gather_chunks",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train_two_phase.py:main",
+      "target": "class:scripts/lmdb_dataset.py:LMDBChunkDataset",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train_two_phase.py:main",
+      "target": "class:models/Motion_Encoder.py:MotionEncoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train_two_phase.py:main",
+      "target": "function:train_two_phase.py:train_epoch",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train_two_phase.py:main",
+      "target": "function:train_two_phase.py:validate",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "file:class_imbalance_strategies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_imbalance_setup.py",
+      "target": "file:class_imbalance_strategies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_imbalance_setup.py",
+      "target": "file:imbalance_config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:FocalLoss",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:ClassBalancedFocalLoss",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:BatchBalancedSampler",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:DynamicLossWeighting",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:HardNegativeMining",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:ThresholdOptimizer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "function:class_imbalance_strategies.py:create_class_balanced_loss",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "function:class_imbalance_strategies.py:get_imbalance_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:FocalLoss",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:ClassBalancedFocalLoss",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:BatchBalancedSampler",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:DynamicLossWeighting",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:HardNegativeMining",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "class:class_imbalance_strategies.py:ThresholdOptimizer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "function:class_imbalance_strategies.py:create_class_balanced_loss",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "function:class_imbalance_strategies.py:get_imbalance_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:get_training_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:create_loss_functions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:create_advanced_components",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:apply_imbalance_strategies_to_training",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:validate_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:get_preset_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:get_training_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:create_loss_functions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:create_advanced_components",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:apply_imbalance_strategies_to_training",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:validate_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "function:imbalance_config.py:get_preset_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_imbalance_setup.py",
+      "target": "function:test_imbalance_setup.py:test_imbalance_strategies",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_imbalance_setup.py",
+      "target": "function:test_imbalance_setup.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:imbalance_config.py:create_loss_functions",
+      "target": "function:class_imbalance_strategies.py:create_class_balanced_loss",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:imbalance_config.py:create_advanced_components",
+      "target": "class:class_imbalance_strategies.py:DynamicLossWeighting",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:imbalance_config.py:create_advanced_components",
+      "target": "class:class_imbalance_strategies.py:BatchBalancedSampler",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:imbalance_config.py:create_advanced_components",
+      "target": "class:class_imbalance_strategies.py:ThresholdOptimizer",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:class_imbalance_strategies.py",
+      "target": "file:test_imbalance_setup.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:imbalance_config.py",
+      "target": "file:test_imbalance_setup.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/preprocess_data.py",
+      "target": "file:scripts/PIE_sequence_Dataset_1.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/preprocess_data_lmdb.py",
+      "target": "file:scripts/PIE_sequence_Dataset_1.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/PIE_sequence_Dataset_1.py",
+      "target": "class:scripts/PIE_sequence_Dataset_1.py:PIESequenceDataset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/PIE_sequence_Dataset_1.py",
+      "target": "function:scripts/PIE_sequence_Dataset_1.py:pad_sequence_tensor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/PIE_sequence_Dataset_1.py",
+      "target": "function:scripts/PIE_sequence_Dataset_1.py:collate_with_padding",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/PIE_sequence_Dataset_1.py",
+      "target": "function:scripts/PIE_sequence_Dataset_1.py:build_dataloader",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/PIE_sequence_Dataset_1.py",
+      "target": "class:scripts/PIE_sequence_Dataset_1.py:PIESequenceDataset",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/PIE_sequence_Dataset_1.py",
+      "target": "function:scripts/PIE_sequence_Dataset_1.py:pad_sequence_tensor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/PIE_sequence_Dataset_1.py",
+      "target": "function:scripts/PIE_sequence_Dataset_1.py:collate_with_padding",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/PIE_sequence_Dataset_1.py",
+      "target": "function:scripts/PIE_sequence_Dataset_1.py:build_dataloader",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/preprocess_data.py",
+      "target": "function:scripts/preprocess_data.py:save_dataset_in_chunks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/preprocess_data.py",
+      "target": "function:scripts/preprocess_data.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/preprocess_data_lmdb.py",
+      "target": "function:scripts/preprocess_data_lmdb.py:save_dataset_in_chunks_lmdb",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/preprocess_data_lmdb.py",
+      "target": "function:scripts/preprocess_data_lmdb.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:scripts/preprocess_data.py:save_dataset_in_chunks",
+      "target": "class:scripts/PIE_sequence_Dataset_1.py:PIESequenceDataset",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:scripts/preprocess_data.py:main",
+      "target": "function:scripts/preprocess_data.py:save_dataset_in_chunks",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:scripts/preprocess_data_lmdb.py:save_dataset_in_chunks_lmdb",
+      "target": "class:scripts/PIE_sequence_Dataset_1.py:PIESequenceDataset",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:scripts/preprocess_data_lmdb.py:main",
+      "target": "function:scripts/preprocess_data_lmdb.py:save_dataset_in_chunks_lmdb",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:README.md",
+      "target": "document:CLAUDE.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "document:GUIDELINE.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "document:requirements.txt",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:extract_frames.py",
+      "target": "function:extract_frames.py:extract_frames",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:extract_frames.py",
+      "target": "function:extract_frames.py:extract_frames",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_model_suffix_logic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_file_structure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_keyword_presence",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_model_suffix_logic",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_file_structure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_keyword_presence",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:label_count.py",
+      "target": "function:label_count.py:label_counts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:label_count.py",
+      "target": "function:label_count.py:label_counts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/augment_sequences.py",
+      "target": "class:scripts/augment_sequences.py:SequenceAugmenter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/augment_sequences.py",
+      "target": "function:scripts/augment_sequences.py:augment_minority_sequences",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/augment_sequences.py",
+      "target": "class:scripts/augment_sequences.py:SequenceAugmenter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/augment_sequences.py",
+      "target": "function:scripts/augment_sequences.py:augment_minority_sequences",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/balance_sequences.py",
+      "target": "function:scripts/balance_sequences.py:balance_dataset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/balance_sequences.py",
+      "target": "function:scripts/balance_sequences.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/balance_sequences.py",
+      "target": "function:scripts/balance_sequences.py:balance_dataset",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/balance_sequences.py",
+      "target": "function:scripts/balance_sequences.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/generate_sequences.py",
+      "target": "function:scripts/generate_sequences.py:generate_sequences",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/generate_sequences.py",
+      "target": "function:scripts/generate_sequences.py:generate_sequences",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:balance_split",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:solve_approx",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:balance_split",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:solve_approx",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ablation_structure_clean.py",
+      "target": "function:test_ablation_structure_clean.py:test_structure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_ablation_structure_clean.py",
+      "target": "function:test_ablation_structure_clean.py:test_structure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:draw_sequence_frame",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:draw_future_labels",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:visualize_from_pickle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:generate_and_visualize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:visualize_blank_with_labels",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:draw_sequence_frame",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:draw_future_labels",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:visualize_from_pickle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:generate_and_visualize",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:visualize_blank_with_labels",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/augment_sequences.py",
+      "target": "file:scripts/balance_sequences.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/balance_sequences.py",
+      "target": "file:scripts/split_balance_sequences_all.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/generate_sequences.py",
+      "target": "file:scripts/balance_sequences.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.claude/skills/debugging-playbook/SKILL.md",
+      "target": "document:.claude/skills/debugging-playbook/references/debug-checklist.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.claude/skills/experiment-tracking/SKILL.md",
+      "target": "document:.claude/skills/experiment-tracking/references/baseline-results.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:visualize_comparison.py:process_pie_dataset",
+      "target": "function:visualize_comparison.py:draw_comparison",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train_two_phase.py:build_criterion",
+      "target": "class:class_imbalance_strategies.py:FocalLoss",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_comparison.py",
+      "target": "function:visualize_comparison.py:draw_comparison",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "function:train_two_phase.py:build_criterion",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:train_two_phase.py",
+      "target": "function:train_two_phase.py:build_criterion",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:train_two_phase.py:main",
+      "target": "function:train_two_phase.py:build_criterion",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:model-components",
+      "name": "Model Components",
+      "description": "Neural network building blocks for multimodal pedestrian prediction: the hierarchical ViT context encoder, temporal motion encoder, cross-attention fusion module, unified ensemble wiring, and ablation variants.",
+      "nodeIds": [
+        "file:models/AblationModels.py",
+        "file:models/Cross_Attention_Module.py",
+        "file:models/Unified_Module.py",
+        "file:models/Vision_Transformer.py",
+        "file:models/Motion_Encoder.py",
+        "file:models/__init__.py"
+      ]
+    },
+    {
+      "id": "layer:data-pipeline",
+      "name": "Data Pipeline & Utilities",
+      "description": "PIE dataset adapters, LMDB-backed datasets, sequence generation/balancing/augmentation, preprocessing scripts, model/training utility helpers, and standalone frame-extraction and label-counting CLIs.",
+      "nodeIds": [
+        "file:scripts/model_utils.py",
+        "file:scripts/pedestrian_detection.py",
+        "file:scripts/lmdb_dataset.py",
+        "file:scripts/train_utils.py",
+        "file:scripts/PIE_sequence_Dataset_1.py",
+        "file:scripts/preprocess_data.py",
+        "file:scripts/preprocess_data_lmdb.py",
+        "file:scripts/__init__.py",
+        "file:scripts/augment_sequences.py",
+        "file:scripts/balance_sequences.py",
+        "file:scripts/generate_sequences.py",
+        "file:scripts/split_balance_sequences_all.py",
+        "file:extract_frames.py",
+        "file:label_count.py"
+      ]
+    },
+    {
+      "id": "layer:training",
+      "name": "Training & Experimentation",
+      "description": "Training entrypoints (single-phase and two-phase), class-imbalance strategies and presets, and the ablation/imbalance verification and example-usage scripts that exercise the full pipeline.",
+      "nodeIds": [
+        "file:train.py",
+        "file:train_two_phase.py",
+        "file:class_imbalance_strategies.py",
+        "file:imbalance_config.py",
+        "file:test_imbalance_setup.py",
+        "file:final_ablation_verification.py",
+        "file:test_ablation_models.py",
+        "file:test_ablation_structure_clean.py",
+        "file:ablation_usage_example.py"
+      ]
+    },
+    {
+      "id": "layer:inference-evaluation",
+      "name": "Inference & Evaluation",
+      "description": "End-to-end evaluation harness, video-based inference entrypoint, and prediction/ground-truth visualization tools used to assess trained pedestrian-behavior models.",
+      "nodeIds": [
+        "file:test.py",
+        "file:main.py",
+        "file:visualize_comparison.py",
+        "file:visualize_gt.py"
+      ]
+    },
+    {
+      "id": "layer:deployment-export",
+      "name": "Deployment & Export",
+      "description": "ONNX export tooling that converts the trained PyTorch ensemble into a portable inference artifact.",
+      "nodeIds": [
+        "file:onnx/onnx_export.py"
+      ]
+    },
+    {
+      "id": "layer:configuration-tooling",
+      "name": "Configuration & Project Tooling",
+      "description": "Shared model/dimension configuration consumed across components, plus repository-level developer tooling: the env-activation batch script, git attributes, Claude IDE settings, and analyzer ignore rules.",
+      "nodeIds": [
+        "file:config.py",
+        "file:run_env.bat",
+        "file:.gitattributes",
+        "config:.claude/settings.local.json",
+        "file:.understand-anything/.understandignore"
+      ]
+    },
+    {
+      "id": "layer:documentation",
+      "name": "Documentation",
+      "description": "Project-facing documentation (README, CLAUDE.md guidance, GUIDELINE.md, requirements list) and Claude Code skill documentation for code review, debugging, and experiment tracking.",
+      "nodeIds": [
+        "document:CLAUDE.md",
+        "document:GUIDELINE.md",
+        "document:README.md",
+        "document:requirements.txt",
+        "document:.claude/skills/code-review-protocol/SKILL.md",
+        "document:.claude/skills/debugging-playbook/references/debug-checklist.md",
+        "document:.claude/skills/debugging-playbook/SKILL.md",
+        "document:.claude/skills/experiment-tracking/references/baseline-results.md",
+        "document:.claude/skills/experiment-tracking/SKILL.md"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "Project Overview & Developer Reference",
+      "description": "Start with the README.md to learn what this thesis project does: multimodal pedestrian behavior prediction on the PIE dataset, jointly predicting actions (walking/standing), looks (attending to traffic), and crosses (crossing behavior). The companion CLAUDE.md is the authoritative developer reference and encodes architecture invariants, dataset class-imbalance statistics, AMP training patterns, and the canonical output dict keys (actions, looks, crosses_pooled, crosses_frame). Reading both up front gives you the mental model the rest of the tour will fill in.",
+      "nodeIds": [
+        "document:README.md",
+        "document:CLAUDE.md",
+        "document:requirements.txt"
+      ]
+    },
+    {
+      "order": 2,
+      "title": "Unified Configuration",
+      "description": "config.py is the single source of truth for the shared model dimension: get_unified_dim_model() returns d_model = 128, and every encoder must respect it. It also provides default kwarg dictionaries for the ViT and motion encoder (vit_args_config, motion_enc_args_config). With fan-in of 7, this is one of the most depended-upon files in the repo — almost every model component and training script imports from here, so changing a constant here ripples everywhere.",
+      "nodeIds": [
+        "file:config.py"
+      ],
+      "languageLesson": "Centralizing dimension constants behind a function rather than a bare module-level variable lets the rest of the codebase couple to a stable API while leaving room to introduce environment-driven or argparse-driven overrides later without touching every call site."
+    },
+    {
+      "order": 3,
+      "title": "Visual Branch — Hierarchical Vision Transformer",
+      "description": "Vision_Transformer.py implements ViT_Hierarchical, the visual branch of the model. It consumes context-crop frames (a wider region around the pedestrian) and emits per-frame embeddings of shape [B, T, 128] using windowed self-attention with relative position bias and multi-stage downsampling. This is the first of the two parallel encoders shown in the README architecture diagram.",
+      "nodeIds": [
+        "file:models/Vision_Transformer.py"
+      ],
+      "languageLesson": "Windowed (Swin-style) self-attention limits attention to local windows, reducing the O(N^2) cost of full attention to roughly O(N) in the number of tokens. Hierarchical downsampling between stages then gives the network a multi-scale receptive field — early stages capture local texture, later stages capture pedestrian-scale context."
+    },
+    {
+      "order": 4,
+      "title": "Motion Branch — Temporal Motion Encoder",
+      "description": "Motion_Encoder.py is the second parallel encoder. It fuses tight-crop image features (extracted by a small CNN) with normalized motion vectors — position and size deltas — via 1D convolutions, then a GRU plus multi-head self-attention models temporal structure. Like the ViT, its output is [B, T, d_model], so the two branches are dimension-compatible and ready to be fused. This branch is what lets the model exploit trajectory dynamics in addition to appearance.",
+      "nodeIds": [
+        "file:models/Motion_Encoder.py"
+      ]
+    },
+    {
+      "order": 5,
+      "title": "Cross-Attention Fusion & Task Heads",
+      "description": "Cross_Attention_Module.py is where the two branches meet. It attends from motion features to visual features, applies learned attention pooling, and produces the per-task logit dictionary. Notably it emits both crosses_pooled (one prediction per clip) and crosses_frame (one prediction per frame), which the evaluation and two-phase training scripts later treat differently. With fan-in 7, this module is consumed by the full model, every ablation, and every training/eval entrypoint — it is the project's narrowest waist.",
+      "nodeIds": [
+        "file:models/Cross_Attention_Module.py"
+      ],
+      "languageLesson": "Cross-attention uses one stream as the query and another as the key/value, letting the query stream selectively pull information from the other modality. logsumexp pooling (used here for crosses_pooled) is a smooth, differentiable approximation to max-pooling that preserves gradients across all frames rather than only the argmax — useful for sparse positive events like crossing onsets."
+    },
+    {
+      "order": 6,
+      "title": "Wiring It All Together — EnsembleModel",
+      "description": "Unified_Module.py defines EnsembleModel, the top-level module that instantiates the ViT, the MotionEncoder, and the CrossAttentionModule, applies LayerNorm to each branch before fusion, and exposes a single forward(images_tight, images_context, motions) entrypoint. Its fan-in of 8 makes it the most-imported file in the project: this is the class that train.py, test.py, main.py, and the ONNX exporter all instantiate.",
+      "nodeIds": [
+        "file:models/Unified_Module.py"
+      ],
+      "languageLesson": "LayerNorm before fusion equalizes the scale and variance of features coming from two very different encoders. Without it, whichever branch has larger activations would dominate the attention scores, effectively suppressing the other modality regardless of its informativeness."
+    },
+    {
+      "order": 7,
+      "title": "Ablation Variants & Model Factory",
+      "description": "AblationModels.py defines three controlled comparisons against the full model: MotionOnlyModel and VisualOnlyModel isolate each branch, while VanillaConcatModel replaces cross-attention with naive concatenation to measure how much the fusion mechanism actually contributes. All variants honor the same output-dict contract so downstream evaluation code is model-agnostic. scripts/model_utils.py provides get_model() and model_forward(), the factory and dispatch helpers that route inputs correctly per variant — this is what lets test.py loop over model types uniformly.",
+      "nodeIds": [
+        "file:models/AblationModels.py",
+        "file:scripts/model_utils.py"
+      ]
+    },
+    {
+      "order": 8,
+      "title": "Data Pipeline — LMDB, Sequences, and Utilities",
+      "description": "The data pipeline has three layers, all introduced here. scripts/generate_sequences.py turns raw PIE trajectories into sliding-window observation sequences with future-window binary labels (the source of the dataset statistics quoted in CLAUDE.md). scripts/lmdb_dataset.py wraps the resulting LMDB chunks as a PyTorch Dataset (LMDBChunkDataset), serving tight crops, context crops, motion vectors, and multi-task labels per sample. scripts/train_utils.py is the connective tissue: collate_fn (with temporal length capping), EarlyStopping, remap_cross_labels (which normalizes raw PIE crossing labels to 0/1), chunk discovery across directories, and background LMDB pre-warming via multiprocessing.",
+      "nodeIds": [
+        "file:scripts/generate_sequences.py",
+        "file:scripts/lmdb_dataset.py",
+        "file:scripts/train_utils.py"
+      ],
+      "languageLesson": "LMDB (Lightning Memory-Mapped Database) gives memory-mapped, near-zero-copy random reads, which is well-suited to large image-sequence datasets that do not fit in RAM. Sharding the data into chunks lets the training loop stream one chunk at a time, releasing GPU and CPU memory between chunks (see the gc.collect() + torch.cuda.empty_cache() pattern in CLAUDE.md)."
+    },
+    {
+      "order": 9,
+      "title": "Single-Phase Training Pipeline",
+      "description": "train.py is the primary training entrypoint. It loads LMDB chunks with background pre-warming, applies WeightedRandomSampler for class imbalance, runs AMP-enabled training with gradient scaling, validates each epoch with F1 and accuracy, logs to CSV, and manages checkpoints — for both the full ensemble and the ablation variants via the model_utils factory from Step 7. This is the script you reach for first when you want to reproduce a baseline run.",
+      "nodeIds": [
+        "file:train.py"
+      ],
+      "languageLesson": "AMP (Automatic Mixed Precision) runs most ops in float16 for speed and memory savings, but uses float32 for loss accumulation and certain numerically sensitive ops. GradScaler scales the loss before backward() to prevent gradient underflow in float16, then unscales before the optimizer step — without it, small gradients silently round to zero and training stalls."
+    },
+    {
+      "order": 10,
+      "title": "Two-Phase Training & Class Imbalance",
+      "description": "Crossing events are severely imbalanced (~37:1 negative-to-positive per CLAUDE.md), so train_two_phase.py implements a three-phase strategy: Phase 1 trains on a balanced subset with FocalLoss, Phase 2 fine-tunes on the full augmented dataset, Phase 3 freezes the backbone and retrains only the classification heads to decouple them. class_imbalance_strategies.py provides the toolbox (focal loss, class-balanced focal loss, batch-balanced sampling, dynamic loss weighting, hard negative mining, threshold optimization), and imbalance_config.py exposes presets and factory functions that wire those strategies into the training loop.",
+      "nodeIds": [
+        "file:train_two_phase.py",
+        "file:class_imbalance_strategies.py",
+        "file:imbalance_config.py"
+      ],
+      "languageLesson": "Focal loss multiplies the standard cross-entropy term by (1 - p_t)^gamma, which down-weights well-classified examples and forces the optimizer to focus on hard, often minority-class cases. Combined with classifier decoupling (Phase 3), this addresses two distinct problems: the loss landscape (imbalanced gradients) and the decision boundary (biased classifier weights) — they are not the same issue and benefit from different fixes."
+    },
+    {
+      "order": 11,
+      "title": "Evaluation Harness",
+      "description": "test.py is the comprehensive evaluation entrypoint. It loads a checkpoint, runs inference over LMDB test chunks, computes the full per-task metric suite mandated by CLAUDE.md (Accuracy, F1, AUC, Precision, Recall), searches for optimal per-task classification thresholds, measures FLOPs and inference latency, and writes results to CSV. Its --model_type flag drives the same factory used in training, so the full model and all three ablations run through one harness with identical metrics.",
+      "nodeIds": [
+        "file:test.py"
+      ]
+    },
+    {
+      "order": 12,
+      "title": "End-to-End Video Inference & ONNX Export",
+      "description": "main.py is the live inference demo: it runs YOLO-based pedestrian detection and tracking on a raw video (via scripts/pedestrian_detection.py), constructs fixed-length tight/context/motion sequences per track, feeds them through the trained EnsembleModel, and renders an annotated output video with action/look/cross predictions. onnx/onnx_export.py closes the loop for deployment by exporting the same EnsembleModel to ONNX with dynamic batch axes, wrapping it in a simplified forward that returns only the three task logit tensors — making the model portable to runtimes outside PyTorch.",
+      "nodeIds": [
+        "file:main.py",
+        "file:scripts/pedestrian_detection.py",
+        "file:onnx/onnx_export.py"
+      ],
+      "languageLesson": "ONNX export traces or scripts the model into a static computation graph. Declaring dynamic_axes for the batch dimension keeps the exported model flexible at inference time, while collapsing the rich output dict into plain tensors avoids tooling that does not understand Python dictionaries as graph outputs. This is the standard bridge from research-time PyTorch to production-time runtimes like ONNX Runtime, TensorRT, or CoreML."
+    }
+  ]
+}

@@ -1,9 +1,0 @@
-{
-  "projectRoot": "C:/Users/LENOVO/Desktop/Undergrad_Project/Undergrad_thesis_project",
-  "batchFiles": [
-    {"path": "class_imbalance_strategies.py", "language": "python", "sizeLines": 466, "fileCategory": "code"},
-    {"path": "imbalance_config.py", "language": "python", "sizeLines": 281, "fileCategory": "code"},
-    {"path": "test_imbalance_setup.py", "language": "python", "sizeLines": 263, "fileCategory": "code"}
-  ],
-  "batchImportData": {"class_imbalance_strategies.py":[],"imbalance_config.py":["class_imbalance_strategies.py"],"test_imbalance_setup.py":["class_imbalance_strategies.py","imbalance_config.py"]}
-}

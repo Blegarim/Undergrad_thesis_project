@@ -24,7 +24,7 @@ from scripts.lmdb_dataset import LMDBChunkDataset
 from config import vit_args_config, motion_enc_args_config, get_unified_dim_model
 
 # ==== Shared utilities ====
-from train import remap_cross_labels, collate_fn
+from scripts.train_utils import remap_cross_labels, collate_fn
 from scripts.model_utils import get_model, model_forward
 
 def evaluate(model, dataloader, device, model_type, use_amp=False):
@@ -86,16 +86,13 @@ def evaluate(model, dataloader, device, model_type, use_amp=False):
             auc = float("nan")
 
         metrics[name + "_acc"] = acc
-        metrics[name + "_f1"] = f1 
-        metrics[name + "_auc"] = auc 
+        metrics[name + "_f1"] = f1
+        metrics[name + "_auc"] = auc
         metrics[name + "_p"] = precision
         metrics[name + "_r"] = recall
 
-        # print(f"    {name}: Acc={acc:.2f} | F1={f1:.2f} | AUC={metrics[name + '_auc']:.2f} | Precision={precision:.2f} | Recall={recall:.2f}")
-
     overall = sum(correct.values()) / sum(total.values())
     metrics["overall_acc"] = overall
-    # print(f"    Overall Accuracy: {overall:.2f}%")
     return metrics, all_labels, all_preds, all_probs
 
 
@@ -135,7 +132,7 @@ def find_optimal_thresholds(y_true, y_prob, task_name=""):
             if f1 > best_f1:
                 best_f1 = f1
                 best_threshold = thresh
-        except:
+        except Exception:
             continue
     
     return best_threshold, best_f1
@@ -207,7 +204,7 @@ def compute_flops(model, model_type, img_height, img_width, context_scale, devic
             inputs = (dummy_images_tight, dummy_images_context, dummy_motions)
         
         flops = FlopCountAnalysis(model, inputs)
-        flops = flops.unsupported_ops_warnings(False)
+        flops.unsupported_ops_warnings(False)
         flops_total = flops.total()
         flops_per_frame = flops_total / dummy_images_tight.size(1)
     
@@ -351,7 +348,7 @@ def main():
     # Get model based on type selection
     model = get_model(args.model_type, motion_enc, vit, embedding_dim, num_classes_dict).to(device)
 
-    state_dict = torch.load(model_path, map_location="cpu")
+    state_dict = torch.load(model_path, map_location="cpu", weights_only=False)
     _init_global_rel_pos_from_ckpt(model, state_dict)
     model.load_state_dict(state_dict)
     print("Model loaded successfully.")
@@ -418,6 +415,8 @@ def main():
         print(f"  Chunk done in {duration:.2f}s")
         del dataset, dataloader
         gc.collect()
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
 
     # ==== Compute Average Metrics ====
     avg_metrics = {}
@@ -482,36 +481,29 @@ def main():
     for h in heads:
         row = [h.capitalize()] + [round_metric(avg_metrics, f"{h}_{s}") for s in metric_suffixes]
         rows.append(row)
-    overall_row = ['Overall', round_metric(avg_metrics, 'overall_acc')]
-    
+    # Pad to match header width (6 columns) so downstream parsers stay aligned.
+    overall_row = ['Overall', round_metric(avg_metrics, 'overall_acc'), '', '', '', '']
+
     # Threshold-optimized summary
     opt_score_row = ["Heads (Optimized)", "Threshold", "Accuracy", "F1", "P", "R"]
     opt_rows = [opt_score_row]
     for h in heads:
         thresh = optimal_thresholds.get(h, 0.5)
-        row = [h.capitalize(), thresh, 
+        row = [h.capitalize(), thresh,
                round_metric(optimized_metrics, f"{h}_acc"),
                round_metric(optimized_metrics, f"{h}_f1"),
                round_metric(optimized_metrics, f"{h}_p"),
                round_metric(optimized_metrics, f"{h}_r")]
         opt_rows.append(row)
-    opt_overall_row = ['Overall (Optimized)', '', round_metric(optimized_metrics, 'overall_acc')]
-    
+    opt_overall_row = ['Overall (Optimized)', '', round_metric(optimized_metrics, 'overall_acc'), '', '', '']
+
+    param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
     computational = [
-        'Parameters count:',
-        f'{sum(p.numel() for p in model.parameters() if p.requires_grad)} params',
-        '',
-        'Model Type:',
-        f'{args.model_type}',
-        '',
-        'Per-frame FLOPs:',
-        f'{flops_per_frame/1e6:.2f} MFLOPs',
-        '',
-        'Per-frame Latency:',
-        f'{latency_per_frame*1000:.2f} ms',
-        '',
-        'FPS Equivalent:',
-        f'{fps:.2f}'
+        ['Parameters count:', f'{param_count} params'],
+        ['Model Type:', args.model_type],
+        ['Per-frame FLOPs:', f'{flops_per_frame/1e6:.2f} MFLOPs'],
+        ['Per-frame Latency:', f'{latency_per_frame*1000:.2f} ms'],
+        ['FPS Equivalent:', f'{fps:.2f}'],
     ]
 
     with open(log_csv, "a", newline="") as f:
@@ -581,16 +573,11 @@ def main():
     
     # Save results with model type suffix
     if args.model_type != 'full':
+        import shutil
         base_log = log_csv.replace('.csv', '')
-        model_suffix = f"_{args.model_type}"
-        new_log = f"{base_log}{model_suffix}.csv"
-        if os.path.exists(log_csv):
-            # Copy existing log to new file with model suffix
-            import shutil
-            shutil.copy2(log_csv, new_log)
-            print(f"Results also copied to: {new_log}")
-        else:
-            print(f"Note: Original log file not found for copying")
+        new_log = f"{base_log}_{args.model_type}.csv"
+        shutil.copy2(log_csv, new_log)
+        print(f"Results also copied to: {new_log}")
 
 if __name__ == "__main__":
     main()

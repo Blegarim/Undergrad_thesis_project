@@ -1,0 +1,3414 @@
+{
+  "version": "1.0.0",
+  "gitCommitHash": "5bc0a794b0d481a18a8f11caa5f806ec7089b615",
+  "generatedAt": "2026-05-26T06:16:34.711Z",
+  "files": {
+    ".claude/settings.local.json": {
+      "filePath": ".claude/settings.local.json",
+      "contentHash": "b6ce328c7ad5a83bc225699fadfc4f742fdd2eecdadbd7def9a0e0eb6a8bbff2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 25,
+      "hasStructuralAnalysis": true
+    },
+    ".claude/skills/code-review-protocol/SKILL.md": {
+      "filePath": ".claude/skills/code-review-protocol/SKILL.md",
+      "contentHash": "5d16037b383a76a2024795bfd2f10f72971847a9a0554dedc9cbf9d3ecfd111d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 140,
+      "hasStructuralAnalysis": true
+    },
+    ".claude/skills/debugging-playbook/references/debug-checklist.md": {
+      "filePath": ".claude/skills/debugging-playbook/references/debug-checklist.md",
+      "contentHash": "84596492d9b90adb53a09b6204416adbfbce45a4e15dd59e9efeb83eb5d1f7be",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 35,
+      "hasStructuralAnalysis": true
+    },
+    ".claude/skills/debugging-playbook/SKILL.md": {
+      "filePath": ".claude/skills/debugging-playbook/SKILL.md",
+      "contentHash": "99eadc0e9a6face457d64d4ca7a761d8224bd94bf9891e0fe0416b9aaad35489",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 141,
+      "hasStructuralAnalysis": true
+    },
+    ".claude/skills/experiment-tracking/references/baseline-results.md": {
+      "filePath": ".claude/skills/experiment-tracking/references/baseline-results.md",
+      "contentHash": "b050d8315ce9b33c3b20474d236c9f76b495cd8cfe1717c59c946fee0fee4480",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 40,
+      "hasStructuralAnalysis": true
+    },
+    ".claude/skills/experiment-tracking/SKILL.md": {
+      "filePath": ".claude/skills/experiment-tracking/SKILL.md",
+      "contentHash": "b397aa66a46e6a769e23e64accee8acf6147087e87d112bf50f2a5ba0f1ab34c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 123,
+      "hasStructuralAnalysis": true
+    },
+    ".gitattributes": {
+      "filePath": ".gitattributes",
+      "contentHash": "1a1dbe176bc233b499d35a57db7513f2941c99ab9759f177830c9149be99005b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 3,
+      "hasStructuralAnalysis": false
+    },
+    ".understand-anything/.understandignore": {
+      "filePath": ".understand-anything/.understandignore",
+      "contentHash": "56c06566b5bc83fc900a532d7292cbab7c27b54bae2c112bbe0c8ad75af690f8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 40,
+      "hasStructuralAnalysis": false
+    },
+    "ablation_usage_example.py": {
+      "filePath": "ablation_usage_example.py",
+      "contentHash": "3ffb74f8b68ff3215c6964061b03260f845c3bb9ce2ec7a02f75dc54059c4cb9",
+      "functions": [
+        {
+          "name": "get_ablation_model",
+          "params": [
+            "model_type",
+            "motion_enc",
+            "vit",
+            "d_model",
+            "num_classes_dict"
+          ],
+          "exported": true,
+          "lineCount": 55
+        },
+        {
+          "name": "train_model_with_ablation",
+          "params": [
+            "model_type"
+          ],
+          "exported": true,
+          "lineCount": 49
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "models.AblationModels",
+          "specifiers": [
+            "MotionOnlyModel",
+            "VisualOnlyModel",
+            "VanillaConcatModel"
+          ]
+        }
+      ],
+      "exports": [
+        "get_ablation_model",
+        "train_model_with_ablation"
+      ],
+      "totalLines": 161,
+      "hasStructuralAnalysis": true
+    },
+    "class_imbalance_strategies.py": {
+      "filePath": "class_imbalance_strategies.py",
+      "contentHash": "3195683abed55e1b17106bc7113098c6f291880757fc93a3e0d7ce0c398c6050",
+      "functions": [
+        {
+          "name": "create_class_balanced_loss",
+          "params": [
+            "dataset",
+            "task",
+            "loss_type"
+          ],
+          "exported": true,
+          "lineCount": 92
+        },
+        {
+          "name": "get_imbalance_config",
+          "params": [],
+          "exported": true,
+          "lineCount": 29
+        }
+      ],
+      "classes": [
+        {
+          "name": "FocalLoss",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 35
+        },
+        {
+          "name": "ClassBalancedFocalLoss",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 43
+        },
+        {
+          "name": "BatchBalancedSampler",
+          "methods": [
+            "__init__",
+            "_group_indices",
+            "_sample_balanced_batch",
+            "__iter__",
+            "__len__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 73
+        },
+        {
+          "name": "DynamicLossWeighting",
+          "methods": [
+            "__init__",
+            "update_performance",
+            "to",
+            "get_weighted_loss"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 70
+        },
+        {
+          "name": "HardNegativeMining",
+          "methods": [
+            "__init__",
+            "select_hard_negatives"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "ThresholdOptimizer",
+          "methods": [
+            "__init__",
+            "optimize_thresholds",
+            "_find_optimal_threshold"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 63
+        }
+      ],
+      "imports": [
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        },
+        {
+          "source": "torch.nn.functional",
+          "specifiers": [
+            "F"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        },
+        {
+          "source": "sklearn.utils.class_weight",
+          "specifiers": [
+            "compute_class_weight"
+          ]
+        },
+        {
+          "source": "sklearn.metrics",
+          "specifiers": [
+            "sklearn_f1_score"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "Counter"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        }
+      ],
+      "exports": [
+        "FocalLoss",
+        "ClassBalancedFocalLoss",
+        "BatchBalancedSampler",
+        "DynamicLossWeighting",
+        "HardNegativeMining",
+        "ThresholdOptimizer",
+        "create_class_balanced_loss",
+        "get_imbalance_config"
+      ],
+      "totalLines": 467,
+      "hasStructuralAnalysis": true
+    },
+    "CLAUDE.md": {
+      "filePath": "CLAUDE.md",
+      "contentHash": "8dd7a4ee564185d121f13c499efaacd9c6d160134bdd318d6cb024700428ab76",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 152,
+      "hasStructuralAnalysis": true
+    },
+    "config.py": {
+      "filePath": "config.py",
+      "contentHash": "9645cd990fc0824159dc39a052e6a49ee430d7a8c188c611832fc4ae26765a23",
+      "functions": [
+        {
+          "name": "get_unified_dim_model",
+          "params": [],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "vit_args_config",
+          "params": [
+            "in_channels",
+            "stage_dims",
+            "layer_nums",
+            "head_nums",
+            "window_size",
+            "mlp_ratio",
+            "drop_path",
+            "attn_dropout",
+            "proj_dropout",
+            "dropout"
+          ],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "motion_enc_args_config",
+          "params": [
+            "motion_dim",
+            "hidden_dim",
+            "num_layers",
+            "num_heads",
+            "dropout"
+          ],
+          "exported": true,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "get_unified_dim_model",
+        "vit_args_config",
+        "motion_enc_args_config"
+      ],
+      "totalLines": 44,
+      "hasStructuralAnalysis": true
+    },
+    "extract_frames.py": {
+      "filePath": "extract_frames.py",
+      "contentHash": "ad7636c13472bac4181b4a173c33bd8b902974547626ff3b213a0e16fcc34b11",
+      "functions": [
+        {
+          "name": "extract_frames",
+          "params": [
+            "video_path",
+            "output_dir",
+            "fps"
+          ],
+          "exported": true,
+          "lineCount": 32
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "cv2",
+          "specifiers": [
+            "cv2"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        }
+      ],
+      "exports": [
+        "extract_frames"
+      ],
+      "totalLines": 46,
+      "hasStructuralAnalysis": true
+    },
+    "final_ablation_verification.py": {
+      "filePath": "final_ablation_verification.py",
+      "contentHash": "5896175d4dc91bc8e7b5f37c22abe4b1398b891d78d05ac374c33420553dcc64",
+      "functions": [
+        {
+          "name": "test_model_suffix_logic",
+          "params": [],
+          "exported": true,
+          "lineCount": 24
+        },
+        {
+          "name": "test_file_structure",
+          "params": [],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "test_keyword_presence",
+          "params": [],
+          "exported": true,
+          "lineCount": 45
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 30
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "test_model_suffix_logic",
+        "test_file_structure",
+        "test_keyword_presence",
+        "main"
+      ],
+      "totalLines": 132,
+      "hasStructuralAnalysis": true
+    },
+    "GUIDELINE.md": {
+      "filePath": "GUIDELINE.md",
+      "contentHash": "7894875f22cddf1de1bdddaeed05e744b9d80ba07307371e86df046059e71031",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 64,
+      "hasStructuralAnalysis": true
+    },
+    "imbalance_config.py": {
+      "filePath": "imbalance_config.py",
+      "contentHash": "27bce17916dee20d9eeec7eb19b045e14aeddae8e46b820ae91f57c20b07f8be",
+      "functions": [
+        {
+          "name": "get_training_config",
+          "params": [],
+          "exported": true,
+          "lineCount": 73
+        },
+        {
+          "name": "create_loss_functions",
+          "params": [
+            "config",
+            "datasets"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "create_advanced_components",
+          "params": [
+            "config",
+            "dataset"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "apply_imbalance_strategies_to_training",
+          "params": [
+            "model",
+            "config",
+            "datasets"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "setup_imbalance_monitoring",
+          "params": [
+            "config"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "get_recommended_config",
+          "params": [],
+          "exported": true,
+          "lineCount": 31
+        },
+        {
+          "name": "validate_config",
+          "params": [
+            "config"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "get_preset_config",
+          "params": [
+            "preset_name"
+          ],
+          "exported": true,
+          "lineCount": 13
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "class_imbalance_strategies",
+          "specifiers": [
+            "FocalLoss",
+            "ClassBalancedFocalLoss",
+            "BatchBalancedSampler",
+            "DynamicLossWeighting",
+            "ThresholdOptimizer",
+            "create_class_balanced_loss",
+            "get_imbalance_config"
+          ]
+        }
+      ],
+      "exports": [
+        "get_training_config",
+        "create_loss_functions",
+        "create_advanced_components",
+        "apply_imbalance_strategies_to_training",
+        "setup_imbalance_monitoring",
+        "get_recommended_config",
+        "validate_config",
+        "get_preset_config"
+      ],
+      "totalLines": 282,
+      "hasStructuralAnalysis": true
+    },
+    "label_count.py": {
+      "filePath": "label_count.py",
+      "contentHash": "1842f5cfa90bdd8147032b59cd5bef698553e278096be8ee64c5a31f3b29c3da",
+      "functions": [
+        {
+          "name": "label_counts",
+          "params": [
+            "chunk_data"
+          ],
+          "exported": true,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "collections",
+          "specifiers": [
+            "Counter"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "csv",
+          "specifiers": [
+            "csv"
+          ]
+        }
+      ],
+      "exports": [
+        "label_counts"
+      ],
+      "totalLines": 65,
+      "hasStructuralAnalysis": true
+    },
+    "main.py": {
+      "filePath": "main.py",
+      "contentHash": "d2666130f95765d017fca66287750c41a7936f4b901b847997e6c27c1f708c24",
+      "functions": [
+        {
+          "name": "inference_collate_fn",
+          "params": [
+            "batch"
+          ],
+          "exported": true,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        },
+        {
+          "source": "torch.utils.data",
+          "specifiers": [
+            "DataLoader"
+          ]
+        },
+        {
+          "source": "torchvision",
+          "specifiers": [
+            "transforms"
+          ]
+        },
+        {
+          "source": "cv2",
+          "specifiers": [
+            "cv2"
+          ]
+        },
+        {
+          "source": "models.Vision_Transformer",
+          "specifiers": [
+            "ViT_Hierarchical"
+          ]
+        },
+        {
+          "source": "models.Motion_Encoder",
+          "specifiers": [
+            "MotionEncoder"
+          ]
+        },
+        {
+          "source": "models.Cross_Attention_Module",
+          "specifiers": [
+            "CrossAttentionModule"
+          ]
+        },
+        {
+          "source": "models.Unified_Module",
+          "specifiers": [
+            "EnsembleModel"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "vit_args_config",
+            "motion_enc_args_config"
+          ]
+        },
+        {
+          "source": "scripts.pedestrian_detection",
+          "specifiers": [
+            "extract_tracks_from_video",
+            "smooth_track"
+          ]
+        },
+        {
+          "source": "scripts.PIE_sequence_Dataset_1",
+          "specifiers": [
+            "PIESequenceDataset"
+          ]
+        },
+        {
+          "source": "PIE.utilities.pie_data",
+          "specifiers": [
+            "PIE"
+          ]
+        }
+      ],
+      "exports": [
+        "inference_collate_fn"
+      ],
+      "totalLines": 330,
+      "hasStructuralAnalysis": true
+    },
+    "models/__init__.py": {
+      "filePath": "models/__init__.py",
+      "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1,
+      "hasStructuralAnalysis": true
+    },
+    "models/AblationModels.py": {
+      "filePath": "models/AblationModels.py",
+      "contentHash": "0649bfee3b3305faa71a63ee601ca693a76f60db68ee92b2a2fa0c66c68b8f53",
+      "functions": [],
+      "classes": [
+        {
+          "name": "MotionOnlyModel",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 65
+        },
+        {
+          "name": "VisualOnlyModel",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 65
+        },
+        {
+          "name": "VanillaConcatModel",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 85
+        }
+      ],
+      "imports": [
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        },
+        {
+          "source": "torch.nn.functional",
+          "specifiers": [
+            "F"
+          ]
+        }
+      ],
+      "exports": [
+        "MotionOnlyModel",
+        "VisualOnlyModel",
+        "VanillaConcatModel"
+      ],
+      "totalLines": 223,
+      "hasStructuralAnalysis": true
+    },
+    "models/Cross_Attention_Module.py": {
+      "filePath": "models/Cross_Attention_Module.py",
+      "contentHash": "8f2e42c4b9f1061d91bf9455c7faa384e731831099ad7134d4dbcc5c508cd683",
+      "functions": [],
+      "classes": [
+        {
+          "name": "CrossAttentionModule",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 75
+        }
+      ],
+      "imports": [
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        }
+      ],
+      "exports": [
+        "CrossAttentionModule"
+      ],
+      "totalLines": 84,
+      "hasStructuralAnalysis": true
+    },
+    "models/Motion_Encoder.py": {
+      "filePath": "models/Motion_Encoder.py",
+      "contentHash": "94cff99dbcf8c27e70fdd3b4aef85ebe5f7c545bd96da046d934a17765f7a818",
+      "functions": [],
+      "classes": [
+        {
+          "name": "MotionEncoder",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 96
+        }
+      ],
+      "imports": [
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        },
+        {
+          "source": "torch.nn.functional",
+          "specifiers": [
+            "F"
+          ]
+        }
+      ],
+      "exports": [
+        "MotionEncoder"
+      ],
+      "totalLines": 118,
+      "hasStructuralAnalysis": true
+    },
+    "models/Unified_Module.py": {
+      "filePath": "models/Unified_Module.py",
+      "contentHash": "c8445659efbeb4f4f32d19b1ea4846326669ecaa8a5d32afb6707849620b5234",
+      "functions": [],
+      "classes": [
+        {
+          "name": "EnsembleModel",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 25
+        }
+      ],
+      "imports": [
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        }
+      ],
+      "exports": [
+        "EnsembleModel"
+      ],
+      "totalLines": 31,
+      "hasStructuralAnalysis": true
+    },
+    "models/Vision_Transformer.py": {
+      "filePath": "models/Vision_Transformer.py",
+      "contentHash": "5b9e686442c799b65bb174383b3e0f004472c5a002fb7dc044e6ee5ed1d59920",
+      "functions": [
+        {
+          "name": "window_partition",
+          "params": [
+            "x",
+            "window_size"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "window_reverse",
+          "params": [
+            "windows",
+            "window_size",
+            "H",
+            "W"
+          ],
+          "exported": true,
+          "lineCount": 17
+        }
+      ],
+      "classes": [
+        {
+          "name": "MLP",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "WindowAttention",
+          "methods": [
+            "__init__",
+            "init_relative_position_bias",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 123
+        },
+        {
+          "name": "WindowTransformerBlock",
+          "methods": [
+            "__init__",
+            "init_relative_position_bias",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 81
+        },
+        {
+          "name": "ViT_Hierarchical",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 126
+        }
+      ],
+      "imports": [
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        },
+        {
+          "source": "torch.nn.functional",
+          "specifiers": [
+            "F"
+          ]
+        },
+        {
+          "source": "timm.layers",
+          "specifiers": [
+            "DropPath"
+          ]
+        }
+      ],
+      "exports": [
+        "MLP",
+        "window_partition",
+        "window_reverse",
+        "WindowAttention",
+        "WindowTransformerBlock",
+        "ViT_Hierarchical"
+      ],
+      "totalLines": 408,
+      "hasStructuralAnalysis": true
+    },
+    "onnx/onnx_export.py": {
+      "filePath": "onnx/onnx_export.py",
+      "contentHash": "b0689f8ed85b99889b4343dca640487f3cd215f63c2f68b76cf6ccd39051d837",
+      "functions": [
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 46
+        }
+      ],
+      "classes": [
+        {
+          "name": "EnsembleModelONNX",
+          "methods": [
+            "__init__",
+            "forward"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 9
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "onnx",
+          "specifiers": [
+            "onnx"
+          ]
+        },
+        {
+          "source": "models.Unified_Module",
+          "specifiers": [
+            "EnsembleModel"
+          ]
+        },
+        {
+          "source": "models.Vision_Transformer",
+          "specifiers": [
+            "ViT_Hierarchical"
+          ]
+        },
+        {
+          "source": "models.Motion_Encoder",
+          "specifiers": [
+            "MotionEncoder"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "vit_args_config",
+            "motion_enc_args_config",
+            "get_unified_dim_model"
+          ]
+        }
+      ],
+      "exports": [
+        "EnsembleModelONNX",
+        "main"
+      ],
+      "totalLines": 71,
+      "hasStructuralAnalysis": true
+    },
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "c17a684c249357bf072b0aa37aa1681941b559187c940aa27236b9ce8c5af54d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 119,
+      "hasStructuralAnalysis": true
+    },
+    "requirements.txt": {
+      "filePath": "requirements.txt",
+      "contentHash": "72db0e671dc97a6542dc66e953276d8050a500aa7397a9ba5452e1ece4bb8ef3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 51,
+      "hasStructuralAnalysis": false
+    },
+    "run_env.bat": {
+      "filePath": "run_env.bat",
+      "contentHash": "e051b316d80b5ada91fc3a535e9b633e4aed29790c48cbabe39d929d2a6ec1fc",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 4,
+      "hasStructuralAnalysis": false
+    },
+    "scripts/__init__.py": {
+      "filePath": "scripts/__init__.py",
+      "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/augment_sequences.py": {
+      "filePath": "scripts/augment_sequences.py",
+      "contentHash": "6688059136b4fc9ae453efcb088471fedddaf7b1e0f6afd34fd5b38d718fdb53",
+      "functions": [
+        {
+          "name": "augment_minority_sequences",
+          "params": [
+            "input_path",
+            "output_path",
+            "crosses_multiplier",
+            "looks_multiplier",
+            "seed"
+          ],
+          "exported": true,
+          "lineCount": 53
+        }
+      ],
+      "classes": [
+        {
+          "name": "SequenceAugmenter",
+          "methods": [
+            "__init__",
+            "horizontal_flip",
+            "color_augment",
+            "motion_noise",
+            "random_erase_frames",
+            "__call__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 61
+        }
+      ],
+      "imports": [
+        {
+          "source": "pickle",
+          "specifiers": [
+            "pickle"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torchvision.transforms",
+          "specifiers": [
+            "T"
+          ]
+        },
+        {
+          "source": "copy",
+          "specifiers": [
+            "copy"
+          ]
+        }
+      ],
+      "exports": [
+        "SequenceAugmenter",
+        "augment_minority_sequences"
+      ],
+      "totalLines": 147,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/balance_sequences.py": {
+      "filePath": "scripts/balance_sequences.py",
+      "contentHash": "04d76f0e0d5ea15e1dd947eb0c5068c199f3035fcb44e36e66ed86e2567e85ae",
+      "functions": [
+        {
+          "name": "_init_groups",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_group_indices",
+          "params": [
+            "data"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "_solve_cross0_counts",
+          "params": [
+            "n1",
+            "a1_pos",
+            "l1_pos",
+            "c00",
+            "c01",
+            "c10",
+            "c11"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "_counts_for_indices",
+          "params": [
+            "data",
+            "indices"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "balance_dataset",
+          "params": [
+            "data",
+            "seed"
+          ],
+          "exported": true,
+          "lineCount": 42
+        },
+        {
+          "name": "summarize",
+          "params": [
+            "data",
+            "indices"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 32
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pickle",
+          "specifiers": [
+            "pickle"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "Counter"
+          ]
+        }
+      ],
+      "exports": [
+        "_init_groups",
+        "_group_indices",
+        "_solve_cross0_counts",
+        "_counts_for_indices",
+        "balance_dataset",
+        "summarize",
+        "main"
+      ],
+      "totalLines": 147,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/generate_sequences.py": {
+      "filePath": "scripts/generate_sequences.py",
+      "contentHash": "7e27da393862117ced5085e3321051728b60e2c23665673a4b6cf70f6db2a6f5",
+      "functions": [
+        {
+          "name": "generate_sequences",
+          "params": [
+            "imdb",
+            "split",
+            "seq_type",
+            "min_track_size",
+            "out_path",
+            "seq_len",
+            "stride",
+            "future_offset",
+            "tol"
+          ],
+          "exported": true,
+          "lineCount": 83
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "PIE.utilities.pie_data",
+          "specifiers": [
+            "PIE"
+          ]
+        },
+        {
+          "source": "pickle",
+          "specifiers": [
+            "pickle"
+          ]
+        }
+      ],
+      "exports": [
+        "generate_sequences"
+      ],
+      "totalLines": 101,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/lmdb_dataset.py": {
+      "filePath": "scripts/lmdb_dataset.py",
+      "contentHash": "8c57b158b7604bdfa887dfe8415e5a5cafea030f756c9dea85cb729423d14fb2",
+      "functions": [],
+      "classes": [
+        {
+          "name": "LMDBChunkDataset",
+          "methods": [
+            "__init__",
+            "__getstate__",
+            "__del__",
+            "_get_env",
+            "__len__",
+            "__getitem__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 92
+        }
+      ],
+      "imports": [
+        {
+          "source": "io",
+          "specifiers": [
+            "io"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "lmdb",
+          "specifiers": [
+            "lmdb"
+          ]
+        },
+        {
+          "source": "pickle",
+          "specifiers": [
+            "pickle"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.utils.data",
+          "specifiers": [
+            "Dataset"
+          ]
+        },
+        {
+          "source": "PIL",
+          "specifiers": [
+            "Image"
+          ]
+        },
+        {
+          "source": "torchvision",
+          "specifiers": [
+            "transforms"
+          ]
+        }
+      ],
+      "exports": [
+        "LMDBChunkDataset"
+      ],
+      "totalLines": 102,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/model_utils.py": {
+      "filePath": "scripts/model_utils.py",
+      "contentHash": "7e702c95ad2292ce5d91bc4ec2946ad7eb3a9e362f10ddecc96a34df5ed86ff0",
+      "functions": [
+        {
+          "name": "get_model",
+          "params": [
+            "model_type",
+            "motion_enc",
+            "vit",
+            "d_model",
+            "num_classes_dict",
+            "dropout"
+          ],
+          "exported": true,
+          "lineCount": 53
+        },
+        {
+          "name": "model_forward",
+          "params": [
+            "model",
+            "model_type",
+            "images_tight",
+            "images_context",
+            "motions"
+          ],
+          "exported": true,
+          "lineCount": 22
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        },
+        {
+          "source": "models.AblationModels",
+          "specifiers": [
+            "MotionOnlyModel",
+            "VisualOnlyModel",
+            "VanillaConcatModel"
+          ]
+        },
+        {
+          "source": "models.Cross_Attention_Module",
+          "specifiers": [
+            "CrossAttentionModule"
+          ]
+        },
+        {
+          "source": "models.Unified_Module",
+          "specifiers": [
+            "EnsembleModel"
+          ]
+        }
+      ],
+      "exports": [
+        "get_model",
+        "model_forward"
+      ],
+      "totalLines": 91,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/pedestrian_detection.py": {
+      "filePath": "scripts/pedestrian_detection.py",
+      "contentHash": "60855d2c8fae8e0e11c9d10bd40a57ca3fece8c948bcb568ab75d47f44416c0e",
+      "functions": [
+        {
+          "name": "extract_tracks_from_video",
+          "params": [
+            "video_path",
+            "model_path",
+            "class_idx",
+            "conf",
+            "show"
+          ],
+          "exported": true,
+          "lineCount": 51
+        },
+        {
+          "name": "smooth_track",
+          "params": [
+            "track_data",
+            "window"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "extract_sequences_from_track",
+          "params": [
+            "track_data",
+            "T",
+            "img_transform"
+          ],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 18
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "ultralytics",
+          "specifiers": [
+            "YOLO"
+          ]
+        },
+        {
+          "source": "cv2",
+          "specifiers": [
+            "cv2"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "defaultdict"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torchvision",
+          "specifiers": [
+            "transforms"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        }
+      ],
+      "exports": [
+        "extract_tracks_from_video",
+        "smooth_track",
+        "extract_sequences_from_track",
+        "main"
+      ],
+      "totalLines": 130,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/PIE_sequence_Dataset_1.py": {
+      "filePath": "scripts/PIE_sequence_Dataset_1.py",
+      "contentHash": "662aeb0087dbed03b589da2dd213862b6b6c2817d68526b1528206bac1fcfc6b",
+      "functions": [
+        {
+          "name": "load_sequences_from_pkl",
+          "params": [
+            "pkl_path"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "pad_sequence_tensor",
+          "params": [
+            "tensor_list",
+            "pad_value"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "collate_with_padding",
+          "params": [
+            "batch"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "build_dataloader",
+          "params": [
+            "sequences",
+            "batch_size",
+            "shuffle",
+            "transform",
+            "crop",
+            "pad",
+            "preload"
+          ],
+          "exported": true,
+          "lineCount": 15
+        }
+      ],
+      "classes": [
+        {
+          "name": "PIESequenceDataset",
+          "methods": [
+            "__init__",
+            "_process_sequence",
+            "__len__",
+            "__getitem__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 121
+        }
+      ],
+      "imports": [
+        {
+          "source": "pickle",
+          "specifiers": [
+            "pickle"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.utils.data",
+          "specifiers": [
+            "Dataset",
+            "DataLoader"
+          ]
+        },
+        {
+          "source": "PIL",
+          "specifiers": [
+            "Image"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "tqdm",
+          "specifiers": [
+            "tqdm"
+          ]
+        }
+      ],
+      "exports": [
+        "load_sequences_from_pkl",
+        "PIESequenceDataset",
+        "pad_sequence_tensor",
+        "collate_with_padding",
+        "build_dataloader"
+      ],
+      "totalLines": 202,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/preprocess_data_lmdb.py": {
+      "filePath": "scripts/preprocess_data_lmdb.py",
+      "contentHash": "bd7cbb2ec182ae4887e01d66e5755415d3e21758972bfc9dbeb2dbf01395fa61",
+      "functions": [
+        {
+          "name": "save_dataset_in_chunks_lmdb",
+          "params": [
+            "sequences",
+            "out_dir",
+            "chunk_size",
+            "transform_tight",
+            "transform_context",
+            "start_idx",
+            "end_idx",
+            "context_scale",
+            "jpeg_quality",
+            "num_workers",
+            "prefetch_factor"
+          ],
+          "exported": true,
+          "lineCount": 80
+        },
+        {
+          "name": "img_resize",
+          "params": [
+            "height",
+            "width"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "img_augment",
+          "params": [
+            "height",
+            "width"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "main",
+          "params": [
+            "img_height",
+            "img_width",
+            "context_scale",
+            "train",
+            "data_aug",
+            "val",
+            "test",
+            "chunk_size"
+          ],
+          "exported": true,
+          "lineCount": 54
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.utils.data",
+          "specifiers": [
+            "DataLoader"
+          ]
+        },
+        {
+          "source": "torchvision",
+          "specifiers": [
+            "transforms"
+          ]
+        },
+        {
+          "source": "torchvision.io",
+          "specifiers": [
+            "encode_jpeg"
+          ]
+        },
+        {
+          "source": "gc",
+          "specifiers": [
+            "gc"
+          ]
+        },
+        {
+          "source": "PIE_sequence_Dataset_1",
+          "specifiers": [
+            "PIESequenceDataset",
+            "load_sequences_from_pkl"
+          ]
+        },
+        {
+          "source": "lmdb",
+          "specifiers": [
+            "lmdb"
+          ]
+        },
+        {
+          "source": "pickle",
+          "specifiers": [
+            "pickle"
+          ]
+        },
+        {
+          "source": "tqdm",
+          "specifiers": [
+            "tqdm"
+          ]
+        }
+      ],
+      "exports": [
+        "save_dataset_in_chunks_lmdb",
+        "img_resize",
+        "img_augment",
+        "main"
+      ],
+      "totalLines": 169,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/preprocess_data.py": {
+      "filePath": "scripts/preprocess_data.py",
+      "contentHash": "bafb8205adefb1cb6983945b992b59d64a9fe17b0d4fba109686efc56d2d4f8b",
+      "functions": [
+        {
+          "name": "save_dataset_in_chunks",
+          "params": [
+            "sequences",
+            "out_dir",
+            "chunk_size",
+            "transform_tight",
+            "transform_context",
+            "start_idx",
+            "end_idx",
+            "context_scale"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "img_resize",
+          "params": [
+            "height",
+            "width"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "img_augment",
+          "params": [
+            "height",
+            "width"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "main",
+          "params": [
+            "img_height",
+            "img_width",
+            "context_scale",
+            "train",
+            "data_aug",
+            "val",
+            "test"
+          ],
+          "exported": true,
+          "lineCount": 58
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torchvision",
+          "specifiers": [
+            "transforms"
+          ]
+        },
+        {
+          "source": "PIE_sequence_Dataset_1",
+          "specifiers": [
+            "load_sequences_from_pkl",
+            "PIESequenceDataset"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "gc",
+          "specifiers": [
+            "gc"
+          ]
+        }
+      ],
+      "exports": [
+        "save_dataset_in_chunks",
+        "img_resize",
+        "img_augment",
+        "main"
+      ],
+      "totalLines": 112,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/split_balance_sequences_all.py": {
+      "filePath": "scripts/split_balance_sequences_all.py",
+      "contentHash": "2ea904c8943394db212793b5ad5713c5d70aa158dec20893c85d20357c953fc4",
+      "functions": [
+        {
+          "name": "clamp_cross",
+          "params": [
+            "value"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "split_indices",
+          "params": [
+            "n",
+            "train_pct",
+            "val_pct",
+            "seed"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "group_indices",
+          "params": [
+            "data",
+            "indices"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "choose_cross1",
+          "params": [
+            "groups",
+            "n1",
+            "rand"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "solve_exact",
+          "params": [
+            "n0",
+            "a_target",
+            "l_target",
+            "c00",
+            "c01",
+            "c10",
+            "c11"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "solve_approx",
+          "params": [
+            "n0",
+            "a_target",
+            "l_target",
+            "c00",
+            "c01",
+            "c10",
+            "c11"
+          ],
+          "exported": true,
+          "lineCount": 31
+        },
+        {
+          "name": "balance_split",
+          "params": [
+            "data",
+            "indices",
+            "cross_pos_ratio",
+            "seed"
+          ],
+          "exported": true,
+          "lineCount": 54
+        },
+        {
+          "name": "summarize",
+          "params": [
+            "data",
+            "indices"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 51
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pickle",
+          "specifiers": [
+            "pickle"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "Counter"
+          ]
+        }
+      ],
+      "exports": [
+        "clamp_cross",
+        "split_indices",
+        "group_indices",
+        "choose_cross1",
+        "solve_exact",
+        "solve_approx",
+        "balance_split",
+        "summarize",
+        "main"
+      ],
+      "totalLines": 229,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/train_utils.py": {
+      "filePath": "scripts/train_utils.py",
+      "contentHash": "0ad7ad3a64a88646b02869f37bf9206afaad2a153e0df0c5d422183ff7434152",
+      "functions": [
+        {
+          "name": "collate_fn",
+          "params": [
+            "batch"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "remap_cross_labels",
+          "params": [
+            "labels"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "gather_chunks",
+          "params": [
+            "folders"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "wait_for_memory",
+          "params": [
+            "threshold",
+            "interval"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "mp_async_load",
+          "params": [
+            "idx",
+            "path",
+            "queue"
+          ],
+          "exported": true,
+          "lineCount": 18
+        }
+      ],
+      "classes": [
+        {
+          "name": "EarlyStopping",
+          "methods": [
+            "__init__",
+            "__call__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 16
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "lmdb",
+          "specifiers": [
+            "lmdb"
+          ]
+        },
+        {
+          "source": "psutil",
+          "specifiers": [
+            "psutil"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        }
+      ],
+      "exports": [
+        "collate_fn",
+        "EarlyStopping",
+        "remap_cross_labels",
+        "gather_chunks",
+        "wait_for_memory",
+        "mp_async_load"
+      ],
+      "totalLines": 98,
+      "hasStructuralAnalysis": true
+    },
+    "test_ablation_models.py": {
+      "filePath": "test_ablation_models.py",
+      "contentHash": "fe629e9cc289cf6891af9d74a94668e7032c4804046410d31050284cf54195c4",
+      "functions": [
+        {
+          "name": "test_ablation_models",
+          "params": [],
+          "exported": true,
+          "lineCount": 165
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        },
+        {
+          "source": "models.Vision_Transformer",
+          "specifiers": [
+            "ViT_Hierarchical"
+          ]
+        },
+        {
+          "source": "models.Motion_Encoder",
+          "specifiers": [
+            "MotionEncoder"
+          ]
+        },
+        {
+          "source": "models.Cross_Attention_Module",
+          "specifiers": [
+            "CrossAttentionModule"
+          ]
+        },
+        {
+          "source": "models.Unified_Module",
+          "specifiers": [
+            "EnsembleModel"
+          ]
+        },
+        {
+          "source": "models.AblationModels",
+          "specifiers": [
+            "MotionOnlyModel",
+            "VisualOnlyModel",
+            "VanillaConcatModel"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "vit_args_config",
+            "motion_enc_args_config",
+            "get_unified_dim_model"
+          ]
+        }
+      ],
+      "exports": [
+        "test_ablation_models"
+      ],
+      "totalLines": 181,
+      "hasStructuralAnalysis": true
+    },
+    "test_ablation_structure_clean.py": {
+      "filePath": "test_ablation_structure_clean.py",
+      "contentHash": "1c7defecdb44ff37564aef13b1f551c2befae607ba83d9948c82c4d446017508",
+      "functions": [
+        {
+          "name": "test_structure",
+          "params": [],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 23
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "test_structure",
+        "main"
+      ],
+      "totalLines": 61,
+      "hasStructuralAnalysis": true
+    },
+    "test_imbalance_setup.py": {
+      "filePath": "test_imbalance_setup.py",
+      "contentHash": "85d8c8f40923a8401301659ddd79a5dad432d708aa5f6e2811264df3c2606ff4",
+      "functions": [
+        {
+          "name": "test_imbalance_strategies",
+          "params": [],
+          "exported": true,
+          "lineCount": 149
+        },
+        {
+          "name": "test_preset_configurations",
+          "params": [],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "simulate_training_scenario",
+          "params": [],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 34
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "imbalance_config",
+          "specifiers": [
+            "get_training_config",
+            "get_preset_config",
+            "validate_config",
+            "apply_imbalance_strategies_to_training",
+            "PRESET_CONFIGS"
+          ]
+        },
+        {
+          "source": "class_imbalance_strategies",
+          "specifiers": [
+            "FocalLoss",
+            "ClassBalancedFocalLoss",
+            "DynamicLossWeighting",
+            "ThresholdOptimizer",
+            "HardNegativeMining",
+            "create_class_balanced_loss"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "Counter"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        }
+      ],
+      "exports": [
+        "test_imbalance_strategies",
+        "test_preset_configurations",
+        "simulate_training_scenario",
+        "main"
+      ],
+      "totalLines": 264,
+      "hasStructuralAnalysis": true
+    },
+    "test.py": {
+      "filePath": "test.py",
+      "contentHash": "2d561c7d2317561c3d2f0dd2c920ddb61e9d38dd02b0bac9a1a9825823fcdc8f",
+      "functions": [
+        {
+          "name": "evaluate",
+          "params": [
+            "model",
+            "dataloader",
+            "device",
+            "model_type",
+            "use_amp"
+          ],
+          "exported": true,
+          "lineCount": 70
+        },
+        {
+          "name": "round_metric",
+          "params": [
+            "metrics",
+            "key"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "find_optimal_thresholds",
+          "params": [
+            "y_true",
+            "y_prob",
+            "task_name"
+          ],
+          "exported": true,
+          "lineCount": 37
+        },
+        {
+          "name": "_infer_window_hw",
+          "params": [
+            "index_tensor",
+            "table_size"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "_init_global_rel_pos_from_ckpt",
+          "params": [
+            "model",
+            "state_dict"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "compute_flops",
+          "params": [
+            "model",
+            "model_type",
+            "img_height",
+            "img_width",
+            "context_scale",
+            "device"
+          ],
+          "exported": true,
+          "lineCount": 39
+        },
+        {
+          "name": "inference_latency",
+          "params": [
+            "model",
+            "model_type",
+            "img_height",
+            "img_width",
+            "context_scale",
+            "device",
+            "num_trials"
+          ],
+          "exported": true,
+          "lineCount": 60
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 309
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "csv",
+          "specifiers": [
+            "csv"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "gc",
+          "specifiers": [
+            "gc"
+          ]
+        },
+        {
+          "source": "math",
+          "specifiers": [
+            "math"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "tqdm",
+          "specifiers": [
+            "tqdm"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.utils.data",
+          "specifiers": [
+            "DataLoader"
+          ]
+        },
+        {
+          "source": "torch.nn.functional",
+          "specifiers": [
+            "F"
+          ]
+        },
+        {
+          "source": "torchvision",
+          "specifiers": [
+            "transforms"
+          ]
+        },
+        {
+          "source": "sklearn.metrics",
+          "specifiers": [
+            "accuracy_score",
+            "f1_score",
+            "roc_auc_score",
+            "precision_score",
+            "recall_score"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "models.Vision_Transformer",
+          "specifiers": [
+            "ViT_Hierarchical"
+          ]
+        },
+        {
+          "source": "models.Motion_Encoder",
+          "specifiers": [
+            "MotionEncoder"
+          ]
+        },
+        {
+          "source": "models.Cross_Attention_Module",
+          "specifiers": [
+            "CrossAttentionModule"
+          ]
+        },
+        {
+          "source": "models.Unified_Module",
+          "specifiers": [
+            "EnsembleModel"
+          ]
+        },
+        {
+          "source": "models.AblationModels",
+          "specifiers": [
+            "MotionOnlyModel",
+            "VisualOnlyModel",
+            "VanillaConcatModel"
+          ]
+        },
+        {
+          "source": "scripts.lmdb_dataset",
+          "specifiers": [
+            "LMDBChunkDataset"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "vit_args_config",
+            "motion_enc_args_config",
+            "get_unified_dim_model"
+          ]
+        },
+        {
+          "source": "train",
+          "specifiers": [
+            "remap_cross_labels",
+            "collate_fn"
+          ]
+        },
+        {
+          "source": "scripts.model_utils",
+          "specifiers": [
+            "get_model",
+            "model_forward"
+          ]
+        }
+      ],
+      "exports": [
+        "evaluate",
+        "round_metric",
+        "find_optimal_thresholds",
+        "_infer_window_hw",
+        "_init_global_rel_pos_from_ckpt",
+        "compute_flops",
+        "inference_latency",
+        "main"
+      ],
+      "totalLines": 597,
+      "hasStructuralAnalysis": true
+    },
+    "train_two_phase.py": {
+      "filePath": "train_two_phase.py",
+      "contentHash": "b75e0d214b2055b2b421594bdb9feb81e7d5185a72869ff60cf0dc7269259f7c",
+      "functions": [
+        {
+          "name": "build_criterion",
+          "params": [
+            "device"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "train_epoch",
+          "params": [
+            "model",
+            "dataloader",
+            "criterion",
+            "optimizer",
+            "device",
+            "scaler",
+            "use_amp"
+          ],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "validate",
+          "params": [
+            "model",
+            "dataloader",
+            "criterion",
+            "device",
+            "use_amp"
+          ],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "freeze_backbone",
+          "params": [
+            "model"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "unfreeze_all",
+          "params": [
+            "model"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 225
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        },
+        {
+          "source": "torch.optim",
+          "specifiers": [
+            "optim"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        },
+        {
+          "source": "torch.utils.data",
+          "specifiers": [
+            "DataLoader"
+          ]
+        },
+        {
+          "source": "torchvision",
+          "specifiers": [
+            "transforms"
+          ]
+        },
+        {
+          "source": "sklearn.metrics",
+          "specifiers": [
+            "f1_score"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "gc",
+          "specifiers": [
+            "gc"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "csv",
+          "specifiers": [
+            "csv"
+          ]
+        },
+        {
+          "source": "multiprocessing",
+          "specifiers": [
+            "mp"
+          ]
+        },
+        {
+          "source": "tqdm",
+          "specifiers": [
+            "tqdm"
+          ]
+        },
+        {
+          "source": "queue",
+          "specifiers": [
+            "Empty"
+          ]
+        },
+        {
+          "source": "models.Vision_Transformer",
+          "specifiers": [
+            "ViT_Hierarchical"
+          ]
+        },
+        {
+          "source": "models.Motion_Encoder",
+          "specifiers": [
+            "MotionEncoder"
+          ]
+        },
+        {
+          "source": "models.Cross_Attention_Module",
+          "specifiers": [
+            "CrossAttentionModule"
+          ]
+        },
+        {
+          "source": "models.Unified_Module",
+          "specifiers": [
+            "EnsembleModel"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "vit_args_config",
+            "motion_enc_args_config",
+            "get_unified_dim_model"
+          ]
+        },
+        {
+          "source": "scripts.lmdb_dataset",
+          "specifiers": [
+            "LMDBChunkDataset"
+          ]
+        },
+        {
+          "source": "class_imbalance_strategies",
+          "specifiers": [
+            "FocalLoss"
+          ]
+        },
+        {
+          "source": "scripts.train_utils",
+          "specifiers": [
+            "collate_fn",
+            "remap_cross_labels",
+            "gather_chunks",
+            "EarlyStopping"
+          ]
+        }
+      ],
+      "exports": [
+        "build_criterion",
+        "train_epoch",
+        "validate",
+        "freeze_backbone",
+        "unfreeze_all",
+        "main"
+      ],
+      "totalLines": 348,
+      "hasStructuralAnalysis": true
+    },
+    "train.py": {
+      "filePath": "train.py",
+      "contentHash": "a275036b4ef66f9666c8916c3e8d5bf28e772a48d138621a2a19e113b16f2162",
+      "functions": [
+        {
+          "name": "compute_class_weights_from_lmdb",
+          "params": [
+            "lmdb_paths",
+            "device"
+          ],
+          "exported": true,
+          "lineCount": 39
+        },
+        {
+          "name": "_inverse_class_weights",
+          "params": [
+            "counts"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "build_sampler_weights",
+          "params": [
+            "lmdb_path",
+            "seq_ids",
+            "cross_pow",
+            "action_pow",
+            "look_pow",
+            "min_weight"
+          ],
+          "exported": true,
+          "lineCount": 39
+        },
+        {
+          "name": "train_one_chunk",
+          "params": [
+            "model",
+            "dataloader",
+            "criterion",
+            "optimizer",
+            "device",
+            "model_type",
+            "loss_weight",
+            "scaler",
+            "use_amp",
+            "use_pin_memory"
+          ],
+          "exported": true,
+          "lineCount": 51
+        },
+        {
+          "name": "validate_one_epoch",
+          "params": [
+            "model",
+            "dataloader",
+            "criterion",
+            "device",
+            "model_type",
+            "loss_weight",
+            "use_amp",
+            "use_pin_memory"
+          ],
+          "exported": true,
+          "lineCount": 58
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 396
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "torch.nn",
+          "specifiers": [
+            "nn"
+          ]
+        },
+        {
+          "source": "torch.optim",
+          "specifiers": [
+            "optim"
+          ]
+        },
+        {
+          "source": "torch.utils.data",
+          "specifiers": [
+            "DataLoader",
+            "WeightedRandomSampler"
+          ]
+        },
+        {
+          "source": "torchvision",
+          "specifiers": [
+            "transforms"
+          ]
+        },
+        {
+          "source": "sklearn.metrics",
+          "specifiers": [
+            "f1_score",
+            "precision_score",
+            "recall_score"
+          ]
+        },
+        {
+          "source": "models.Vision_Transformer",
+          "specifiers": [
+            "ViT_Hierarchical"
+          ]
+        },
+        {
+          "source": "models.Motion_Encoder",
+          "specifiers": [
+            "MotionEncoder"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "vit_args_config",
+            "motion_enc_args_config",
+            "get_unified_dim_model"
+          ]
+        },
+        {
+          "source": "scripts.lmdb_dataset",
+          "specifiers": [
+            "LMDBChunkDataset"
+          ]
+        },
+        {
+          "source": "scripts.model_utils",
+          "specifiers": [
+            "get_model",
+            "model_forward"
+          ]
+        },
+        {
+          "source": "scripts.train_utils",
+          "specifiers": [
+            "collate_fn",
+            "EarlyStopping",
+            "remap_cross_labels",
+            "gather_chunks",
+            "wait_for_memory",
+            "mp_async_load"
+          ]
+        },
+        {
+          "source": "gc",
+          "specifiers": [
+            "gc"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "csv",
+          "specifiers": [
+            "csv"
+          ]
+        },
+        {
+          "source": "psutil",
+          "specifiers": [
+            "psutil"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "Counter"
+          ]
+        },
+        {
+          "source": "multiprocessing",
+          "specifiers": [
+            "mp"
+          ]
+        },
+        {
+          "source": "lmdb",
+          "specifiers": [
+            "lmdb"
+          ]
+        },
+        {
+          "source": "pickle",
+          "specifiers": [
+            "pickle"
+          ]
+        },
+        {
+          "source": "queue",
+          "specifiers": [
+            "Empty"
+          ]
+        },
+        {
+          "source": "tqdm",
+          "specifiers": [
+            "tqdm"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        }
+      ],
+      "exports": [
+        "compute_class_weights_from_lmdb",
+        "_inverse_class_weights",
+        "build_sampler_weights",
+        "train_one_chunk",
+        "validate_one_epoch",
+        "main"
+      ],
+      "totalLines": 636,
+      "hasStructuralAnalysis": true
+    },
+    "visualize_comparison.py": {
+      "filePath": "visualize_comparison.py",
+      "contentHash": "ccda3c0f2b915ba57d399acb9cd6d4629a456638ac79ba30ec13e93b618e9ad9",
+      "functions": [
+        {
+          "name": "parse_args",
+          "params": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "load_model",
+          "params": [
+            "model_path",
+            "device"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "get_pie_annotations",
+          "params": [
+            "pie_path",
+            "set_id",
+            "vid_id"
+          ],
+          "exported": true,
+          "lineCount": 78
+        },
+        {
+          "name": "generate_sequences_from_annotations",
+          "params": [
+            "annotations",
+            "seq_len",
+            "stride",
+            "future_offset",
+            "tol"
+          ],
+          "exported": true,
+          "lineCount": 52
+        },
+        {
+          "name": "draw_labels",
+          "params": [
+            "frame",
+            "action",
+            "look",
+            "cross",
+            "x1",
+            "y1",
+            "x2",
+            "y2",
+            "prefix"
+          ],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "draw_comparison",
+          "params": [
+            "frame",
+            "gt_action",
+            "gt_look",
+            "gt_cross",
+            "pred_action",
+            "pred_look",
+            "pred_cross",
+            "x1",
+            "y1",
+            "x2",
+            "y2"
+          ],
+          "exported": true,
+          "lineCount": 35
+        },
+        {
+          "name": "process_pie_dataset",
+          "params": [
+            "args"
+          ],
+          "exported": true,
+          "lineCount": 228
+        },
+        {
+          "name": "process_custom_video",
+          "params": [
+            "args"
+          ],
+          "exported": true,
+          "lineCount": 122
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 19
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "cv2",
+          "specifiers": [
+            "cv2"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "torch.utils.data",
+          "specifiers": [
+            "DataLoader"
+          ]
+        },
+        {
+          "source": "torchvision",
+          "specifiers": [
+            "transforms"
+          ]
+        },
+        {
+          "source": "models.Vision_Transformer",
+          "specifiers": [
+            "ViT_Hierarchical"
+          ]
+        },
+        {
+          "source": "models.Motion_Encoder",
+          "specifiers": [
+            "MotionEncoder"
+          ]
+        },
+        {
+          "source": "models.Cross_Attention_Module",
+          "specifiers": [
+            "CrossAttentionModule"
+          ]
+        },
+        {
+          "source": "models.Unified_Module",
+          "specifiers": [
+            "EnsembleModel"
+          ]
+        },
+        {
+          "source": "models.AblationModels",
+          "specifiers": [
+            "MotionOnlyModel",
+            "VisualOnlyModel",
+            "VanillaConcatModel"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "vit_args_config",
+            "motion_enc_args_config"
+          ]
+        },
+        {
+          "source": "scripts.model_utils",
+          "specifiers": [
+            "get_model",
+            "model_forward"
+          ]
+        },
+        {
+          "source": "scripts.PIE_sequence_Dataset_1",
+          "specifiers": [
+            "PIESequenceDataset"
+          ]
+        },
+        {
+          "source": "PIE.utilities.pie_data",
+          "specifiers": [
+            "PIE"
+          ]
+        }
+      ],
+      "exports": [
+        "parse_args",
+        "load_model",
+        "get_pie_annotations",
+        "generate_sequences_from_annotations",
+        "draw_labels",
+        "draw_comparison",
+        "process_pie_dataset",
+        "process_custom_video",
+        "main"
+      ],
+      "totalLines": 687,
+      "hasStructuralAnalysis": true
+    },
+    "visualize_gt.py": {
+      "filePath": "visualize_gt.py",
+      "contentHash": "a985e4a39a501e56110de3e02ca4ba6f5482db08e574807cf88ab7365176d0de",
+      "functions": [
+        {
+          "name": "clamp_to_binary",
+          "params": [
+            "signal"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "draw_sequence_frame",
+          "params": [
+            "frame",
+            "bbox",
+            "frame_idx",
+            "total_frames",
+            "pie",
+            "track_id"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "draw_future_labels",
+          "params": [
+            "frame",
+            "action_future",
+            "look_future",
+            "cross_future",
+            "width"
+          ],
+          "exported": true,
+          "lineCount": 40
+        },
+        {
+          "name": "visualize_from_pickle",
+          "params": [
+            "pkl_path",
+            "output_path",
+            "max_sequences"
+          ],
+          "exported": true,
+          "lineCount": 92
+        },
+        {
+          "name": "generate_and_visualize",
+          "params": [
+            "pie_path",
+            "output_path",
+            "split",
+            "max_sequences"
+          ],
+          "exported": true,
+          "lineCount": 134
+        },
+        {
+          "name": "visualize_blank_with_labels",
+          "params": [
+            "output_path",
+            "num_sequences"
+          ],
+          "exported": true,
+          "lineCount": 54
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 37
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "cv2",
+          "specifiers": [
+            "cv2"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        },
+        {
+          "source": "pickle",
+          "specifiers": [
+            "pickle"
+          ]
+        },
+        {
+          "source": "PIE.utilities.pie_data",
+          "specifiers": [
+            "PIE"
+          ]
+        }
+      ],
+      "exports": [
+        "clamp_to_binary",
+        "draw_sequence_frame",
+        "draw_future_labels",
+        "visualize_from_pickle",
+        "generate_and_visualize",
+        "visualize_blank_with_labels",
+        "main"
+      ],
+      "totalLines": 438,
+      "hasStructuralAnalysis": true
+    }
+  }
+}
