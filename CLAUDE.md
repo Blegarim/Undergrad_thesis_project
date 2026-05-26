@@ -131,7 +131,7 @@ Use `PIE/utilities/pie_data.py` for loading and annotation access. Do not modify
 
 - **Naming**: PascalCase classes, snake_case functions/variables, UPPER_SNAKE_CASE constants, `_underscore` prefix for private.
 - **Imports**: stdlib → third-party → local.
-- **Quality**: type hints on signatures, docstrings on classes/complex functions, comments for non-obvious logic, functions ≤50 lines, lines ≤120 chars.
+- **Quality**: annotate all signatures with type hints, add docstrings to classes and complex functions, comment non-obvious logic, keep functions under 50 lines and lines under 120 characters.
 
 ## Debugging
 
