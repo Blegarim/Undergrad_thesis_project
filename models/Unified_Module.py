@@ -25,6 +25,7 @@ class EnsembleModel(nn.Module):
 
         if return_feats:
             return logits, image_feats, motion_feats
+
         return logits
 
     

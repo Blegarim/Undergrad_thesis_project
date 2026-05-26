@@ -48,7 +48,7 @@ Motion seqs  → MotionEncoder (tight crop + motion) ──┘
 
 **Unified `d_model`**: `get_unified_dim_model()` → 128. All components share this — never change one without updating the others.
 
-**Output dict keys**: `actions`, `looks`, `crosses_pooled`, `crosses_frame`. `crosses_frame` only present in full model and ablation models that implement it.
+**Output dict keys**: `actions`, `looks`, `crosses_pooled`, `crosses_frame`, `temporal_weights`. `crosses_frame` only present in full model and ablation models that implement it. `temporal_weights` is `[B, T]` softmax weights from the pooling MLP in `CrossAttentionModule` (full model only).
 
 ## Configuration (`config.py`)
 
@@ -91,6 +91,7 @@ Implications:
 |---|---|
 | `scripts/model_utils.py` | `get_model(model_type, ...)` — model factory; `model_forward(...)` — dispatch by model type |
 | `scripts/train_utils.py` | `collate_fn`, `EarlyStopping`, `remap_cross_labels`, `gather_chunks`, `wait_for_memory`, `mp_async_load` |
+| `scripts/plot_results.py` | CLI script: reads CSV/NPZ artifacts, writes PNG figures to `plots/`. Phases 1–4 (loss curves, PR curves, ablation bars, temporal attention) |
 
 ## Training Patterns
 

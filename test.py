@@ -6,6 +6,7 @@ import math
 import re
 from tqdm import tqdm
 from datetime import datetime
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
@@ -31,6 +32,7 @@ def evaluate(model, dataloader, device, model_type, use_amp=False):
     model.eval()
     correct, total = {}, {}
     all_preds, all_labels, all_probs = {}, {}, {}
+    all_temporal_weights = []
 
     with torch.no_grad():
         for images_tight, images_context, motions, labels in dataloader:
@@ -43,17 +45,20 @@ def evaluate(model, dataloader, device, model_type, use_amp=False):
             with torch.amp.autocast('cuda', enabled=use_amp):
                 outputs = model_forward(model, model_type, images_tight, images_context, motions)
 
+            if "temporal_weights" in outputs:
+                all_temporal_weights.append(outputs["temporal_weights"].float().cpu())
+
             # Process each head (actions, looks, crosses)
             for name in ["actions", "looks", "crosses"]:
                 if name == "crosses":
                     logits = outputs["crosses_frame"]
                 else:
                     logits = outputs[name]
-                
+
                 # Ensure float for softmax when using AMP
                 if use_amp:
                     logits = logits.float()
-                
+
                 probs = F.softmax(logits, dim=1)
                 _, preds = torch.max(probs, 1)
 
@@ -93,7 +98,10 @@ def evaluate(model, dataloader, device, model_type, use_amp=False):
 
     overall = sum(correct.values()) / sum(total.values())
     metrics["overall_acc"] = overall
-    return metrics, all_labels, all_preds, all_probs
+    temporal_weights = (
+        torch.cat(all_temporal_weights).numpy() if all_temporal_weights else None
+    )
+    return metrics, all_labels, all_preds, all_probs, temporal_weights
 
 
 def round_metric(metrics, key):
@@ -370,6 +378,7 @@ def main():
     # ==== Process each chunk ====
     all_metrics = []
     all_labels_global, all_preds_global, all_probs_global = {}, {}, {}
+    all_temporal_weights_global = []
     heads = ["actions", "looks", "crosses"]
     metric_suffixes = ["acc", "f1", "auc", "p", "r"]
 
@@ -391,13 +400,16 @@ def main():
             collate_fn=collate_fn,
         )
 
-        metrics, all_labels_chunk, all_preds_chunk, all_probs_chunk = evaluate(model, dataloader, device, args.model_type, use_amp=use_amp)
+        metrics, all_labels_chunk, all_preds_chunk, all_probs_chunk, tw_chunk = evaluate(model, dataloader, device, args.model_type, use_amp=use_amp)
         duration = time.time() - start
 
         for name in all_labels_chunk.keys():
             all_labels_global.setdefault(name, []).extend(all_labels_chunk[name])
             all_preds_global.setdefault(name, []).extend(all_preds_chunk[name])
             all_probs_global.setdefault(name, []).extend(all_probs_chunk[name])
+
+        if tw_chunk is not None:
+            all_temporal_weights_global.append(tw_chunk)
 
         metrics_row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -570,7 +582,22 @@ def main():
                         row.extend(['', '', '', ''])
                 writer.writerow(row)
         print(f"Predictions saved: {n_samples} samples")
-    
+
+        if all_temporal_weights_global:
+            tw_all = np.concatenate(all_temporal_weights_global, axis=0)
+            tw_path = os.path.join("plots", f"temporal_weights.npz")
+            os.makedirs("plots", exist_ok=True)
+            labels_for_tw = {}
+            for name in heads:
+                if name in all_labels_flat:
+                    labels_for_tw[name] = all_labels_flat[name]
+            np.savez_compressed(
+                tw_path,
+                temporal_weights=tw_all,
+                **{f"{k}_true": v for k, v in labels_for_tw.items()},
+            )
+            print(f"Temporal weights saved: {tw_path} ({tw_all.shape})")
+
     # Save results with model type suffix
     if args.model_type != 'full':
         import shutil

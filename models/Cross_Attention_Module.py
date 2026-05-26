@@ -75,6 +75,8 @@ class CrossAttentionModule(nn.Module):
             else:
                 raise ValueError(f"Unsupported frame_pool: {self.frame_pool}")
 
+        logits["temporal_weights"] = weights.squeeze(-1)  # [B, T]
+
         return logits
 
 
