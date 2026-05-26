@@ -1,0 +1,717 @@
+{
+  "nodes": [
+    {
+      "id": "config:.claude/settings.local.json",
+      "type": "config",
+      "name": "settings.local.json",
+      "filePath": ".claude/settings.local.json",
+      "summary": "Claude Code local permissions configuration granting shell access to training scripts, test scripts, git commands, and node execution.",
+      "tags": ["configuration", "permissions", "development"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.claude/skills/code-review-protocol/SKILL.md",
+      "type": "document",
+      "name": "SKILL.md",
+      "filePath": ".claude/skills/code-review-protocol/SKILL.md",
+      "summary": "Structured code review protocol defining a two-pass review methodology with severity levels, reporting format, fix protocol, and honesty rules for thorough bug detection.",
+      "tags": ["documentation", "code-review", "development", "methodology"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.claude/skills/debugging-playbook/references/debug-checklist.md",
+      "type": "document",
+      "name": "debug-checklist.md",
+      "filePath": ".claude/skills/debugging-playbook/references/debug-checklist.md",
+      "summary": "Four-stage debugging checklist covering reproduce, locate, isolate, and fix stages for systematic PyTorch error diagnosis.",
+      "tags": ["documentation", "debugging", "checklist", "reference"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.claude/skills/debugging-playbook/SKILL.md",
+      "type": "document",
+      "name": "SKILL.md",
+      "filePath": ".claude/skills/debugging-playbook/SKILL.md",
+      "summary": "Decision-tree debugging guide covering OOM, NaN loss, shape mismatch, CUDA errors, slow training, non-convergence, and import errors specific to the pedestrian prediction PyTorch project.",
+      "tags": ["documentation", "debugging", "pytorch", "troubleshooting"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.claude/skills/experiment-tracking/references/baseline-results.md",
+      "type": "document",
+      "name": "baseline-results.md",
+      "filePath": ".claude/skills/experiment-tracking/references/baseline-results.md",
+      "summary": "Records current best training run metrics and run history for the pedestrian prediction model, serving as a baseline comparison reference.",
+      "tags": ["documentation", "experiment-tracking", "baseline", "metrics"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.claude/skills/experiment-tracking/SKILL.md",
+      "type": "document",
+      "name": "SKILL.md",
+      "filePath": ".claude/skills/experiment-tracking/SKILL.md",
+      "summary": "Experiment tracking conventions covering run naming, directory structure, CSV log schema, checkpoint save/load patterns, and criteria for determining model improvement.",
+      "tags": ["documentation", "experiment-tracking", "conventions", "training"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:.gitattributes",
+      "type": "file",
+      "name": ".gitattributes",
+      "filePath": ".gitattributes",
+      "summary": "Git line-ending normalization configuration enabling auto-detection of text files with LF normalization.",
+      "tags": ["configuration", "git", "line-endings"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:.understand-anything/.understandignore",
+      "type": "file",
+      "name": ".understandignore",
+      "filePath": ".understand-anything/.understandignore",
+      "summary": "Exclusion patterns for the understand-anything analysis tool, filtering out large binary files (models, datasets, LMDB), the PIE dataset directory, and generated output folders.",
+      "tags": ["configuration", "analysis-tooling", "ignore-patterns"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:extract_frames.py",
+      "type": "file",
+      "name": "extract_frames.py",
+      "filePath": "extract_frames.py",
+      "summary": "CLI utility for extracting frames from MP4 video files at a configurable FPS rate, saving them as JPEG images for dataset preprocessing.",
+      "tags": ["utility", "video-processing", "data-preprocessing", "script"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:extract_frames.py:extract_frames",
+      "type": "function",
+      "name": "extract_frames",
+      "filePath": "extract_frames.py",
+      "lineRange": [5, 36],
+      "summary": "Opens a video file with OpenCV and extracts frames at the specified FPS interval, saving each as a high-quality JPEG to the output directory.",
+      "tags": ["video-processing", "frame-extraction", "opencv"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:final_ablation_verification.py",
+      "type": "file",
+      "name": "final_ablation_verification.py",
+      "filePath": "final_ablation_verification.py",
+      "summary": "Verification test script that checks ablation model integration by testing model suffix logic, file structure, and keyword presence in train.py and test.py.",
+      "tags": ["test", "verification", "ablation", "integration-test"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:final_ablation_verification.py:test_model_suffix_logic",
+      "type": "function",
+      "name": "test_model_suffix_logic",
+      "filePath": "final_ablation_verification.py",
+      "lineRange": [6, 29],
+      "summary": "Validates that model type names produce the correct filename suffixes for each ablation variant (full, motion_only, visual_only, vanilla_concat).",
+      "tags": ["test", "validation", "ablation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:final_ablation_verification.py:test_file_structure",
+      "type": "function",
+      "name": "test_file_structure",
+      "filePath": "final_ablation_verification.py",
+      "lineRange": [31, 52],
+      "summary": "Checks that required model files exist on disk for the ablation study architecture.",
+      "tags": ["test", "file-check", "ablation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:final_ablation_verification.py:test_keyword_presence",
+      "type": "function",
+      "name": "test_keyword_presence",
+      "filePath": "final_ablation_verification.py",
+      "lineRange": [54, 98],
+      "summary": "Reads train.py and test.py source files to verify presence of critical keywords and patterns needed for ablation model support.",
+      "tags": ["test", "source-analysis", "ablation"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:final_ablation_verification.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "final_ablation_verification.py",
+      "lineRange": [100, 129],
+      "summary": "Orchestrates all verification tests and reports overall pass/fail status with a detailed summary.",
+      "tags": ["test", "entry-point", "orchestrator"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:label_count.py",
+      "type": "file",
+      "name": "label_count.py",
+      "filePath": "label_count.py",
+      "summary": "Counts label distributions (actions, looks, crosses) across preprocessed .pt chunk files and writes the results to a CSV for dataset analysis.",
+      "tags": ["utility", "data-analysis", "label-distribution", "script"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:label_count.py:label_counts",
+      "type": "function",
+      "name": "label_counts",
+      "filePath": "label_count.py",
+      "lineRange": [6, 15],
+      "summary": "Aggregates per-class label frequencies for actions, looks, and crosses from a list of sequence dictionaries using Counter objects.",
+      "tags": ["utility", "counting", "label-distribution"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:models/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "models/__init__.py",
+      "summary": "Empty package initializer marking the models directory as a Python package for module imports.",
+      "tags": ["entry-point", "package-init", "models"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "scripts/__init__.py",
+      "summary": "Empty package initializer marking the scripts directory as a Python package for module imports.",
+      "tags": ["entry-point", "package-init", "scripts"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/augment_sequences.py",
+      "type": "file",
+      "name": "augment_sequences.py",
+      "filePath": "scripts/augment_sequences.py",
+      "summary": "Data augmentation pipeline for minority-class sequences (crosses=1, looks=1) applying horizontal flips, color jitter, motion noise, and random frame erasure to expand the training dataset.",
+      "tags": ["data-augmentation", "class-imbalance", "preprocessing", "training"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:scripts/augment_sequences.py:SequenceAugmenter",
+      "type": "class",
+      "name": "SequenceAugmenter",
+      "filePath": "scripts/augment_sequences.py",
+      "lineRange": [13, 73],
+      "summary": "Applies stochastic augmentation transforms (horizontal flip, color jitter, motion noise, random frame erasure) to pedestrian sequences while preserving label validity.",
+      "tags": ["data-augmentation", "transform", "class-imbalance"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/augment_sequences.py:augment_minority_sequences",
+      "type": "function",
+      "name": "augment_minority_sequences",
+      "filePath": "scripts/augment_sequences.py",
+      "lineRange": [76, 128],
+      "summary": "Loads a pickled sequence dataset, expands minority-class subsets (crosses and looks positives) by a configurable multiplier via augmentation, and saves the balanced result.",
+      "tags": ["data-augmentation", "class-imbalance", "pipeline"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/balance_sequences.py",
+      "type": "file",
+      "name": "balance_sequences.py",
+      "filePath": "scripts/balance_sequences.py",
+      "summary": "Balances the training dataset by subsampling majority classes using stratified group-based selection that maintains target ratios for actions, looks, and crosses labels simultaneously.",
+      "tags": ["data-balancing", "class-imbalance", "preprocessing", "script"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/balance_sequences.py:balance_dataset",
+      "type": "function",
+      "name": "balance_dataset",
+      "filePath": "scripts/balance_sequences.py",
+      "lineRange": [54, 95],
+      "summary": "Computes balanced subset indices by grouping samples by label combinations and solving for target counts that equalize the crosses class while respecting actions and looks ratios.",
+      "tags": ["data-balancing", "stratified-sampling", "algorithm"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/balance_sequences.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/balance_sequences.py",
+      "lineRange": [111, 142],
+      "summary": "CLI entry point that loads a pickle dataset, applies balance_dataset, prints a summary of class distributions, and saves the balanced subset.",
+      "tags": ["entry-point", "cli", "data-balancing"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/generate_sequences.py",
+      "type": "file",
+      "name": "generate_sequences.py",
+      "filePath": "scripts/generate_sequences.py",
+      "summary": "Generates sliding-window observation sequences from PIE dataset trajectories with future-window binary labels for actions, looks, and crosses prediction tasks.",
+      "tags": ["data-generation", "preprocessing", "sequence-extraction", "pie-dataset"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/generate_sequences.py:generate_sequences",
+      "type": "function",
+      "name": "generate_sequences",
+      "filePath": "scripts/generate_sequences.py",
+      "lineRange": [9, 91],
+      "summary": "Extracts fixed-length sub-sequences from PIE trajectories using a sliding window, applies onset filtering, and assigns binary future labels based on whether actions/looks/crosses occur within a future offset window.",
+      "tags": ["data-generation", "sliding-window", "label-assignment", "pie-dataset"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:scripts/split_balance_sequences_all.py",
+      "type": "file",
+      "name": "split_balance_sequences_all.py",
+      "filePath": "scripts/split_balance_sequences_all.py",
+      "summary": "Splits a unified sequence dataset into train/val/test partitions, then balances each split to achieve target class ratios using exact or approximate constraint solvers.",
+      "tags": ["data-splitting", "data-balancing", "preprocessing", "class-imbalance"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/split_balance_sequences_all.py:balance_split",
+      "type": "function",
+      "name": "balance_split",
+      "filePath": "scripts/split_balance_sequences_all.py",
+      "lineRange": [100, 153],
+      "summary": "Balances a single data split by solving for target cross-positive ratios, selecting from stratified groups, and falling back to approximate solutions when exact allocation is infeasible.",
+      "tags": ["data-balancing", "constraint-solving", "stratified-sampling"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/split_balance_sequences_all.py:solve_approx",
+      "type": "function",
+      "name": "solve_approx",
+      "filePath": "scripts/split_balance_sequences_all.py",
+      "lineRange": [67, 97],
+      "summary": "Iteratively searches for approximate group allocation counts that minimize deviation from target actions and looks ratios when exact solutions are infeasible.",
+      "tags": ["optimization", "constraint-solving", "approximation"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/split_balance_sequences_all.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/split_balance_sequences_all.py",
+      "lineRange": [174, 224],
+      "summary": "CLI entry point that loads sequences, splits into train/val/test, balances each split independently, prints distribution summaries, and saves results as pickle files.",
+      "tags": ["entry-point", "cli", "data-pipeline"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:test_ablation_structure_clean.py",
+      "type": "file",
+      "name": "test_ablation_structure_clean.py",
+      "filePath": "test_ablation_structure_clean.py",
+      "summary": "Lightweight structural test that reads test.py source to verify the presence of ablation model imports, functions, and CLI parameters needed for multi-model evaluation.",
+      "tags": ["test", "verification", "ablation", "structural-test"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_ablation_structure_clean.py:test_structure",
+      "type": "function",
+      "name": "test_structure",
+      "filePath": "test_ablation_structure_clean.py",
+      "lineRange": [6, 34],
+      "summary": "Checks test.py source code for the presence of key components (get_model, model_forward, ablation imports, argparse, model_type, unified dim) needed for ablation model support.",
+      "tags": ["test", "source-verification", "ablation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:visualize_gt.py",
+      "type": "file",
+      "name": "visualize_gt.py",
+      "filePath": "visualize_gt.py",
+      "summary": "Ground-truth visualization tool that renders pedestrian observation sequences as annotated video with bounding boxes, frame indices, and color-coded future prediction labels for actions, looks, and crosses.",
+      "tags": ["visualization", "ground-truth", "video-generation", "debugging"],
+      "complexity": "complex",
+      "languageNotes": "Uses OpenCV VideoWriter for frame-by-frame video composition with overlay annotations. Supports three modes: pickle-based, live generation from PIE, and synthetic blank frames."
+    },
+    {
+      "id": "function:visualize_gt.py:draw_sequence_frame",
+      "type": "function",
+      "name": "draw_sequence_frame",
+      "filePath": "visualize_gt.py",
+      "lineRange": [42, 66],
+      "summary": "Draws a bounding box and frame counter overlay on a single video frame for sequence visualization.",
+      "tags": ["visualization", "opencv", "annotation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:visualize_gt.py:draw_future_labels",
+      "type": "function",
+      "name": "draw_future_labels",
+      "filePath": "visualize_gt.py",
+      "lineRange": [69, 108],
+      "summary": "Renders color-coded future prediction labels (action, look, cross) as rectangles with text overlays at the bottom of a video frame.",
+      "tags": ["visualization", "label-overlay", "annotation"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:visualize_gt.py:visualize_from_pickle",
+      "type": "function",
+      "name": "visualize_from_pickle",
+      "filePath": "visualize_gt.py",
+      "lineRange": [111, 202],
+      "summary": "Loads pre-generated sequences from a pickle file and renders them as an annotated video showing observation frames with bounding boxes and future labels.",
+      "tags": ["visualization", "video-generation", "pickle-loading"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:visualize_gt.py:generate_and_visualize",
+      "type": "function",
+      "name": "generate_and_visualize",
+      "filePath": "visualize_gt.py",
+      "lineRange": [205, 338],
+      "summary": "Generates sequences directly from PIE dataset annotations and renders them as an annotated visualization video, combining data generation and video output in one pass.",
+      "tags": ["visualization", "data-generation", "video-generation", "pie-dataset"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:visualize_gt.py:visualize_blank_with_labels",
+      "type": "function",
+      "name": "visualize_blank_with_labels",
+      "filePath": "visualize_gt.py",
+      "lineRange": [341, 394],
+      "summary": "Creates a demo visualization video using blank frames with randomly generated labels to demonstrate the annotation overlay format without requiring actual PIE data.",
+      "tags": ["visualization", "demo", "synthetic-data"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:visualize_gt.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "visualize_gt.py",
+      "lineRange": [397, 433],
+      "summary": "Entry point that selects visualization mode based on available data: uses pickle if found, falls back to live PIE generation, or creates a blank demo video.",
+      "tags": ["entry-point", "cli", "visualization"],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:extract_frames.py",
+      "target": "function:extract_frames.py:extract_frames",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:extract_frames.py",
+      "target": "function:extract_frames.py:extract_frames",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_model_suffix_logic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_file_structure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_keyword_presence",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_model_suffix_logic",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_file_structure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:test_keyword_presence",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:final_ablation_verification.py",
+      "target": "function:final_ablation_verification.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:label_count.py",
+      "target": "function:label_count.py:label_counts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:label_count.py",
+      "target": "function:label_count.py:label_counts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/augment_sequences.py",
+      "target": "class:scripts/augment_sequences.py:SequenceAugmenter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:scripts/augment_sequences.py",
+      "target": "function:scripts/augment_sequences.py:augment_minority_sequences",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:scripts/augment_sequences.py",
+      "target": "class:scripts/augment_sequences.py:SequenceAugmenter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/augment_sequences.py",
+      "target": "function:scripts/augment_sequences.py:augment_minority_sequences",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/balance_sequences.py",
+      "target": "function:scripts/balance_sequences.py:balance_dataset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:scripts/balance_sequences.py",
+      "target": "function:scripts/balance_sequences.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:scripts/balance_sequences.py",
+      "target": "function:scripts/balance_sequences.py:balance_dataset",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/balance_sequences.py",
+      "target": "function:scripts/balance_sequences.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/generate_sequences.py",
+      "target": "function:scripts/generate_sequences.py:generate_sequences",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:scripts/generate_sequences.py",
+      "target": "function:scripts/generate_sequences.py:generate_sequences",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:balance_split",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:solve_approx",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:balance_split",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:solve_approx",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/split_balance_sequences_all.py",
+      "target": "function:scripts/split_balance_sequences_all.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ablation_structure_clean.py",
+      "target": "function:test_ablation_structure_clean.py:test_structure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_ablation_structure_clean.py",
+      "target": "function:test_ablation_structure_clean.py:test_structure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:draw_sequence_frame",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:draw_future_labels",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:visualize_from_pickle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:generate_and_visualize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:visualize_blank_with_labels",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:draw_sequence_frame",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:draw_future_labels",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:visualize_from_pickle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:generate_and_visualize",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:visualize_blank_with_labels",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:visualize_gt.py",
+      "target": "function:visualize_gt.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/augment_sequences.py",
+      "target": "file:scripts/balance_sequences.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/balance_sequences.py",
+      "target": "file:scripts/split_balance_sequences_all.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:scripts/generate_sequences.py",
+      "target": "file:scripts/balance_sequences.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.claude/skills/debugging-playbook/SKILL.md",
+      "target": "document:.claude/skills/debugging-playbook/references/debug-checklist.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.claude/skills/experiment-tracking/SKILL.md",
+      "target": "document:.claude/skills/experiment-tracking/references/baseline-results.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

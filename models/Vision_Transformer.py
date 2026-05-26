@@ -8,7 +8,7 @@ class MLP(nn.Module):
         super().__init__()
         self.hidden_dim = hidden_dim or dim * 2
         self.fc1 = nn.Linear(dim, self.hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, dim)
+        self.fc2 = nn.Linear(self.hidden_dim, dim)
         self.dropout = nn.Dropout(dropout)
     def forward(self, x):
         return self.fc2(self.dropout(F.gelu(self.fc1(x))))
@@ -378,7 +378,6 @@ class ViT_Hierarchical(nn.Module):
         return x
 
 if __name__ == '__main__':
-    from torchview import draw_graph
     from fvcore.nn import FlopCountAnalysis
     # Test the ViT_Hierarchical module
     batch_size = 1

@@ -1,0 +1,1250 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 3,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "scripts/PIE_sequence_Dataset_1.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 201,
+      "nonEmptyLines": 182,
+      "functions": [
+        {
+          "name": "load_sequences_from_pkl",
+          "startLine": 14,
+          "endLine": 19,
+          "params": [
+            "pkl_path"
+          ]
+        },
+        {
+          "name": "pad_sequence_tensor",
+          "startLine": 143,
+          "endLine": 159,
+          "params": [
+            "tensor_list",
+            "pad_value"
+          ]
+        },
+        {
+          "name": "collate_with_padding",
+          "startLine": 161,
+          "endLine": 185,
+          "params": [
+            "batch"
+          ]
+        },
+        {
+          "name": "build_dataloader",
+          "startLine": 187,
+          "endLine": 201,
+          "params": [
+            "sequences",
+            "batch_size",
+            "shuffle",
+            "transform",
+            "crop",
+            "pad",
+            "preload"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "PIESequenceDataset",
+          "startLine": 21,
+          "endLine": 141,
+          "methods": [
+            "__init__",
+            "_process_sequence",
+            "__len__",
+            "__getitem__"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "load_sequences_from_pkl",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "PIESequenceDataset",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "pad_sequence_tensor",
+          "line": 143,
+          "isDefault": false
+        },
+        {
+          "name": "collate_with_padding",
+          "line": 161,
+          "isDefault": false
+        },
+        {
+          "name": "build_dataloader",
+          "line": 187,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "load_sequences_from_pkl",
+          "callee": "open",
+          "lineNumber": 15
+        },
+        {
+          "caller": "load_sequences_from_pkl",
+          "callee": "pickle.load",
+          "lineNumber": 16
+        },
+        {
+          "caller": "load_sequences_from_pkl",
+          "callee": "print",
+          "lineNumber": 17
+        },
+        {
+          "caller": "load_sequences_from_pkl",
+          "callee": "len",
+          "lineNumber": 17
+        },
+        {
+          "caller": "load_sequences_from_pkl",
+          "callee": "print",
+          "lineNumber": 18
+        },
+        {
+          "caller": "load_sequences_from_pkl",
+          "callee": "sequences[0].keys",
+          "lineNumber": 18
+        },
+        {
+          "caller": "__init__",
+          "callee": "print",
+          "lineNumber": 34
+        },
+        {
+          "caller": "__init__",
+          "callee": "enumerate",
+          "lineNumber": 36
+        },
+        {
+          "caller": "__init__",
+          "callee": "tqdm",
+          "lineNumber": 36
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.data.append",
+          "lineNumber": 37
+        },
+        {
+          "caller": "__init__",
+          "callee": "self._process_sequence",
+          "lineNumber": 37
+        },
+        {
+          "caller": "__init__",
+          "callee": "print",
+          "lineNumber": 38
+        },
+        {
+          "caller": "__init__",
+          "callee": "len",
+          "lineNumber": 38
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "zip",
+          "lineNumber": 45
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "Path",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "img_path.exists",
+          "lineNumber": 47
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "img_path.with_suffix",
+          "lineNumber": 48
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "img_path.stem.isdigit",
+          "lineNumber": 49
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "img_path.stem.zfill",
+          "lineNumber": 50
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "candidates.append",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "img_path.with_name",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "candidates.append",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "img_path.with_name",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "alt_path.exists",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "FileNotFoundError",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "open",
+          "lineNumber": 63
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "in_file.read",
+          "lineNumber": 64
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "jpeg.decode",
+          "lineNumber": 65
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "Image.fromarray",
+          "lineNumber": 66
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "Exception",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "Image.open(img_path).convert",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "Image.open",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "map",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "img.crop",
+          "lineNumber": 73
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "max",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "max",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "min",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "min",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "img.crop",
+          "lineNumber": 82
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "self.transform_tight",
+          "lineNumber": 84
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "self.transform_context",
+          "lineNumber": 86
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "images_tight.append",
+          "lineNumber": 88
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "images_context.append",
+          "lineNumber": 89
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "centers.append",
+          "lineNumber": 91
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "width.append",
+          "lineNumber": 92
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "height.append",
+          "lineNumber": 93
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.tensor",
+          "lineNumber": 95
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.tensor",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.tensor",
+          "lineNumber": 97
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.cat",
+          "lineNumber": 101
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.cat",
+          "lineNumber": 102
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.cat",
+          "lineNumber": 103
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.cat",
+          "lineNumber": 105
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "widths.unsqueeze",
+          "lineNumber": 105
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "heights.unsqueeze",
+          "lineNumber": 106
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "dw.unsqueeze",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "dh.unsqueeze",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.stack",
+          "lineNumber": 110
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.stack",
+          "lineNumber": 111
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.tensor",
+          "lineNumber": 118
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.tensor",
+          "lineNumber": 119
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "torch.tensor",
+          "lineNumber": 120
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "seq.get",
+          "lineNumber": 125
+        },
+        {
+          "caller": "_process_sequence",
+          "callee": "seq.get",
+          "lineNumber": 126
+        },
+        {
+          "caller": "__len__",
+          "callee": "len",
+          "lineNumber": 133
+        },
+        {
+          "caller": "__len__",
+          "callee": "len",
+          "lineNumber": 135
+        },
+        {
+          "caller": "__getitem__",
+          "callee": "self._process_sequence",
+          "lineNumber": 141
+        },
+        {
+          "caller": "pad_sequence_tensor",
+          "callee": "max",
+          "lineNumber": 148
+        },
+        {
+          "caller": "pad_sequence_tensor",
+          "callee": "torch.full",
+          "lineNumber": 154
+        },
+        {
+          "caller": "pad_sequence_tensor",
+          "callee": "torch.cat",
+          "lineNumber": 155
+        },
+        {
+          "caller": "pad_sequence_tensor",
+          "callee": "batch.append",
+          "lineNumber": 158
+        },
+        {
+          "caller": "pad_sequence_tensor",
+          "callee": "torch.stack",
+          "lineNumber": 159
+        },
+        {
+          "caller": "collate_with_padding",
+          "callee": "pad_sequence_tensor",
+          "lineNumber": 165
+        },
+        {
+          "caller": "collate_with_padding",
+          "callee": "pad_sequence_tensor",
+          "lineNumber": 166
+        },
+        {
+          "caller": "collate_with_padding",
+          "callee": "pad_sequence_tensor",
+          "lineNumber": 167
+        },
+        {
+          "caller": "collate_with_padding",
+          "callee": "torch.stack",
+          "lineNumber": 168
+        },
+        {
+          "caller": "collate_with_padding",
+          "callee": "torch.stack",
+          "lineNumber": 169
+        },
+        {
+          "caller": "collate_with_padding",
+          "callee": "torch.stack",
+          "lineNumber": 170
+        },
+        {
+          "caller": "build_dataloader",
+          "callee": "PIESequenceDataset",
+          "lineNumber": 198
+        },
+        {
+          "caller": "build_dataloader",
+          "callee": "DataLoader",
+          "lineNumber": 200
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 4,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "scripts/preprocess_data.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 111,
+      "nonEmptyLines": 98,
+      "functions": [
+        {
+          "name": "save_dataset_in_chunks",
+          "startLine": 7,
+          "endLine": 31,
+          "params": [
+            "sequences",
+            "out_dir",
+            "chunk_size",
+            "transform_tight",
+            "transform_context",
+            "start_idx",
+            "end_idx",
+            "context_scale"
+          ]
+        },
+        {
+          "name": "img_resize",
+          "startLine": 33,
+          "endLine": 37,
+          "params": [
+            "height",
+            "width"
+          ]
+        },
+        {
+          "name": "img_augment",
+          "startLine": 38,
+          "endLine": 45,
+          "params": [
+            "height",
+            "width"
+          ]
+        },
+        {
+          "name": "main",
+          "startLine": 47,
+          "endLine": 104,
+          "params": [
+            "img_height",
+            "img_width",
+            "context_scale",
+            "train",
+            "data_aug",
+            "val",
+            "test"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "save_dataset_in_chunks",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "img_resize",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "img_augment",
+          "line": 38,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 47,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "os.makedirs",
+          "lineNumber": 10
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "len",
+          "lineNumber": 12
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "print",
+          "lineNumber": 14
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "range",
+          "lineNumber": 16
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "PIESequenceDataset",
+          "lineNumber": 18
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "os.path.join",
+          "lineNumber": 22
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "os.path.join",
+          "lineNumber": 23
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "torch.save",
+          "lineNumber": 25
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "os.replace",
+          "lineNumber": 26
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "print",
+          "lineNumber": 28
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "len",
+          "lineNumber": 28
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "torch.cuda.empty_cache",
+          "lineNumber": 30
+        },
+        {
+          "caller": "save_dataset_in_chunks",
+          "callee": "gc.collect",
+          "lineNumber": 31
+        },
+        {
+          "caller": "img_resize",
+          "callee": "transforms.Compose",
+          "lineNumber": 34
+        },
+        {
+          "caller": "img_resize",
+          "callee": "transforms.Resize",
+          "lineNumber": 35
+        },
+        {
+          "caller": "img_resize",
+          "callee": "transforms.ToTensor",
+          "lineNumber": 36
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.Compose",
+          "lineNumber": 39
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.Resize",
+          "lineNumber": 40
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.RandomHorizontalFlip",
+          "lineNumber": 41
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.ColorJitter",
+          "lineNumber": 42
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.RandomResizedCrop",
+          "lineNumber": 43
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.ToTensor",
+          "lineNumber": 44
+        },
+        {
+          "caller": "main",
+          "callee": "img_resize",
+          "lineNumber": 50
+        },
+        {
+          "caller": "main",
+          "callee": "img_resize",
+          "lineNumber": 51
+        },
+        {
+          "caller": "main",
+          "callee": "img_augment",
+          "lineNumber": 52
+        },
+        {
+          "caller": "main",
+          "callee": "img_augment",
+          "lineNumber": 53
+        },
+        {
+          "caller": "main",
+          "callee": "load_sequences_from_pkl",
+          "lineNumber": 55
+        },
+        {
+          "caller": "main",
+          "callee": "load_sequences_from_pkl",
+          "lineNumber": 56
+        },
+        {
+          "caller": "main",
+          "callee": "load_sequences_from_pkl",
+          "lineNumber": 57
+        },
+        {
+          "caller": "main",
+          "callee": "len",
+          "lineNumber": 60
+        },
+        {
+          "caller": "main",
+          "callee": "len",
+          "lineNumber": 64
+        },
+        {
+          "caller": "main",
+          "callee": "save_dataset_in_chunks",
+          "lineNumber": 68
+        },
+        {
+          "caller": "main",
+          "callee": "save_dataset_in_chunks",
+          "lineNumber": 77
+        },
+        {
+          "caller": "main",
+          "callee": "save_dataset_in_chunks",
+          "lineNumber": 86
+        },
+        {
+          "caller": "main",
+          "callee": "save_dataset_in_chunks",
+          "lineNumber": 95
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 104
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "scripts/preprocess_data_lmdb.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 168,
+      "nonEmptyLines": 146,
+      "functions": [
+        {
+          "name": "save_dataset_in_chunks_lmdb",
+          "startLine": 12,
+          "endLine": 91,
+          "params": [
+            "sequences",
+            "out_dir",
+            "chunk_size",
+            "transform_tight",
+            "transform_context",
+            "start_idx",
+            "end_idx",
+            "context_scale",
+            "jpeg_quality",
+            "num_workers",
+            "prefetch_factor"
+          ]
+        },
+        {
+          "name": "img_resize",
+          "startLine": 93,
+          "endLine": 97,
+          "params": [
+            "height",
+            "width"
+          ]
+        },
+        {
+          "name": "img_augment",
+          "startLine": 98,
+          "endLine": 105,
+          "params": [
+            "height",
+            "width"
+          ]
+        },
+        {
+          "name": "main",
+          "startLine": 107,
+          "endLine": 160,
+          "params": [
+            "img_height",
+            "img_width",
+            "context_scale",
+            "train",
+            "data_aug",
+            "val",
+            "test",
+            "chunk_size"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "save_dataset_in_chunks_lmdb",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "img_resize",
+          "line": 93,
+          "isDefault": false
+        },
+        {
+          "name": "img_augment",
+          "line": 98,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 107,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "os.makedirs",
+          "lineNumber": 22
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "len",
+          "lineNumber": 24
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "print",
+          "lineNumber": 26
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "range",
+          "lineNumber": 28
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "PIESequenceDataset",
+          "lineNumber": 30
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "DataLoader",
+          "lineNumber": 47
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "os.path.join",
+          "lineNumber": 49
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "print",
+          "lineNumber": 50
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "len",
+          "lineNumber": 52
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "max",
+          "lineNumber": 53
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "int",
+          "lineNumber": 53
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "print",
+          "lineNumber": 54
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "lmdb.open",
+          "lineNumber": 56
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "env.begin",
+          "lineNumber": 57
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "enumerate",
+          "lineNumber": 58
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "tqdm",
+          "lineNumber": 58
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "len",
+          "lineNumber": 58
+        },
+        {
+          "caller": "unbatch",
+          "callee": "torch.is_tensor",
+          "lineNumber": 60
+        },
+        {
+          "caller": "unbatch",
+          "callee": "isinstance",
+          "lineNumber": 62
+        },
+        {
+          "caller": "unbatch",
+          "callee": "len",
+          "lineNumber": 62
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "unbatch",
+          "lineNumber": 66
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "sample.items",
+          "lineNumber": 66
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "enumerate",
+          "lineNumber": 69
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "(img * 255.0).clamp(0, 255).to(torch.uint8).contiguous",
+          "lineNumber": 70
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "(img * 255.0).clamp(0, 255).to",
+          "lineNumber": 70
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "(img * 255.0).clamp",
+          "lineNumber": 70
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "encode_jpeg",
+          "lineNumber": 71
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "txn.put",
+          "lineNumber": 72
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "f\"{j}_{k}_tight\".encode",
+          "lineNumber": 72
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "jpg.numpy().tobytes",
+          "lineNumber": 72
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "jpg.numpy",
+          "lineNumber": 72
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "enumerate",
+          "lineNumber": 74
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "(img * 255.0).clamp(0, 255).to(torch.uint8).contiguous",
+          "lineNumber": 75
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "(img * 255.0).clamp(0, 255).to",
+          "lineNumber": 75
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "(img * 255.0).clamp",
+          "lineNumber": 75
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "encode_jpeg",
+          "lineNumber": 76
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "txn.put",
+          "lineNumber": 77
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "f\"{j}_{k}_context\".encode",
+          "lineNumber": 77
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "jpg.numpy().tobytes",
+          "lineNumber": 77
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "jpg.numpy",
+          "lineNumber": 77
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "sample.items",
+          "lineNumber": 80
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "key.startswith",
+          "lineNumber": 81
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "txn.put",
+          "lineNumber": 82
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "f\"{j}_meta\".encode",
+          "lineNumber": 82
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "pickle.dumps",
+          "lineNumber": 82
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "env.sync",
+          "lineNumber": 84
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "env.close",
+          "lineNumber": 85
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "print",
+          "lineNumber": 86
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "len",
+          "lineNumber": 86
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "torch.cuda.empty_cache",
+          "lineNumber": 88
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "gc.collect",
+          "lineNumber": 89
+        },
+        {
+          "caller": "save_dataset_in_chunks_lmdb",
+          "callee": "print",
+          "lineNumber": 91
+        },
+        {
+          "caller": "img_resize",
+          "callee": "transforms.Compose",
+          "lineNumber": 94
+        },
+        {
+          "caller": "img_resize",
+          "callee": "transforms.Resize",
+          "lineNumber": 95
+        },
+        {
+          "caller": "img_resize",
+          "callee": "transforms.ToTensor",
+          "lineNumber": 96
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.Compose",
+          "lineNumber": 99
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.Resize",
+          "lineNumber": 100
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.RandomHorizontalFlip",
+          "lineNumber": 101
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.ColorJitter",
+          "lineNumber": 102
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.RandomResizedCrop",
+          "lineNumber": 103
+        },
+        {
+          "caller": "img_augment",
+          "callee": "transforms.ToTensor",
+          "lineNumber": 104
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 111
+        },
+        {
+          "caller": "main",
+          "callee": "img_resize",
+          "lineNumber": 113
+        },
+        {
+          "caller": "main",
+          "callee": "img_resize",
+          "lineNumber": 114
+        },
+        {
+          "caller": "main",
+          "callee": "int",
+          "lineNumber": 114
+        },
+        {
+          "caller": "main",
+          "callee": "int",
+          "lineNumber": 114
+        },
+        {
+          "caller": "main",
+          "callee": "img_augment",
+          "lineNumber": 115
+        },
+        {
+          "caller": "main",
+          "callee": "img_augment",
+          "lineNumber": 116
+        },
+        {
+          "caller": "main",
+          "callee": "int",
+          "lineNumber": 116
+        },
+        {
+          "caller": "main",
+          "callee": "int",
+          "lineNumber": 116
+        },
+        {
+          "caller": "main",
+          "callee": "load_sequences_from_pkl",
+          "lineNumber": 121
+        },
+        {
+          "caller": "main",
+          "callee": "load_sequences_from_pkl",
+          "lineNumber": 123
+        },
+        {
+          "caller": "main",
+          "callee": "load_sequences_from_pkl",
+          "lineNumber": 125
+        },
+        {
+          "caller": "main",
+          "callee": "save_dataset_in_chunks_lmdb",
+          "lineNumber": 129
+        },
+        {
+          "caller": "main",
+          "callee": "save_dataset_in_chunks_lmdb",
+          "lineNumber": 137
+        },
+        {
+          "caller": "main",
+          "callee": "save_dataset_in_chunks_lmdb",
+          "lineNumber": 145
+        },
+        {
+          "caller": "main",
+          "callee": "save_dataset_in_chunks_lmdb",
+          "lineNumber": 153
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 160
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    }
+  ]
+}

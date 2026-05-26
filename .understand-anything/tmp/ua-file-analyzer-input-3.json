@@ -1,0 +1,11 @@
+{
+  "projectRoot": "C:/Users/LENOVO/Desktop/Undergrad_Project/Undergrad_thesis_project",
+  "batchFiles": [
+    {"path": "models/Motion_Encoder.py", "language": "python", "sizeLines": 117, "fileCategory": "code"},
+    {"path": "scripts/lmdb_dataset.py", "language": "python", "sizeLines": 101, "fileCategory": "code"},
+    {"path": "scripts/train_utils.py", "language": "python", "sizeLines": 97, "fileCategory": "code"},
+    {"path": "train.py", "language": "python", "sizeLines": 646, "fileCategory": "code"},
+    {"path": "train_two_phase.py", "language": "python", "sizeLines": 347, "fileCategory": "code"}
+  ],
+  "batchImportData": {"models/Motion_Encoder.py":[],"scripts/lmdb_dataset.py":[],"scripts/train_utils.py":[],"train.py":["config.py","models/Cross_Attention_Module.py","models/Motion_Encoder.py","models/Unified_Module.py","models/Vision_Transformer.py","scripts/lmdb_dataset.py","scripts/model_utils.py","scripts/train_utils.py"],"train_two_phase.py":["class_imbalance_strategies.py","config.py","models/Cross_Attention_Module.py","models/Motion_Encoder.py","models/Unified_Module.py","models/Vision_Transformer.py","scripts/lmdb_dataset.py","scripts/train_utils.py"]}
+}

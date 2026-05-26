@@ -1,0 +1,13 @@
+{
+  "projectRoot": "C:/Users/LENOVO/Desktop/Undergrad_Project/Undergrad_thesis_project",
+  "batchFiles": [
+    {"path": "scripts/PIE_sequence_Dataset_1.py", "language": "python", "sizeLines": 201, "fileCategory": "code"},
+    {"path": "scripts/preprocess_data.py", "language": "python", "sizeLines": 111, "fileCategory": "code"},
+    {"path": "scripts/preprocess_data_lmdb.py", "language": "python", "sizeLines": 168, "fileCategory": "code"}
+  ],
+  "batchImportData": {
+    "scripts/PIE_sequence_Dataset_1.py": [],
+    "scripts/preprocess_data.py": ["scripts/PIE_sequence_Dataset_1.py"],
+    "scripts/preprocess_data_lmdb.py": ["scripts/PIE_sequence_Dataset_1.py"]
+  }
+}

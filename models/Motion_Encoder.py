@@ -109,7 +109,6 @@ if __name__ == "__main__":
     
     model = MotionEncoder(
         motion_dim=motion_dim,
-        img_size=img_size,
         hidden_dim=224,
         d_model=128
     )

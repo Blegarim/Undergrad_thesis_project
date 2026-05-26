@@ -9,7 +9,7 @@ import psutil
 import torch
 
 
-MAX_SEQ_LEN = 16  # cap temporal length to bound VRAM across chunks
+MAX_SEQ_LEN = 20  # cap temporal length to bound VRAM across chunks
 
 
 def collate_fn(batch):
@@ -44,16 +44,30 @@ def remap_cross_labels(labels: dict) -> None:
 
 
 def gather_chunks(folders):
+    """
+    Collect *.lmdb files from one or more folders.
+    Missing folders are skipped with a warning. Raises only if no folder exists,
+    so callers can pass optional variants (e.g. augmented data) without crashing
+    on a fresh machine.
+    """
     if isinstance(folders, str):
         folders = [folders]
     all_files = []
+    missing = []
     for folder in folders:
         if not os.path.isdir(folder):
-            raise FileNotFoundError(f"gather_chunks: folder not found: {folder!r}")
+            missing.append(folder)
+            continue
         chunk_files = sorted([os.path.join(folder, f)
                               for f in os.listdir(folder)
                               if f.endswith('.lmdb')])
         all_files.extend(chunk_files)
+    if missing:
+        print(f"gather_chunks: skipping missing folder(s): {missing}")
+    if not all_files:
+        raise FileNotFoundError(
+            f"gather_chunks: no .lmdb chunks found in any of {folders}"
+        )
     return all_files
 
 

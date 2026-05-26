@@ -1,0 +1,11 @@
+{
+  "projectRoot": "C:/Users/LENOVO/Desktop/Undergrad_Project/Undergrad_thesis_project",
+  "batchFiles": [
+    {"path": "CLAUDE.md", "language": "markdown", "sizeLines": 151, "fileCategory": "docs"},
+    {"path": "GUIDELINE.md", "language": "markdown", "sizeLines": 63, "fileCategory": "docs"},
+    {"path": "README.md", "language": "markdown", "sizeLines": 118, "fileCategory": "docs"},
+    {"path": "requirements.txt", "language": "txt", "sizeLines": 50, "fileCategory": "docs"},
+    {"path": "run_env.bat", "language": "batch", "sizeLines": 3, "fileCategory": "script"}
+  ],
+  "batchImportData": {"CLAUDE.md":[],"GUIDELINE.md":[],"README.md":[],"requirements.txt":[],"run_env.bat":[]}
+}

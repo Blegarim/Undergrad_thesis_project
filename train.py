@@ -144,10 +144,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, model_type,
             total_batch_loss = torch.zeros(1, device=device)[0]
             for name in ["actions", "looks", "crosses"]:
                 if name == "crosses":
-                    if model_type in ['full', 'vanilla_concat'] and hasattr(model, 'cross_attention') and model.cross_attention.use_frame_crosses:
-                        logits = outputs["crosses_frame"]
-                    else:
-                        logits = outputs["crosses_pooled"]
+                    logits = outputs["crosses_frame"]
                 else:
                     logits = outputs[name]
 
@@ -210,12 +207,9 @@ def validate_one_epoch(model, dataloader, criterion, device, model_type, use_amp
 
             # accumulate loss as sum over samples (handles criterion reduction='mean')
             batch_loss = 0.0
-            for name in ["actions", "looks", "crosses"]: 
+            for name in ["actions", "looks", "crosses"]:
                 if name == "crosses":
-                    if model_type in ['full', 'vanilla_concat'] and hasattr(model, 'cross_attention') and model.cross_attention.use_frame_crosses:
-                        logits = outputs["crosses_frame"]
-                    else:
-                        logits = outputs["crosses_pooled"]
+                    logits = outputs["crosses_frame"]
                 else:
                     logits = outputs[name]
                 if use_amp:
@@ -318,6 +312,19 @@ def main():
     
     # Get model based on type selection
     model = get_model(args.model_type, motion_enc, vit, embedding_dim, num_classes_dict).to(device)
+
+    # Materialize lazily-built parameters BEFORE checkpoint load + optimizer construction.
+    # Why: ViT_Hierarchical's global-window blocks (window_size=None) defer their
+    # relative_position_bias_table to the first forward call. If the optimizer is
+    # built first, those late-created parameters never receive gradient updates,
+    # and load_state_dict(strict=False) drops them as "unexpected" on resume.
+    with torch.no_grad():
+        model.eval()
+        dummy_tight = torch.zeros(1, 2, 3, 128, 128, device=device)
+        dummy_context = torch.zeros(1, 2, 3, 224, 224, device=device)
+        dummy_motions = torch.zeros(1, 2, 8, device=device)
+        model_forward(model, args.model_type, dummy_tight, dummy_context, dummy_motions)
+        model.train()
 
     # Load model
     checkpoint_path = 'best_model_outputs/best_model_epoch.pth'

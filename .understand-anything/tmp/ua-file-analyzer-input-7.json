@@ -1,0 +1,25 @@
+{
+  "projectRoot": "C:/Users/LENOVO/Desktop/Undergrad_Project/Undergrad_thesis_project",
+  "batchFiles": [
+    {"path": ".claude/settings.local.json", "language": "json", "sizeLines": 23, "fileCategory": "config"},
+    {"path": ".claude/skills/code-review-protocol/SKILL.md", "language": "markdown", "sizeLines": 139, "fileCategory": "docs"},
+    {"path": ".claude/skills/debugging-playbook/references/debug-checklist.md", "language": "markdown", "sizeLines": 34, "fileCategory": "docs"},
+    {"path": ".claude/skills/debugging-playbook/SKILL.md", "language": "markdown", "sizeLines": 140, "fileCategory": "docs"},
+    {"path": ".claude/skills/experiment-tracking/references/baseline-results.md", "language": "markdown", "sizeLines": 39, "fileCategory": "docs"},
+    {"path": ".claude/skills/experiment-tracking/SKILL.md", "language": "markdown", "sizeLines": 122, "fileCategory": "docs"},
+    {"path": ".gitattributes", "language": "unknown", "sizeLines": 2, "fileCategory": "code"},
+    {"path": ".understand-anything/.understandignore", "language": "unknown", "sizeLines": 39, "fileCategory": "code"},
+    {"path": "extract_frames.py", "language": "python", "sizeLines": 45, "fileCategory": "code"},
+    {"path": "final_ablation_verification.py", "language": "python", "sizeLines": 131, "fileCategory": "code"},
+    {"path": "label_count.py", "language": "python", "sizeLines": 64, "fileCategory": "code"},
+    {"path": "models/__init__.py", "language": "python", "sizeLines": 0, "fileCategory": "code"},
+    {"path": "scripts/__init__.py", "language": "python", "sizeLines": 0, "fileCategory": "code"},
+    {"path": "scripts/augment_sequences.py", "language": "python", "sizeLines": 146, "fileCategory": "code"},
+    {"path": "scripts/balance_sequences.py", "language": "python", "sizeLines": 146, "fileCategory": "code"},
+    {"path": "scripts/generate_sequences.py", "language": "python", "sizeLines": 100, "fileCategory": "code"},
+    {"path": "scripts/split_balance_sequences_all.py", "language": "python", "sizeLines": 228, "fileCategory": "code"},
+    {"path": "test_ablation_structure_clean.py", "language": "python", "sizeLines": 60, "fileCategory": "code"},
+    {"path": "visualize_gt.py", "language": "python", "sizeLines": 437, "fileCategory": "code"}
+  ],
+  "batchImportData": {".claude/settings.local.json":[],".claude/skills/code-review-protocol/SKILL.md":[],".claude/skills/debugging-playbook/references/debug-checklist.md":[],".claude/skills/debugging-playbook/SKILL.md":[],".claude/skills/experiment-tracking/references/baseline-results.md":[],".claude/skills/experiment-tracking/SKILL.md":[],".gitattributes":[],".understand-anything/.understandignore":[],"extract_frames.py":[],"final_ablation_verification.py":[],"label_count.py":[],"models/__init__.py":[],"scripts/__init__.py":[],"scripts/augment_sequences.py":[],"scripts/balance_sequences.py":[],"scripts/generate_sequences.py":[],"scripts/split_balance_sequences_all.py":[],"test_ablation_structure_clean.py":[],"visualize_gt.py":[]}
+}

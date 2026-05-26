@@ -8,7 +8,7 @@ class CrossAttentionModule(nn.Module):
         num_heads=8,
         num_classes_dict=None,
         dropout=0.1,
-        use_frame_crosses=False,   # kept for config / logging
+        use_frame_crosses=True,    # kept for config / logging
         frame_pool="logsumexp",
     ):
         super().__init__()

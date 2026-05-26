@@ -40,22 +40,13 @@ def evaluate(model, dataloader, device, model_type, use_amp=False):
             labels = {k: v.to(device, non_blocking=True).long() for k, v in labels.items()}
 
             remap_cross_labels(labels)
-            with torch.cuda.amp.autocast(enabled=use_amp):
+            with torch.amp.autocast('cuda', enabled=use_amp):
                 outputs = model_forward(model, model_type, images_tight, images_context, motions)
 
             # Process each head (actions, looks, crosses)
             for name in ["actions", "looks", "crosses"]:
-                # Select appropriate crosses output
                 if name == "crosses":
-                    if model_type == 'full' and hasattr(model, 'cross_attention'):
-                        # Only full model has cross_attention
-                        if model.cross_attention.use_frame_crosses:
-                            logits = outputs["crosses_frame"]
-                        else:
-                            logits = outputs["crosses_pooled"]
-                    else:
-                        # Ablation models: trained with crosses_pooled (no cross_attention)
-                        logits = outputs["crosses_pooled"]
+                    logits = outputs["crosses_frame"]
                 else:
                     logits = outputs[name]
                 
@@ -102,7 +93,7 @@ def evaluate(model, dataloader, device, model_type, use_amp=False):
 
         # print(f"    {name}: Acc={acc:.2f} | F1={f1:.2f} | AUC={metrics[name + '_auc']:.2f} | Precision={precision:.2f} | Recall={recall:.2f}")
 
-    overall = 100.0 * sum(correct.values()) / sum(total.values())
+    overall = sum(correct.values()) / sum(total.values())
     metrics["overall_acc"] = overall
     # print(f"    Overall Accuracy: {overall:.2f}%")
     return metrics, all_labels, all_preds, all_probs
@@ -455,7 +446,7 @@ def main():
         avg_metrics[name + "_r"] = recall
 
     avg_metrics["overall_acc"] = (
-        100 * sum(v for k, v in avg_metrics.items() if k.endswith("_acc")) / 3.0
+        sum(v for k, v in avg_metrics.items() if k.endswith("_acc")) / 3.0
     )
 
     # ==== Threshold Optimization ====
@@ -482,7 +473,7 @@ def main():
             print(f"  {name}: threshold={opt_thresh:.2f}, F1={opt_f1:.4f} (default: {avg_metrics.get(f'{name}_f1', 0):.4f})")
     
     optimized_metrics["overall_acc"] = (
-        100 * sum(v for k, v in optimized_metrics.items() if k.endswith("_acc")) / 3.0
+        sum(v for k, v in optimized_metrics.items() if k.endswith("_acc")) / 3.0
     ) if any(k.endswith("_acc") for k in optimized_metrics) else 0.0
 
     # Summary Table
@@ -545,7 +536,7 @@ def main():
         print(f"  {k}: {v:.2f}")
     print("\nThreshold-optimized metrics:")
     print(f"  Optimal thresholds: {optimal_thresholds}")
-    print(f"  Overall accuracy: {optimized_metrics.get('overall_acc', 0):.2f}%")
+    print(f"  Overall accuracy: {optimized_metrics.get('overall_acc', 0) * 100:.2f}%")
     print(f"Results logged to: {log_csv}")
     
     # Save detailed predictions with probabilities

@@ -1,0 +1,206 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 5,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "CLAUDE.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 151,
+      "nonEmptyLines": 110,
+      "sections": [
+        {
+          "heading": "CLAUDE.md",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Project Overview",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "Commands",
+          "level": 2,
+          "line": 9
+        },
+        {
+          "heading": "Architecture",
+          "level": 2,
+          "line": 33
+        },
+        {
+          "heading": "Configuration (`config.py`)",
+          "level": 2,
+          "line": 53
+        },
+        {
+          "heading": "Data Pipeline",
+          "level": 2,
+          "line": 61
+        },
+        {
+          "heading": "Dataset Statistics",
+          "level": 2,
+          "line": 70
+        },
+        {
+          "heading": "Shared Utilities",
+          "level": 2,
+          "line": 88
+        },
+        {
+          "heading": "Training Patterns",
+          "level": 2,
+          "line": 95
+        },
+        {
+          "heading": "Evaluation Metrics",
+          "level": 2,
+          "line": 122
+        },
+        {
+          "heading": "PIE Dataset (`PIE/`)",
+          "level": 2,
+          "line": 126
+        },
+        {
+          "heading": "Code Style",
+          "level": 2,
+          "line": 130
+        },
+        {
+          "heading": "Debugging",
+          "level": 2,
+          "line": 136
+        },
+        {
+          "heading": "Core Development Rules",
+          "level": 2,
+          "line": 143
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 14
+      }
+    },
+    {
+      "path": "GUIDELINE.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 63,
+      "nonEmptyLines": 43,
+      "sections": [
+        {
+          "heading": "1. Think Before Coding",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "2. Simplicity First",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "3. Surgical Changes",
+          "level": 2,
+          "line": 27
+        },
+        {
+          "heading": "4. Goal-Driven Execution",
+          "level": 2,
+          "line": 43
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 118,
+      "nonEmptyLines": 94,
+      "sections": [
+        {
+          "heading": "Pedestrian Behavior Prediction",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Architecture",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "Setup",
+          "level": 2,
+          "line": 32
+        },
+        {
+          "heading": "Training",
+          "level": 2,
+          "line": 39
+        },
+        {
+          "heading": "Evaluation",
+          "level": 2,
+          "line": 53
+        },
+        {
+          "heading": "Inference",
+          "level": 2,
+          "line": 64
+        },
+        {
+          "heading": "Data Pipeline",
+          "level": 2,
+          "line": 71
+        },
+        {
+          "heading": "Project Structure",
+          "level": 2,
+          "line": 81
+        },
+        {
+          "heading": "Further Reading",
+          "level": 2,
+          "line": 114
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 9
+      }
+    },
+    {
+      "path": "requirements.txt",
+      "language": "txt",
+      "fileCategory": "docs",
+      "totalLines": 50,
+      "nonEmptyLines": 50,
+      "metrics": {}
+    },
+    {
+      "path": "run_env.bat",
+      "language": "batch",
+      "fileCategory": "script",
+      "totalLines": 3,
+      "nonEmptyLines": 3,
+      "metrics": {}
+    }
+  ]
+}

@@ -10,7 +10,15 @@
       "Bash(git status)",
       "Bash(git diff*)",
       "Bash(git log*)",
-      "Bash(grep \"\\\\.py$\")"
+      "Bash(grep \"\\\\.py$\")",
+      "Bash(python models/Motion_Encoder.py)",
+      "Bash(mkdir -p tests)",
+      "Bash(python tests/smoke_train_test.py)",
+      "Bash(tee tests/smoke_run.log)",
+      "Bash(node *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\LENOVO\\Desktop\\Undergrad_Project\\Undergrad_thesis_project"
     ]
   }
 }

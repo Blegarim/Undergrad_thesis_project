@@ -1,0 +1,1285 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "louvain",
+  "totalFiles": 48,
+  "totalBatches": 7,
+  "exportsByPath": {
+    ".gitattributes": [],
+    ".understand-anything/.understandignore": [],
+    "ablation_usage_example.py": [
+      "get_ablation_model",
+      "train_model_with_ablation"
+    ],
+    "class_imbalance_strategies.py": [
+      "FocalLoss",
+      "ClassBalancedFocalLoss",
+      "BatchBalancedSampler",
+      "DynamicLossWeighting",
+      "HardNegativeMining",
+      "ThresholdOptimizer",
+      "create_class_balanced_loss",
+      "get_imbalance_config"
+    ],
+    "config.py": [
+      "get_unified_dim_model",
+      "vit_args_config",
+      "motion_enc_args_config"
+    ],
+    "extract_frames.py": [
+      "extract_frames"
+    ],
+    "final_ablation_verification.py": [
+      "test_model_suffix_logic",
+      "test_file_structure",
+      "test_keyword_presence",
+      "main"
+    ],
+    "imbalance_config.py": [
+      "get_training_config",
+      "create_loss_functions",
+      "create_advanced_components",
+      "apply_imbalance_strategies_to_training",
+      "setup_imbalance_monitoring",
+      "get_recommended_config",
+      "validate_config",
+      "get_preset_config"
+    ],
+    "label_count.py": [
+      "label_counts"
+    ],
+    "main.py": [
+      "inference_collate_fn"
+    ],
+    "models/__init__.py": [],
+    "models/AblationModels.py": [
+      "MotionOnlyModel",
+      "VisualOnlyModel",
+      "VanillaConcatModel"
+    ],
+    "models/Cross_Attention_Module.py": [
+      "CrossAttentionModule"
+    ],
+    "models/Motion_Encoder.py": [
+      "MotionEncoder"
+    ],
+    "models/Unified_Module.py": [
+      "EnsembleModel"
+    ],
+    "models/Vision_Transformer.py": [
+      "MLP",
+      "window_partition",
+      "window_reverse",
+      "WindowAttention",
+      "WindowTransformerBlock",
+      "ViT_Hierarchical"
+    ],
+    "onnx/onnx_export.py": [
+      "EnsembleModelONNX",
+      "main"
+    ],
+    "scripts/__init__.py": [],
+    "scripts/augment_sequences.py": [
+      "SequenceAugmenter",
+      "augment_minority_sequences"
+    ],
+    "scripts/balance_sequences.py": [
+      "_init_groups",
+      "_group_indices",
+      "_solve_cross0_counts",
+      "_counts_for_indices",
+      "balance_dataset",
+      "summarize",
+      "main"
+    ],
+    "scripts/generate_sequences.py": [
+      "generate_sequences"
+    ],
+    "scripts/lmdb_dataset.py": [
+      "LMDBChunkDataset"
+    ],
+    "scripts/model_utils.py": [
+      "get_model",
+      "model_forward"
+    ],
+    "scripts/pedestrian_detection.py": [
+      "extract_tracks_from_video",
+      "smooth_track",
+      "extract_sequences_from_track",
+      "main"
+    ],
+    "scripts/PIE_sequence_Dataset_1.py": [
+      "load_sequences_from_pkl",
+      "PIESequenceDataset",
+      "pad_sequence_tensor",
+      "collate_with_padding",
+      "build_dataloader"
+    ],
+    "scripts/preprocess_data_lmdb.py": [
+      "save_dataset_in_chunks_lmdb",
+      "img_resize",
+      "img_augment",
+      "main"
+    ],
+    "scripts/preprocess_data.py": [
+      "save_dataset_in_chunks",
+      "img_resize",
+      "img_augment",
+      "main"
+    ],
+    "scripts/split_balance_sequences_all.py": [
+      "clamp_cross",
+      "split_indices",
+      "group_indices",
+      "choose_cross1",
+      "solve_exact",
+      "solve_approx",
+      "balance_split",
+      "summarize",
+      "main"
+    ],
+    "scripts/train_utils.py": [
+      "collate_fn",
+      "EarlyStopping",
+      "remap_cross_labels",
+      "gather_chunks",
+      "wait_for_memory",
+      "mp_async_load"
+    ],
+    "test_ablation_models.py": [
+      "test_ablation_models"
+    ],
+    "test_ablation_structure_clean.py": [
+      "test_structure",
+      "main"
+    ],
+    "test_imbalance_setup.py": [
+      "test_imbalance_strategies",
+      "test_preset_configurations",
+      "simulate_training_scenario",
+      "main"
+    ],
+    "test.py": [
+      "evaluate",
+      "round_metric",
+      "find_optimal_thresholds",
+      "_infer_window_hw",
+      "_init_global_rel_pos_from_ckpt",
+      "compute_flops",
+      "inference_latency",
+      "main"
+    ],
+    "train_two_phase.py": [
+      "build_criterion",
+      "train_epoch",
+      "validate",
+      "freeze_backbone",
+      "unfreeze_all",
+      "main"
+    ],
+    "train.py": [
+      "compute_class_weights_from_lmdb",
+      "_inverse_class_weights",
+      "build_sampler_weights",
+      "train_one_chunk",
+      "validate_one_epoch",
+      "finetune",
+      "main"
+    ],
+    "visualize_comparison.py": [
+      "parse_args",
+      "load_model",
+      "get_pie_annotations",
+      "generate_sequences_from_annotations",
+      "draw_labels",
+      "draw_comparison",
+      "process_pie_dataset",
+      "process_custom_video",
+      "main"
+    ],
+    "visualize_gt.py": [
+      "clamp_to_binary",
+      "draw_sequence_frame",
+      "draw_future_labels",
+      "visualize_from_pickle",
+      "generate_and_visualize",
+      "visualize_blank_with_labels",
+      "main"
+    ]
+  },
+  "batches": [
+    {
+      "batchIndex": 1,
+      "files": [
+        {
+          "path": "ablation_usage_example.py",
+          "language": "python",
+          "sizeLines": 160,
+          "fileCategory": "code"
+        },
+        {
+          "path": "models/AblationModels.py",
+          "language": "python",
+          "sizeLines": 222,
+          "fileCategory": "code"
+        },
+        {
+          "path": "models/Cross_Attention_Module.py",
+          "language": "python",
+          "sizeLines": 83,
+          "fileCategory": "code"
+        },
+        {
+          "path": "models/Unified_Module.py",
+          "language": "python",
+          "sizeLines": 30,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/model_utils.py",
+          "language": "python",
+          "sizeLines": 90,
+          "fileCategory": "code"
+        },
+        {
+          "path": "test.py",
+          "language": "python",
+          "sizeLines": 596,
+          "fileCategory": "code"
+        },
+        {
+          "path": "test_ablation_models.py",
+          "language": "python",
+          "sizeLines": 180,
+          "fileCategory": "code"
+        },
+        {
+          "path": "visualize_comparison.py",
+          "language": "python",
+          "sizeLines": 686,
+          "fileCategory": "code"
+        }
+      ],
+      "batchImportData": {
+        "ablation_usage_example.py": [
+          "models/AblationModels.py"
+        ],
+        "models/AblationModels.py": [],
+        "models/Cross_Attention_Module.py": [],
+        "models/Unified_Module.py": [],
+        "scripts/model_utils.py": [
+          "models/AblationModels.py",
+          "models/Cross_Attention_Module.py",
+          "models/Unified_Module.py"
+        ],
+        "test.py": [
+          "config.py",
+          "models/AblationModels.py",
+          "models/Cross_Attention_Module.py",
+          "models/Motion_Encoder.py",
+          "models/Unified_Module.py",
+          "models/Vision_Transformer.py",
+          "scripts/lmdb_dataset.py",
+          "scripts/model_utils.py",
+          "train.py"
+        ],
+        "test_ablation_models.py": [
+          "config.py",
+          "models/AblationModels.py",
+          "models/Cross_Attention_Module.py",
+          "models/Motion_Encoder.py",
+          "models/Unified_Module.py",
+          "models/Vision_Transformer.py"
+        ],
+        "visualize_comparison.py": [
+          "config.py",
+          "models/AblationModels.py",
+          "models/Cross_Attention_Module.py",
+          "models/Motion_Encoder.py",
+          "models/Unified_Module.py",
+          "models/Vision_Transformer.py",
+          "scripts/model_utils.py",
+          "scripts/PIE_sequence_Dataset_1.py"
+        ]
+      },
+      "neighborMap": {
+        "models/Cross_Attention_Module.py": [
+          {
+            "path": "main.py",
+            "batchIndex": 2,
+            "symbols": [
+              "inference_collate_fn"
+            ]
+          },
+          {
+            "path": "train_two_phase.py",
+            "batchIndex": 3,
+            "symbols": [
+              "build_criterion",
+              "train_epoch",
+              "validate",
+              "freeze_backbone",
+              "unfreeze_all",
+              "main"
+            ]
+          },
+          {
+            "path": "train.py",
+            "batchIndex": 3,
+            "symbols": [
+              "compute_class_weights_from_lmdb",
+              "_inverse_class_weights",
+              "build_sampler_weights",
+              "train_one_chunk",
+              "validate_one_epoch",
+              "finetune",
+              "main"
+            ]
+          }
+        ],
+        "models/Unified_Module.py": [
+          {
+            "path": "main.py",
+            "batchIndex": 2,
+            "symbols": [
+              "inference_collate_fn"
+            ]
+          },
+          {
+            "path": "onnx/onnx_export.py",
+            "batchIndex": 2,
+            "symbols": [
+              "EnsembleModelONNX",
+              "main"
+            ]
+          },
+          {
+            "path": "train_two_phase.py",
+            "batchIndex": 3,
+            "symbols": [
+              "build_criterion",
+              "train_epoch",
+              "validate",
+              "freeze_backbone",
+              "unfreeze_all",
+              "main"
+            ]
+          },
+          {
+            "path": "train.py",
+            "batchIndex": 3,
+            "symbols": [
+              "compute_class_weights_from_lmdb",
+              "_inverse_class_weights",
+              "build_sampler_weights",
+              "train_one_chunk",
+              "validate_one_epoch",
+              "finetune",
+              "main"
+            ]
+          }
+        ],
+        "scripts/model_utils.py": [
+          {
+            "path": "train.py",
+            "batchIndex": 3,
+            "symbols": [
+              "compute_class_weights_from_lmdb",
+              "_inverse_class_weights",
+              "build_sampler_weights",
+              "train_one_chunk",
+              "validate_one_epoch",
+              "finetune",
+              "main"
+            ]
+          }
+        ],
+        "test.py": [
+          {
+            "path": "config.py",
+            "batchIndex": 2,
+            "symbols": [
+              "get_unified_dim_model",
+              "vit_args_config",
+              "motion_enc_args_config"
+            ]
+          },
+          {
+            "path": "models/Motion_Encoder.py",
+            "batchIndex": 3,
+            "symbols": [
+              "MotionEncoder"
+            ]
+          },
+          {
+            "path": "models/Vision_Transformer.py",
+            "batchIndex": 2,
+            "symbols": [
+              "MLP",
+              "window_partition",
+              "window_reverse",
+              "WindowAttention",
+              "WindowTransformerBlock",
+              "ViT_Hierarchical"
+            ]
+          },
+          {
+            "path": "scripts/lmdb_dataset.py",
+            "batchIndex": 3,
+            "symbols": [
+              "LMDBChunkDataset"
+            ]
+          },
+          {
+            "path": "train.py",
+            "batchIndex": 3,
+            "symbols": [
+              "compute_class_weights_from_lmdb",
+              "_inverse_class_weights",
+              "build_sampler_weights",
+              "train_one_chunk",
+              "validate_one_epoch",
+              "finetune",
+              "main"
+            ]
+          }
+        ],
+        "test_ablation_models.py": [
+          {
+            "path": "config.py",
+            "batchIndex": 2,
+            "symbols": [
+              "get_unified_dim_model",
+              "vit_args_config",
+              "motion_enc_args_config"
+            ]
+          },
+          {
+            "path": "models/Motion_Encoder.py",
+            "batchIndex": 3,
+            "symbols": [
+              "MotionEncoder"
+            ]
+          },
+          {
+            "path": "models/Vision_Transformer.py",
+            "batchIndex": 2,
+            "symbols": [
+              "MLP",
+              "window_partition",
+              "window_reverse",
+              "WindowAttention",
+              "WindowTransformerBlock",
+              "ViT_Hierarchical"
+            ]
+          }
+        ],
+        "visualize_comparison.py": [
+          {
+            "path": "config.py",
+            "batchIndex": 2,
+            "symbols": [
+              "get_unified_dim_model",
+              "vit_args_config",
+              "motion_enc_args_config"
+            ]
+          },
+          {
+            "path": "models/Motion_Encoder.py",
+            "batchIndex": 3,
+            "symbols": [
+              "MotionEncoder"
+            ]
+          },
+          {
+            "path": "models/Vision_Transformer.py",
+            "batchIndex": 2,
+            "symbols": [
+              "MLP",
+              "window_partition",
+              "window_reverse",
+              "WindowAttention",
+              "WindowTransformerBlock",
+              "ViT_Hierarchical"
+            ]
+          },
+          {
+            "path": "scripts/PIE_sequence_Dataset_1.py",
+            "batchIndex": 5,
+            "symbols": [
+              "load_sequences_from_pkl",
+              "PIESequenceDataset",
+              "pad_sequence_tensor",
+              "collate_with_padding",
+              "build_dataloader"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "batchIndex": 2,
+      "files": [
+        {
+          "path": "config.py",
+          "language": "python",
+          "sizeLines": 43,
+          "fileCategory": "code"
+        },
+        {
+          "path": "main.py",
+          "language": "python",
+          "sizeLines": 329,
+          "fileCategory": "code"
+        },
+        {
+          "path": "models/Vision_Transformer.py",
+          "language": "python",
+          "sizeLines": 407,
+          "fileCategory": "code"
+        },
+        {
+          "path": "onnx/onnx_export.py",
+          "language": "python",
+          "sizeLines": 70,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/pedestrian_detection.py",
+          "language": "python",
+          "sizeLines": 129,
+          "fileCategory": "code"
+        }
+      ],
+      "batchImportData": {
+        "config.py": [],
+        "main.py": [
+          "config.py",
+          "models/Cross_Attention_Module.py",
+          "models/Motion_Encoder.py",
+          "models/Unified_Module.py",
+          "models/Vision_Transformer.py",
+          "scripts/pedestrian_detection.py",
+          "scripts/PIE_sequence_Dataset_1.py"
+        ],
+        "models/Vision_Transformer.py": [],
+        "onnx/onnx_export.py": [
+          "config.py",
+          "models/Motion_Encoder.py",
+          "models/Unified_Module.py",
+          "models/Vision_Transformer.py"
+        ],
+        "scripts/pedestrian_detection.py": []
+      },
+      "neighborMap": {
+        "config.py": [
+          {
+            "path": "test_ablation_models.py",
+            "batchIndex": 1,
+            "symbols": [
+              "test_ablation_models"
+            ]
+          },
+          {
+            "path": "test.py",
+            "batchIndex": 1,
+            "symbols": [
+              "evaluate",
+              "round_metric",
+              "find_optimal_thresholds",
+              "_infer_window_hw",
+              "_init_global_rel_pos_from_ckpt",
+              "compute_flops",
+              "inference_latency",
+              "main"
+            ]
+          },
+          {
+            "path": "train_two_phase.py",
+            "batchIndex": 3,
+            "symbols": [
+              "build_criterion",
+              "train_epoch",
+              "validate",
+              "freeze_backbone",
+              "unfreeze_all",
+              "main"
+            ]
+          },
+          {
+            "path": "train.py",
+            "batchIndex": 3,
+            "symbols": [
+              "compute_class_weights_from_lmdb",
+              "_inverse_class_weights",
+              "build_sampler_weights",
+              "train_one_chunk",
+              "validate_one_epoch",
+              "finetune",
+              "main"
+            ]
+          },
+          {
+            "path": "visualize_comparison.py",
+            "batchIndex": 1,
+            "symbols": [
+              "parse_args",
+              "load_model",
+              "get_pie_annotations",
+              "generate_sequences_from_annotations",
+              "draw_labels",
+              "draw_comparison",
+              "process_pie_dataset",
+              "process_custom_video",
+              "main"
+            ]
+          }
+        ],
+        "main.py": [
+          {
+            "path": "models/Cross_Attention_Module.py",
+            "batchIndex": 1,
+            "symbols": [
+              "CrossAttentionModule"
+            ]
+          },
+          {
+            "path": "models/Motion_Encoder.py",
+            "batchIndex": 3,
+            "symbols": [
+              "MotionEncoder"
+            ]
+          },
+          {
+            "path": "models/Unified_Module.py",
+            "batchIndex": 1,
+            "symbols": [
+              "EnsembleModel"
+            ]
+          },
+          {
+            "path": "scripts/PIE_sequence_Dataset_1.py",
+            "batchIndex": 5,
+            "symbols": [
+              "load_sequences_from_pkl",
+              "PIESequenceDataset",
+              "pad_sequence_tensor",
+              "collate_with_padding",
+              "build_dataloader"
+            ]
+          }
+        ],
+        "models/Vision_Transformer.py": [
+          {
+            "path": "test_ablation_models.py",
+            "batchIndex": 1,
+            "symbols": [
+              "test_ablation_models"
+            ]
+          },
+          {
+            "path": "test.py",
+            "batchIndex": 1,
+            "symbols": [
+              "evaluate",
+              "round_metric",
+              "find_optimal_thresholds",
+              "_infer_window_hw",
+              "_init_global_rel_pos_from_ckpt",
+              "compute_flops",
+              "inference_latency",
+              "main"
+            ]
+          },
+          {
+            "path": "train_two_phase.py",
+            "batchIndex": 3,
+            "symbols": [
+              "build_criterion",
+              "train_epoch",
+              "validate",
+              "freeze_backbone",
+              "unfreeze_all",
+              "main"
+            ]
+          },
+          {
+            "path": "train.py",
+            "batchIndex": 3,
+            "symbols": [
+              "compute_class_weights_from_lmdb",
+              "_inverse_class_weights",
+              "build_sampler_weights",
+              "train_one_chunk",
+              "validate_one_epoch",
+              "finetune",
+              "main"
+            ]
+          },
+          {
+            "path": "visualize_comparison.py",
+            "batchIndex": 1,
+            "symbols": [
+              "parse_args",
+              "load_model",
+              "get_pie_annotations",
+              "generate_sequences_from_annotations",
+              "draw_labels",
+              "draw_comparison",
+              "process_pie_dataset",
+              "process_custom_video",
+              "main"
+            ]
+          }
+        ],
+        "onnx/onnx_export.py": [
+          {
+            "path": "models/Motion_Encoder.py",
+            "batchIndex": 3,
+            "symbols": [
+              "MotionEncoder"
+            ]
+          },
+          {
+            "path": "models/Unified_Module.py",
+            "batchIndex": 1,
+            "symbols": [
+              "EnsembleModel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "batchIndex": 3,
+      "files": [
+        {
+          "path": "models/Motion_Encoder.py",
+          "language": "python",
+          "sizeLines": 117,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/lmdb_dataset.py",
+          "language": "python",
+          "sizeLines": 101,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/train_utils.py",
+          "language": "python",
+          "sizeLines": 97,
+          "fileCategory": "code"
+        },
+        {
+          "path": "train.py",
+          "language": "python",
+          "sizeLines": 646,
+          "fileCategory": "code"
+        },
+        {
+          "path": "train_two_phase.py",
+          "language": "python",
+          "sizeLines": 347,
+          "fileCategory": "code"
+        }
+      ],
+      "batchImportData": {
+        "models/Motion_Encoder.py": [],
+        "scripts/lmdb_dataset.py": [],
+        "scripts/train_utils.py": [],
+        "train.py": [
+          "config.py",
+          "models/Cross_Attention_Module.py",
+          "models/Motion_Encoder.py",
+          "models/Unified_Module.py",
+          "models/Vision_Transformer.py",
+          "scripts/lmdb_dataset.py",
+          "scripts/model_utils.py",
+          "scripts/train_utils.py"
+        ],
+        "train_two_phase.py": [
+          "class_imbalance_strategies.py",
+          "config.py",
+          "models/Cross_Attention_Module.py",
+          "models/Motion_Encoder.py",
+          "models/Unified_Module.py",
+          "models/Vision_Transformer.py",
+          "scripts/lmdb_dataset.py",
+          "scripts/train_utils.py"
+        ]
+      },
+      "neighborMap": {
+        "models/Motion_Encoder.py": [
+          {
+            "path": "main.py",
+            "batchIndex": 2,
+            "symbols": [
+              "inference_collate_fn"
+            ]
+          },
+          {
+            "path": "onnx/onnx_export.py",
+            "batchIndex": 2,
+            "symbols": [
+              "EnsembleModelONNX",
+              "main"
+            ]
+          },
+          {
+            "path": "test_ablation_models.py",
+            "batchIndex": 1,
+            "symbols": [
+              "test_ablation_models"
+            ]
+          },
+          {
+            "path": "test.py",
+            "batchIndex": 1,
+            "symbols": [
+              "evaluate",
+              "round_metric",
+              "find_optimal_thresholds",
+              "_infer_window_hw",
+              "_init_global_rel_pos_from_ckpt",
+              "compute_flops",
+              "inference_latency",
+              "main"
+            ]
+          },
+          {
+            "path": "visualize_comparison.py",
+            "batchIndex": 1,
+            "symbols": [
+              "parse_args",
+              "load_model",
+              "get_pie_annotations",
+              "generate_sequences_from_annotations",
+              "draw_labels",
+              "draw_comparison",
+              "process_pie_dataset",
+              "process_custom_video",
+              "main"
+            ]
+          }
+        ],
+        "scripts/lmdb_dataset.py": [
+          {
+            "path": "test.py",
+            "batchIndex": 1,
+            "symbols": [
+              "evaluate",
+              "round_metric",
+              "find_optimal_thresholds",
+              "_infer_window_hw",
+              "_init_global_rel_pos_from_ckpt",
+              "compute_flops",
+              "inference_latency",
+              "main"
+            ]
+          }
+        ],
+        "train.py": [
+          {
+            "path": "config.py",
+            "batchIndex": 2,
+            "symbols": [
+              "get_unified_dim_model",
+              "vit_args_config",
+              "motion_enc_args_config"
+            ]
+          },
+          {
+            "path": "models/Cross_Attention_Module.py",
+            "batchIndex": 1,
+            "symbols": [
+              "CrossAttentionModule"
+            ]
+          },
+          {
+            "path": "models/Unified_Module.py",
+            "batchIndex": 1,
+            "symbols": [
+              "EnsembleModel"
+            ]
+          },
+          {
+            "path": "models/Vision_Transformer.py",
+            "batchIndex": 2,
+            "symbols": [
+              "MLP",
+              "window_partition",
+              "window_reverse",
+              "WindowAttention",
+              "WindowTransformerBlock",
+              "ViT_Hierarchical"
+            ]
+          },
+          {
+            "path": "scripts/model_utils.py",
+            "batchIndex": 1,
+            "symbols": [
+              "get_model",
+              "model_forward"
+            ]
+          },
+          {
+            "path": "test.py",
+            "batchIndex": 1,
+            "symbols": [
+              "evaluate",
+              "round_metric",
+              "find_optimal_thresholds",
+              "_infer_window_hw",
+              "_init_global_rel_pos_from_ckpt",
+              "compute_flops",
+              "inference_latency",
+              "main"
+            ]
+          }
+        ],
+        "train_two_phase.py": [
+          {
+            "path": "class_imbalance_strategies.py",
+            "batchIndex": 4,
+            "symbols": [
+              "FocalLoss",
+              "ClassBalancedFocalLoss",
+              "BatchBalancedSampler",
+              "DynamicLossWeighting",
+              "HardNegativeMining",
+              "ThresholdOptimizer",
+              "create_class_balanced_loss",
+              "get_imbalance_config"
+            ]
+          },
+          {
+            "path": "config.py",
+            "batchIndex": 2,
+            "symbols": [
+              "get_unified_dim_model",
+              "vit_args_config",
+              "motion_enc_args_config"
+            ]
+          },
+          {
+            "path": "models/Cross_Attention_Module.py",
+            "batchIndex": 1,
+            "symbols": [
+              "CrossAttentionModule"
+            ]
+          },
+          {
+            "path": "models/Unified_Module.py",
+            "batchIndex": 1,
+            "symbols": [
+              "EnsembleModel"
+            ]
+          },
+          {
+            "path": "models/Vision_Transformer.py",
+            "batchIndex": 2,
+            "symbols": [
+              "MLP",
+              "window_partition",
+              "window_reverse",
+              "WindowAttention",
+              "WindowTransformerBlock",
+              "ViT_Hierarchical"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "batchIndex": 4,
+      "files": [
+        {
+          "path": "class_imbalance_strategies.py",
+          "language": "python",
+          "sizeLines": 466,
+          "fileCategory": "code"
+        },
+        {
+          "path": "imbalance_config.py",
+          "language": "python",
+          "sizeLines": 281,
+          "fileCategory": "code"
+        },
+        {
+          "path": "test_imbalance_setup.py",
+          "language": "python",
+          "sizeLines": 263,
+          "fileCategory": "code"
+        }
+      ],
+      "batchImportData": {
+        "class_imbalance_strategies.py": [],
+        "imbalance_config.py": [
+          "class_imbalance_strategies.py"
+        ],
+        "test_imbalance_setup.py": [
+          "class_imbalance_strategies.py",
+          "imbalance_config.py"
+        ]
+      },
+      "neighborMap": {
+        "class_imbalance_strategies.py": [
+          {
+            "path": "train_two_phase.py",
+            "batchIndex": 3,
+            "symbols": [
+              "build_criterion",
+              "train_epoch",
+              "validate",
+              "freeze_backbone",
+              "unfreeze_all",
+              "main"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "batchIndex": 5,
+      "files": [
+        {
+          "path": "scripts/PIE_sequence_Dataset_1.py",
+          "language": "python",
+          "sizeLines": 201,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/preprocess_data.py",
+          "language": "python",
+          "sizeLines": 111,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/preprocess_data_lmdb.py",
+          "language": "python",
+          "sizeLines": 168,
+          "fileCategory": "code"
+        }
+      ],
+      "batchImportData": {
+        "scripts/PIE_sequence_Dataset_1.py": [],
+        "scripts/preprocess_data.py": [
+          "scripts/PIE_sequence_Dataset_1.py"
+        ],
+        "scripts/preprocess_data_lmdb.py": [
+          "scripts/PIE_sequence_Dataset_1.py"
+        ]
+      },
+      "neighborMap": {
+        "scripts/PIE_sequence_Dataset_1.py": [
+          {
+            "path": "main.py",
+            "batchIndex": 2,
+            "symbols": [
+              "inference_collate_fn"
+            ]
+          },
+          {
+            "path": "visualize_comparison.py",
+            "batchIndex": 1,
+            "symbols": [
+              "parse_args",
+              "load_model",
+              "get_pie_annotations",
+              "generate_sequences_from_annotations",
+              "draw_labels",
+              "draw_comparison",
+              "process_pie_dataset",
+              "process_custom_video",
+              "main"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "batchIndex": 6,
+      "files": [
+        {
+          "path": "CLAUDE.md",
+          "language": "markdown",
+          "sizeLines": 151,
+          "fileCategory": "docs"
+        },
+        {
+          "path": "GUIDELINE.md",
+          "language": "markdown",
+          "sizeLines": 63,
+          "fileCategory": "docs"
+        },
+        {
+          "path": "README.md",
+          "language": "markdown",
+          "sizeLines": 118,
+          "fileCategory": "docs"
+        },
+        {
+          "path": "requirements.txt",
+          "language": "txt",
+          "sizeLines": 50,
+          "fileCategory": "docs"
+        },
+        {
+          "path": "run_env.bat",
+          "language": "batch",
+          "sizeLines": 3,
+          "fileCategory": "script"
+        }
+      ],
+      "batchImportData": {
+        "CLAUDE.md": [],
+        "GUIDELINE.md": [],
+        "README.md": [],
+        "requirements.txt": [],
+        "run_env.bat": []
+      },
+      "neighborMap": {}
+    },
+    {
+      "batchIndex": 7,
+      "files": [
+        {
+          "path": ".claude/settings.local.json",
+          "language": "json",
+          "sizeLines": 23,
+          "fileCategory": "config"
+        },
+        {
+          "path": ".claude/skills/code-review-protocol/SKILL.md",
+          "language": "markdown",
+          "sizeLines": 139,
+          "fileCategory": "docs"
+        },
+        {
+          "path": ".claude/skills/debugging-playbook/references/debug-checklist.md",
+          "language": "markdown",
+          "sizeLines": 34,
+          "fileCategory": "docs"
+        },
+        {
+          "path": ".claude/skills/debugging-playbook/SKILL.md",
+          "language": "markdown",
+          "sizeLines": 140,
+          "fileCategory": "docs"
+        },
+        {
+          "path": ".claude/skills/experiment-tracking/references/baseline-results.md",
+          "language": "markdown",
+          "sizeLines": 39,
+          "fileCategory": "docs"
+        },
+        {
+          "path": ".claude/skills/experiment-tracking/SKILL.md",
+          "language": "markdown",
+          "sizeLines": 122,
+          "fileCategory": "docs"
+        },
+        {
+          "path": ".gitattributes",
+          "language": "unknown",
+          "sizeLines": 2,
+          "fileCategory": "code"
+        },
+        {
+          "path": ".understand-anything/.understandignore",
+          "language": "unknown",
+          "sizeLines": 39,
+          "fileCategory": "code"
+        },
+        {
+          "path": "extract_frames.py",
+          "language": "python",
+          "sizeLines": 45,
+          "fileCategory": "code"
+        },
+        {
+          "path": "final_ablation_verification.py",
+          "language": "python",
+          "sizeLines": 131,
+          "fileCategory": "code"
+        },
+        {
+          "path": "label_count.py",
+          "language": "python",
+          "sizeLines": 64,
+          "fileCategory": "code"
+        },
+        {
+          "path": "models/__init__.py",
+          "language": "python",
+          "sizeLines": 0,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/__init__.py",
+          "language": "python",
+          "sizeLines": 0,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/augment_sequences.py",
+          "language": "python",
+          "sizeLines": 146,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/balance_sequences.py",
+          "language": "python",
+          "sizeLines": 146,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/generate_sequences.py",
+          "language": "python",
+          "sizeLines": 100,
+          "fileCategory": "code"
+        },
+        {
+          "path": "scripts/split_balance_sequences_all.py",
+          "language": "python",
+          "sizeLines": 228,
+          "fileCategory": "code"
+        },
+        {
+          "path": "test_ablation_structure_clean.py",
+          "language": "python",
+          "sizeLines": 60,
+          "fileCategory": "code"
+        },
+        {
+          "path": "visualize_gt.py",
+          "language": "python",
+          "sizeLines": 437,
+          "fileCategory": "code"
+        }
+      ],
+      "batchImportData": {
+        ".claude/settings.local.json": [],
+        ".claude/skills/code-review-protocol/SKILL.md": [],
+        ".claude/skills/debugging-playbook/references/debug-checklist.md": [],
+        ".claude/skills/debugging-playbook/SKILL.md": [],
+        ".claude/skills/experiment-tracking/references/baseline-results.md": [],
+        ".claude/skills/experiment-tracking/SKILL.md": [],
+        ".gitattributes": [],
+        ".understand-anything/.understandignore": [],
+        "extract_frames.py": [],
+        "final_ablation_verification.py": [],
+        "label_count.py": [],
+        "models/__init__.py": [],
+        "scripts/__init__.py": [],
+        "scripts/augment_sequences.py": [],
+        "scripts/balance_sequences.py": [],
+        "scripts/generate_sequences.py": [],
+        "scripts/split_balance_sequences_all.py": [],
+        "test_ablation_structure_clean.py": [],
+        "visualize_gt.py": []
+      },
+      "neighborMap": {}
+    }
+  ]
+}

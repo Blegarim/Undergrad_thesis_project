@@ -1,0 +1,130 @@
+{
+  "scriptCompleted": true,
+  "stats": {
+    "filesScanned": 48,
+    "filesWithImports": 13,
+    "totalEdges": 59
+  },
+  "importMap": {
+    ".claude/settings.local.json": [],
+    ".claude/skills/code-review-protocol/SKILL.md": [],
+    ".claude/skills/debugging-playbook/references/debug-checklist.md": [],
+    ".claude/skills/debugging-playbook/SKILL.md": [],
+    ".claude/skills/experiment-tracking/references/baseline-results.md": [],
+    ".claude/skills/experiment-tracking/SKILL.md": [],
+    ".gitattributes": [],
+    ".understand-anything/.understandignore": [],
+    "ablation_usage_example.py": [
+      "models/AblationModels.py"
+    ],
+    "class_imbalance_strategies.py": [],
+    "CLAUDE.md": [],
+    "config.py": [],
+    "extract_frames.py": [],
+    "final_ablation_verification.py": [],
+    "GUIDELINE.md": [],
+    "imbalance_config.py": [
+      "class_imbalance_strategies.py"
+    ],
+    "label_count.py": [],
+    "main.py": [
+      "config.py",
+      "models/Cross_Attention_Module.py",
+      "models/Motion_Encoder.py",
+      "models/Unified_Module.py",
+      "models/Vision_Transformer.py",
+      "scripts/pedestrian_detection.py",
+      "scripts/PIE_sequence_Dataset_1.py"
+    ],
+    "models/__init__.py": [],
+    "models/AblationModels.py": [],
+    "models/Cross_Attention_Module.py": [],
+    "models/Motion_Encoder.py": [],
+    "models/Unified_Module.py": [],
+    "models/Vision_Transformer.py": [],
+    "onnx/onnx_export.py": [
+      "config.py",
+      "models/Motion_Encoder.py",
+      "models/Unified_Module.py",
+      "models/Vision_Transformer.py"
+    ],
+    "README.md": [],
+    "requirements.txt": [],
+    "run_env.bat": [],
+    "scripts/__init__.py": [],
+    "scripts/augment_sequences.py": [],
+    "scripts/balance_sequences.py": [],
+    "scripts/generate_sequences.py": [],
+    "scripts/lmdb_dataset.py": [],
+    "scripts/model_utils.py": [
+      "models/AblationModels.py",
+      "models/Cross_Attention_Module.py",
+      "models/Unified_Module.py"
+    ],
+    "scripts/pedestrian_detection.py": [],
+    "scripts/PIE_sequence_Dataset_1.py": [],
+    "scripts/preprocess_data_lmdb.py": [
+      "scripts/PIE_sequence_Dataset_1.py"
+    ],
+    "scripts/preprocess_data.py": [
+      "scripts/PIE_sequence_Dataset_1.py"
+    ],
+    "scripts/split_balance_sequences_all.py": [],
+    "scripts/train_utils.py": [],
+    "test_ablation_models.py": [
+      "config.py",
+      "models/AblationModels.py",
+      "models/Cross_Attention_Module.py",
+      "models/Motion_Encoder.py",
+      "models/Unified_Module.py",
+      "models/Vision_Transformer.py"
+    ],
+    "test_ablation_structure_clean.py": [],
+    "test_imbalance_setup.py": [
+      "class_imbalance_strategies.py",
+      "imbalance_config.py"
+    ],
+    "test.py": [
+      "config.py",
+      "models/AblationModels.py",
+      "models/Cross_Attention_Module.py",
+      "models/Motion_Encoder.py",
+      "models/Unified_Module.py",
+      "models/Vision_Transformer.py",
+      "scripts/lmdb_dataset.py",
+      "scripts/model_utils.py",
+      "train.py"
+    ],
+    "train_two_phase.py": [
+      "class_imbalance_strategies.py",
+      "config.py",
+      "models/Cross_Attention_Module.py",
+      "models/Motion_Encoder.py",
+      "models/Unified_Module.py",
+      "models/Vision_Transformer.py",
+      "scripts/lmdb_dataset.py",
+      "scripts/train_utils.py"
+    ],
+    "train.py": [
+      "config.py",
+      "models/Cross_Attention_Module.py",
+      "models/Motion_Encoder.py",
+      "models/Unified_Module.py",
+      "models/Vision_Transformer.py",
+      "scripts/lmdb_dataset.py",
+      "scripts/model_utils.py",
+      "scripts/train_utils.py"
+    ],
+    "visualize_comparison.py": [
+      "config.py",
+      "models/AblationModels.py",
+      "models/Cross_Attention_Module.py",
+      "models/Motion_Encoder.py",
+      "models/Unified_Module.py",
+      "models/Vision_Transformer.py",
+      "scripts/model_utils.py",
+      "scripts/PIE_sequence_Dataset_1.py"
+    ],
+    "visualize_gt.py": []
+  }
+}

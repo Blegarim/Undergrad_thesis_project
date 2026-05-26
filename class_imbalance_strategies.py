@@ -305,10 +305,7 @@ class ThresholdOptimizer:
                 
                 for task in task_names:
                     if task == 'crosses':
-                        if hasattr(model.cross_attention, 'use_frame_crosses') and model.cross_attention.use_frame_crosses:
-                            logits = outputs['crosses_frame']
-                        else:
-                            logits = outputs['crosses_pooled']
+                        logits = outputs['crosses_frame']
                     else:
                         logits = outputs[task]
                         
