@@ -2,15 +2,12 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
 from sklearn.metrics import f1_score, precision_score, recall_score
 
 from models.Vision_Transformer import ViT_Hierarchical
 from models.Motion_Encoder import MotionEncoder
-from models.Cross_Attention_Module import CrossAttentionModule
-from models.Unified_Module import EnsembleModel
 from config import vit_args_config, motion_enc_args_config, get_unified_dim_model
 from scripts.lmdb_dataset import LMDBChunkDataset
 from scripts.model_utils import get_model, model_forward
@@ -52,6 +49,9 @@ def compute_class_weights_from_lmdb(lmdb_paths, device):
                         meta = pickle.loads(value)
                         for task in counts:
                             label = int(meta.get(task, 0))
+                            if task == 'crosses':
+                                # Mirror remap_cross_labels: raw {-1, 0, 1} → {0, 1}
+                                label = max(0, min(1, label))
                             if label in [0, 1]:
                                 counts[task][label] += 1
         finally:
@@ -164,8 +164,6 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, model_type,
             optimizer.step()
         total_loss += total_batch_loss.item()
 
-        del outputs, logits, targets, head_loss
-
         progress_bar.set_postfix({'loss':f'{total_batch_loss.item():.4f}'})
 
     progress_bar.close()
@@ -176,7 +174,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, model_type,
     torch.cuda.empty_cache()
     return avg_loss
 
-def validate_one_epoch(model, dataloader, criterion, device, model_type, use_amp=False, use_pin_memory=False):
+def validate_one_epoch(model, dataloader, criterion, device, model_type, loss_weight=None, use_amp=False, use_pin_memory=False):
     """
     Returns:
       - loss_sum: float (sum of per-sample losses across the dataloader)
@@ -186,9 +184,10 @@ def validate_one_epoch(model, dataloader, criterion, device, model_type, use_amp
       - all_targets: dict mapping head -> list of targets (for F1 computation)
     """
     model.eval()
+    if loss_weight is None:
+        loss_weight = {'actions': 1.0, 'looks': 1.0, 'crosses': 1.0}
     loss_sum = 0.0
     correct = {}
-    total = {}
     all_preds = {name: [] for name in ["actions", "looks", "crosses"]}
     all_targets = {name: [] for name in ["actions", "looks", "crosses"]}
     samples = 0
@@ -216,13 +215,12 @@ def validate_one_epoch(model, dataloader, criterion, device, model_type, use_amp
                     logits = logits.float()
                 targets = labels[name]
                 loss_i = criterion[name](logits, targets)
-                # convert mean loss to sum
-                batch_loss += loss_i.item() * batch_size
+                # convert mean loss to sum; mirror train_one_chunk's per-head weighting
+                batch_loss += loss_weight.get(name, 1.0) * loss_i.item() * batch_size
 
                 _, preds = torch.max(logits, 1)
                 correct[name] = correct.get(name, 0) + (preds == targets).sum().item()
-                total[name] = total.get(name, 0) + targets.size(0)
-                
+
                 all_preds[name].extend(preds.cpu().numpy().tolist())
                 all_targets[name].extend(targets.cpu().numpy().tolist())
 
@@ -235,14 +233,6 @@ def validate_one_epoch(model, dataloader, criterion, device, model_type, use_amp
     # Note: return raw correct counts and predictions (not per-chunk accuracies)
     return loss_sum, samples, correct, all_preds, all_targets
     
-def finetune(model, enable_finetune=False):
-    if not enable_finetune:
-        return
-    for name, param in model.named_parameters():
-        param.requires_grad = False
-        if ('cross_attention' in name) or ('classifier' in name) or ('cross_attn' in name):
-            param.requires_grad = True
-
 def main():
     import argparse
     parser = argparse.ArgumentParser(description='Train pedestrian behavior prediction model')
@@ -336,8 +326,6 @@ def main():
             print(f"Checkpoint mismatch: missing={missing}, unexpected={unexpected}")
     else:
         print(f'Checkpoint {checkpoint_path} not found. Starting from scratch.')
-
-    finetune(model, enable_finetune=False)
 
     train_chunk_folder = ['preprocessed_train', 'preprocessed_train_aug']
     val_chunk_folder = 'preprocessed_val'
@@ -557,6 +545,7 @@ def main():
                 criterion,
                 device,
                 args.model_type,
+                loss_weight=loss_weight,
                 use_amp=use_amp,
                 use_pin_memory=use_pin_memory,
             )
