@@ -15,7 +15,8 @@
       "Bash(mkdir -p tests)",
       "Bash(python tests/smoke_train_test.py)",
       "Bash(tee tests/smoke_run.log)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(mkdir -p /home/user/Undergrad_thesis_project/.claude/hooks)"
     ],
     "additionalDirectories": [
       "c:\\Users\\LENOVO\\Desktop\\Undergrad_Project\\Undergrad_thesis_project"
