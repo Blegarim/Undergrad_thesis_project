@@ -158,7 +158,7 @@ dataloader = DataLoader(
 # ============================================================
 print("Running inference...")
 batch_size = 32
-all_preds = {'actions': [], 'looks': [], 'crosses_frame': [], 'crosses_pooled': []}
+all_preds = {'actions': [], 'looks': [], 'crosses_frame': []}
 all_metadata = []
 
 with torch.no_grad():
@@ -180,10 +180,6 @@ with torch.no_grad():
                 # This is used for main prediction (aligned with train.py)
                 batch_preds = outputs[key].argmax(dim=1).cpu().tolist()
                 all_preds['crosses_frame'].extend(batch_preds)
-            elif key == 'crosses_pooled':
-                # Store for reference (aligned with train.py)
-                batch_preds = outputs[key].argmax(dim=1).cpu().tolist()
-                all_preds['crosses_pooled'].extend(batch_preds)
             else:
                 # actions, looks
                 batch_preds = outputs[key].argmax(dim=1).cpu().tolist()

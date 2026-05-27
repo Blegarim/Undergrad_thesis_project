@@ -49,8 +49,6 @@ class MotionOnlyModel(nn.Module):
             if key != "crosses":
                 logits[key] = head(pooled)
         
-        # Crosses classification (both pooled and frame-level)
-        pooled_crosses = self.classifier["crosses"](pooled)
         frame_logits = self.crosses_frame_head(motion_feats)  # [B, T, C]
         
         # Frame pooling for crosses
@@ -63,7 +61,6 @@ class MotionOnlyModel(nn.Module):
         else:
             raise ValueError(f"Unsupported frame_pool: {frame_pool}")
         
-        logits["crosses_pooled"] = pooled_crosses
         logits["crosses_frame"] = frame_crosses
         
         return logits
@@ -116,8 +113,6 @@ class VisualOnlyModel(nn.Module):
             if key != "crosses":
                 logits[key] = head(pooled)
         
-        # Crosses classification (both pooled and frame-level)
-        pooled_crosses = self.classifier["crosses"](pooled)
         frame_logits = self.crosses_frame_head(image_feats)  # [B, T, C]
         
         # Frame pooling for crosses
@@ -130,7 +125,6 @@ class VisualOnlyModel(nn.Module):
         else:
             raise ValueError(f"Unsupported frame_pool: {frame_pool}")
         
-        logits["crosses_pooled"] = pooled_crosses
         logits["crosses_frame"] = frame_crosses
         
         return logits
@@ -203,8 +197,6 @@ class VanillaConcatModel(nn.Module):
             if key != "crosses":
                 logits[key] = head(pooled)
         
-        # Crosses classification (both pooled and frame-level)
-        pooled_crosses = self.classifier["crosses"](pooled)
         frame_logits = self.crosses_frame_head(fused_feats)  # [B, T, C]
         
         # Frame pooling for crosses
@@ -217,7 +209,6 @@ class VanillaConcatModel(nn.Module):
         else:
             raise ValueError(f"Unsupported frame_pool: {frame_pool}")
         
-        logits["crosses_pooled"] = pooled_crosses
         logits["crosses_frame"] = frame_crosses
         
         return logits

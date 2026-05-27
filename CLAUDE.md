@@ -48,7 +48,7 @@ Motion seqs  → MotionEncoder (tight crop + motion) ──┘
 
 **Unified `d_model`**: `get_unified_dim_model()` → 128. All components share this — never change one without updating the others.
 
-**Output dict keys**: `actions`, `looks`, `crosses_pooled`, `crosses_frame`, `temporal_weights`. `crosses_frame` only present in full model and ablation models that implement it. `temporal_weights` is `[B, T]` softmax weights from the pooling MLP in `CrossAttentionModule` (full model only).
+**Output dict keys**: `actions`, `looks`, `crosses_frame`, `temporal_weights`. `crosses_frame` only present in full model and ablation models that implement it. `temporal_weights` is `[B, T]` softmax weights from the pooling MLP in `CrossAttentionModule` (full model only).
 
 ## Configuration (`config.py`)
 

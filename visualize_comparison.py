@@ -437,17 +437,11 @@ def process_pie_dataset(args):
                     else:
                         look_pred = outputs['looks'][i].item()
                     
-                    # For crosses, use crosses_frame (matching train.py)
                     if 'crosses_frame' in outputs:
                         if outputs['crosses_frame'].dim() == 2:
                             cross_pred = outputs['crosses_frame'][i].argmax(dim=0).item()
                         else:
                             cross_pred = outputs['crosses_frame'][i].item()
-                    elif 'crosses_pooled' in outputs:
-                        if outputs['crosses_pooled'].dim() == 2:
-                            cross_pred = outputs['crosses_pooled'][i].argmax(dim=0).item()
-                        else:
-                            cross_pred = outputs['crosses_pooled'][i].item()
                     else:
                         if outputs['crosses'].dim() == 2:
                             cross_pred = outputs['crosses'][i].argmax(dim=0).item()

@@ -61,8 +61,6 @@ class CrossAttentionModule(nn.Module):
             if key != "crosses":
                 logits[key] = head(pooled)
 
-        logits["crosses_pooled"] = self.classifier["crosses"](pooled)
-
         if self.use_frame_crosses:
             frame_logits = self.crosses_frame_head(attn_output)  # [B, T, C]
 

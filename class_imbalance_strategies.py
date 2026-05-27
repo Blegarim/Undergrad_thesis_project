@@ -22,7 +22,10 @@ class FocalLoss(nn.Module):
         super(FocalLoss, self).__init__()
         if isinstance(alpha, (list, tuple)):
             alpha = torch.tensor(alpha, dtype=torch.float32)
-        self.alpha = alpha
+        if isinstance(alpha, torch.Tensor):
+            self.register_buffer('alpha', alpha)
+        else:
+            self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
         
@@ -35,9 +38,7 @@ class FocalLoss(nn.Module):
             if isinstance(self.alpha, (float, int)):
                 alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
             elif isinstance(self.alpha, torch.Tensor):
-                # Ensure alpha tensor is on the same device as inputs
-                alpha = self.alpha.to(inputs.device)
-                alpha_t = alpha.gather(0, targets)
+                alpha_t = self.alpha.gather(0, targets)
             else:
                 alpha_t = 1.0
             focal_loss = alpha_t * focal_loss
@@ -174,16 +175,18 @@ class DynamicLossWeighting(nn.Module):
     """
     Dynamically adjusts loss weights based on task performance and class imbalance.
     """
+    TASK_INDEX = {'actions': 0, 'looks': 1, 'crosses': 2}
+
     def __init__(self, initial_weights=None, adaptive=True, patience=3):
         super(DynamicLossWeighting, self).__init__()
         self.adaptive = adaptive
         self.patience = patience
-        
+
         if initial_weights is None:
             self.weights = nn.Parameter(torch.tensor([1.0, 1.0, 1.0]))
         else:
             self.weights = nn.Parameter(torch.tensor(initial_weights))
-            
+
         self.performance_history = {'actions': [], 'looks': [], 'crosses': []}
         self.last_improvement = {'actions': 0, 'looks': 0, 'crosses': 0}
         
@@ -208,7 +211,7 @@ class DynamicLossWeighting(nn.Module):
                         
                 # Increase weight for tasks that aren't improving
                 if self.last_improvement[task] > self.patience:
-                    idx = ['actions', 'looks', 'crosses'].index(task)
+                    idx = self.TASK_INDEX[task]
                     with torch.no_grad():
                         self.weights[idx] *= 1.1
                     self.last_improvement[task] = 0
@@ -231,9 +234,8 @@ class DynamicLossWeighting(nn.Module):
     def get_weighted_loss(self, losses):
         """Apply dynamic weights to individual task losses."""
         weighted_loss = 0.0
-        for i, (task, loss) in enumerate(losses.items()):
-            # Ensure weights are on the same device as the loss
-            weight = self.weights[i]
+        for task, loss in losses.items():
+            weight = self.weights[self.TASK_INDEX[task]]
             if hasattr(loss, 'device'):
                 weight = weight.to(loss.device)
             elif self._device is not None:

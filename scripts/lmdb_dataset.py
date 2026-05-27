@@ -26,7 +26,7 @@ class LMDBChunkDataset(Dataset):
                 for key, _ in cursor:
                     key_str = key.decode()
                     if key_str.endswith("_meta"):
-                        seq_id = key_str.split("_")[0]
+                        seq_id = key_str[:-len("_meta")]
                         self.seq_ids.append(seq_id)
         finally:
             env.close()

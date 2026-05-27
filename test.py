@@ -460,9 +460,14 @@ def main():
         avg_metrics[name + "_p"] = precision
         avg_metrics[name + "_r"] = recall
 
-    avg_metrics["overall_acc"] = (
-        sum(v for k, v in avg_metrics.items() if k.endswith("_acc")) / 3.0
-    )
+    total_correct = 0
+    total_samples = 0
+    for name in all_labels_global.keys():
+        y_true = torch.cat(all_labels_global[name]).numpy()
+        y_pred = torch.cat(all_preds_global[name]).numpy()
+        total_correct += (y_true == y_pred).sum()
+        total_samples += len(y_true)
+    avg_metrics["overall_acc"] = total_correct / total_samples if total_samples > 0 else 0.0
 
     # ==== Threshold Optimization ====
     optimal_thresholds = {}
