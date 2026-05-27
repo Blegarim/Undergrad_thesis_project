@@ -130,13 +130,10 @@ def main():
         ])
     
     transform_tight = transforms.Compose([
-        transforms.Resize((128, 128)),
-        transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     transform_context = transforms.Compose([
         transforms.Resize((224, 224)),
-        transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     
@@ -152,7 +149,7 @@ def main():
     model = EnsembleModel(motion_enc, vit, cross_attention, d_model).to(device)
     
     batch_size = 4
-    num_workers = 4
+    num_workers = 6
     
     phase1_chunks = gather_chunks(['preprocessed_train_balanced'])
     phase2_chunks = gather_chunks(['preprocessed_train_augmented', 'preprocessed_train_augmented_dataaug'])
@@ -197,7 +194,9 @@ def main():
         val_metrics = []
         for chunk_path in val_chunks:
             dataset = LMDBChunkDataset(chunk_path, transform_tight, transform_context)
-            loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0, collate_fn=collate_fn)
+            loader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
+                              num_workers=num_workers, collate_fn=collate_fn,
+                              prefetch_factor=2 if num_workers > 0 else None)
             val_metrics.append(validate(model, loader, criterion, device, use_amp=use_amp))
             del dataset, loader
             gc.collect()
@@ -252,7 +251,9 @@ def main():
         val_metrics = []
         for chunk_path in val_chunks:
             dataset = LMDBChunkDataset(chunk_path, transform_tight, transform_context)
-            loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0, collate_fn=collate_fn)
+            loader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
+                              num_workers=num_workers, collate_fn=collate_fn,
+                              prefetch_factor=2 if num_workers > 0 else None)
             val_metrics.append(validate(model, loader, criterion, device, use_amp=use_amp))
             del dataset, loader
             gc.collect()
@@ -312,7 +313,9 @@ def main():
         val_metrics = []
         for chunk_path in val_chunks:
             dataset = LMDBChunkDataset(chunk_path, transform_tight, transform_context)
-            loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0, collate_fn=collate_fn)
+            loader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
+                              num_workers=num_workers, collate_fn=collate_fn,
+                              prefetch_factor=2 if num_workers > 0 else None)
             val_metrics.append(validate(model, loader, criterion, device, use_amp=use_amp))
             del dataset, loader
             gc.collect()

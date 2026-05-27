@@ -1,11 +1,9 @@
-import io
 import os
 import lmdb
 import pickle
 import torch
 from torch.utils.data import Dataset
-from PIL import Image
-from torchvision import transforms
+from torchvision.io import decode_jpeg
 
 class LMDBChunkDataset(Dataset):
     """
@@ -15,7 +13,7 @@ class LMDBChunkDataset(Dataset):
         self.lmdb_path = lmdb_path
         self._env = None
         self._pid = None
-        self.default_transform = transforms.ToTensor()
+        self.default_transform = torch.nn.Identity()
         self.transform_tight = transform_tight or self.default_transform
         self.transform_context = transform_context or self.default_transform
 
@@ -56,6 +54,12 @@ class LMDBChunkDataset(Dataset):
     def __len__(self):
         return len(self.seq_ids)
 
+    @staticmethod
+    def _decode_jpeg_buf(buf):
+        """Decode JPEG bytes to float32 [C,H,W] tensor in [0,1] via libjpeg-turbo."""
+        t = torch.frombuffer(bytearray(buf), dtype=torch.uint8)
+        return decode_jpeg(t).float().div_(255.0)
+
     def __getitem__(self, idx):
         seq_id = self.seq_ids[idx]
         env = self._get_env()
@@ -66,7 +70,6 @@ class LMDBChunkDataset(Dataset):
             looks = meta["looks"]
             crosses = meta["crosses"]
 
-            # Determine frame count from motion tensor
             T = motions.shape[0]
             imgs_tight, imgs_context = [], []
 
@@ -75,8 +78,8 @@ class LMDBChunkDataset(Dataset):
                 cbuf = txn.get(f"{seq_id}_{k}_context".encode())
                 if tbuf is None or cbuf is None:
                     continue
-                timg = Image.open(io.BytesIO(tbuf)).convert("RGB")
-                cimg = Image.open(io.BytesIO(cbuf)).convert("RGB")
+                timg = self._decode_jpeg_buf(tbuf)
+                cimg = self._decode_jpeg_buf(cbuf)
                 if self.transform_tight:
                     timg = self.transform_tight(timg)
                 if self.transform_context:

@@ -283,7 +283,7 @@ def main():
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
     num_epochs = 30
-    num_workers = 4
+    num_workers = 6
     num_classes_dict = {
             'actions': 2,
             'looks': 2,
@@ -353,14 +353,11 @@ def main():
     os.makedirs('best_model_outputs', exist_ok=True)
 
     transform_tight = transforms.Compose([
-        transforms.Resize((128, 128)),
-        transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
     ])
     transform_context = transforms.Compose([
         transforms.Resize((224, 224)),
-        transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
     ])
@@ -530,14 +527,16 @@ def main():
                 transform_context=transform_context
             )
 
-            val_loader = DataLoader(
-                val_dataset,
+            val_loader_kwargs = dict(
                 batch_size=batch_size,
                 shuffle=False,
-                num_workers=0,
+                num_workers=num_workers,
                 collate_fn=collate_fn,
-                pin_memory=use_pin_memory
+                pin_memory=use_pin_memory,
             )
+            if num_workers > 0:
+                val_loader_kwargs['prefetch_factor'] = 2
+            val_loader = DataLoader(val_dataset, **val_loader_kwargs)
 
             chunk_loss_sum, chunk_n, chunk_corrects, chunk_preds, chunk_targets = validate_one_epoch(
                 model,
