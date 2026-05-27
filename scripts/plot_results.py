@@ -1,6 +1,58 @@
 """
 Standalone CLI script that reads CSV/NPZ artifacts from training and
 evaluation runs and writes PNG figures to plots/.
+
+Usage
+-----
+Run from the project root. Each phase is independent — pass only the
+flags for the figures you want. Outputs are written to ``--out_dir``
+(default ``plots/``), which is created if missing.
+
+    python scripts/plot_results.py [options]
+
+Phase 1 — Training curves (loss + per-head F1/accuracy):
+    python scripts/plot_results.py \
+        --train_log results/training_log.csv \
+        --out_dir plots/
+
+    Input: training_log CSV with columns ``Epoch``, ``Avg Train Loss``,
+    ``Val Loss`` and either ``{Actions,Looks,Crosses} F1`` (+ optional
+    ``Macro F1``) or ``{Actions,Looks,Crosses} Acc`` + ``Overall Val Acc``.
+    Outputs: ``loss_curves.png``, ``per_head_f1_curves.png``.
+
+Phase 2 — Precision-recall and threshold sweep:
+    python scripts/plot_results.py \
+        --predictions results/predictions.csv \
+        --out_dir plots/
+
+    Input: per-sample predictions CSV with columns
+    ``{actions,looks,crosses}_true`` and ``{actions,looks,crosses}_prob_1``.
+    Outputs: ``pr_curves.png`` (with t=0.5 and best-F1 markers),
+    ``f1_threshold.png``.
+
+Phase 3 — Ablation comparison bar charts:
+    python scripts/plot_results.py \
+        --ablation_logs full=results/test_full.csv,motion_only=results/test_motion.csv,visual_only=results/test_visual.csv,vanilla_concat=results/test_concat.csv \
+        --out_dir plots/
+
+    Input: comma-separated ``name=path`` pairs pointing at test-log CSVs
+    that contain a summary table (either under a ``=== Default Threshold
+    (0.5) ===`` header or a bare ``Heads,Accuracy,F1,AUC,...`` row).
+    A ``full`` entry adds a macro-metric reference line.
+    Outputs: ``ablation_f1.png``, ``ablation_auc.png``.
+
+Phase 4 — Temporal attention heatmap:
+    python scripts/plot_results.py \
+        --temporal_weights results/temporal_weights.npz \
+        --out_dir plots/
+
+    Input: NPZ with key ``temporal_weights`` of shape ``[N, T]`` and at
+    least one of ``{actions,looks,crosses}_true`` for class splitting.
+    Output: ``temporal_attention.png`` (mean ± std weight per frame,
+    split by class).
+
+Phases can be combined in one invocation; only the flags supplied are
+run. With no flags, the script prints a hint and exits.
 """
 
 import argparse
