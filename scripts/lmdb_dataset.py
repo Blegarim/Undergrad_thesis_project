@@ -3,7 +3,7 @@ import lmdb
 import pickle
 import torch
 from torch.utils.data import Dataset
-from torchvision.io import decode_jpeg
+from torchvision.io import decode_jpeg, ImageReadMode
 
 class LMDBChunkDataset(Dataset):
     """
@@ -58,7 +58,7 @@ class LMDBChunkDataset(Dataset):
     def _decode_jpeg_buf(buf):
         """Decode JPEG bytes to float32 [C,H,W] tensor in [0,1] via libjpeg-turbo."""
         t = torch.frombuffer(bytearray(buf), dtype=torch.uint8)
-        return decode_jpeg(t).float().div_(255.0)
+        return decode_jpeg(t, mode=ImageReadMode.RGB).float().div_(255.0)
 
     def __getitem__(self, idx):
         seq_id = self.seq_ids[idx]
