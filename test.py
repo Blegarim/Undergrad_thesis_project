@@ -322,7 +322,12 @@ def main():
     test_chunk_folder = "preprocessed_test"
     log_dir = "training_log"
     os.makedirs(log_dir, exist_ok=True)
-    base_transforms = transforms.Compose([
+    transform_tight = transforms.Compose([
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
+    ])
+    transform_context = transforms.Compose([
+        transforms.Resize((224, 224)),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225]),
     ])
@@ -387,8 +392,8 @@ def main():
 
         dataset = LMDBChunkDataset(
             chunk_path,
-            transform_tight=base_transforms,
-            transform_context=base_transforms,
+            transform_tight=transform_tight,
+            transform_context=transform_context,
         )
         dataloader = DataLoader(
             dataset,
