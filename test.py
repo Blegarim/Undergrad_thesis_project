@@ -322,8 +322,12 @@ def main():
     test_chunk_folder = "preprocessed_test"
     log_dir = "training_log"
     os.makedirs(log_dir, exist_ok=True)
-    base_transforms = transforms.Compose([
-        transforms.ToTensor(),
+    transform_tight = transforms.Compose([
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
+    ])
+    transform_context = transforms.Compose([
+        transforms.Resize((224, 224)),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225]),
     ])
@@ -388,8 +392,8 @@ def main():
 
         dataset = LMDBChunkDataset(
             chunk_path,
-            transform_tight=base_transforms,
-            transform_context=base_transforms,
+            transform_tight=transform_tight,
+            transform_context=transform_context,
         )
         dataloader = DataLoader(
             dataset,
@@ -456,9 +460,14 @@ def main():
         avg_metrics[name + "_p"] = precision
         avg_metrics[name + "_r"] = recall
 
-    avg_metrics["overall_acc"] = (
-        sum(v for k, v in avg_metrics.items() if k.endswith("_acc")) / 3.0
-    )
+    total_correct = 0
+    total_samples = 0
+    for name in all_labels_global.keys():
+        y_true = torch.cat(all_labels_global[name]).numpy()
+        y_pred = torch.cat(all_preds_global[name]).numpy()
+        total_correct += (y_true == y_pred).sum()
+        total_samples += len(y_true)
+    avg_metrics["overall_acc"] = total_correct / total_samples if total_samples > 0 else 0.0
 
     # ==== Threshold Optimization ====
     optimal_thresholds = {}

@@ -149,8 +149,7 @@ USAGE_EXAMPLES = """
 The ablation models produce output in the same format as the original:
 {
     'actions': [B, 2],
-    'looks': [B, 2], 
-    'crosses_pooled': [B, 2],
+    'looks': [B, 2],
     'crosses_frame': [B, 2]
 }
 

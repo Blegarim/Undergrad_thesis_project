@@ -141,7 +141,7 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, model_type,
         with torch.amp.autocast('cuda', enabled=use_amp):
             outputs = model_forward(model, model_type, images_tight, images_context, motions)
 
-            total_batch_loss = torch.zeros(1, device=device)[0]
+            total_batch_loss = torch.tensor(0.0, device=device)
             for name in ["actions", "looks", "crosses"]:
                 if name == "crosses":
                     logits = outputs["crosses_frame"]
@@ -167,12 +167,12 @@ def train_one_chunk(model, dataloader, criterion, optimizer, device, model_type,
         progress_bar.set_postfix({'loss':f'{total_batch_loss.item():.4f}'})
 
     progress_bar.close()
-    if len(dataloader) == 0:
-        return float('nan')  
-    avg_loss = total_loss / len(dataloader)
-    tqdm.write(f"Average chunk Loss: {avg_loss:.4f}")
+    n_batches = len(dataloader)
+    if n_batches == 0:
+        return 0.0, 0
+    tqdm.write(f"Average chunk Loss: {total_loss / n_batches:.4f}")
     torch.cuda.empty_cache()
-    return avg_loss
+    return total_loss, n_batches
 
 def validate_one_epoch(model, dataloader, criterion, device, model_type, loss_weight=None, use_amp=False, use_pin_memory=False):
     """
@@ -283,7 +283,7 @@ def main():
     vit_args = vit_args_config()
     motion_enc_args = motion_enc_args_config()
     num_epochs = 30
-    num_workers = 4
+    num_workers = 6
     num_classes_dict = {
             'actions': 2,
             'looks': 2,
@@ -353,14 +353,11 @@ def main():
     os.makedirs('best_model_outputs', exist_ok=True)
 
     transform_tight = transforms.Compose([
-        transforms.Resize((128, 128)),
-        transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
     ])
     transform_context = transforms.Compose([
         transforms.Resize((224, 224)),
-        transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
     ])
@@ -376,7 +373,8 @@ def main():
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch + 1}/{num_epochs}")
         random.shuffle(train_chunk_files)
-        epoch_loss = []
+        epoch_loss_sum = 0.0
+        epoch_n_batches = 0
 
         preload = min(3, len(train_chunk_files))
         for i in range(preload):
@@ -385,118 +383,114 @@ def main():
             p.start()
             processes[i] = p
 
-        for chunk_idx, chunk_path in enumerate(train_chunk_files):
-            # Collect queue results until desired chunk
-            try:
-                while chunk_idx not in results:
-                    idx, status, payload = queue.get(timeout=300)  # seconds (tunable)
-                    results[idx] = (status, payload)
-            except Empty:
-                print(f"Timeout waiting for chunk {chunk_idx} — terminating associated process")
+        try:
+            for chunk_idx, chunk_path in enumerate(train_chunk_files):
+                # Collect queue results until desired chunk
+                try:
+                    while chunk_idx not in results:
+                        idx, status, payload = queue.get(timeout=300)
+                        results[idx] = (status, payload)
+                except Empty:
+                    print(f"Timeout waiting for chunk {chunk_idx} — terminating associated process")
+                    proc = processes.pop(chunk_idx, None)
+                    if proc is not None:
+                        proc.terminate()
+                        proc.join()
+                    continue
+                status, payload = results.pop(chunk_idx)
+
                 proc = processes.pop(chunk_idx, None)
                 if proc is not None:
-                    proc.terminate()
                     proc.join()
-                continue
-            status, payload = results.pop(chunk_idx)
 
-            # Join the process that produce this chunk
-            proc = processes.pop(chunk_idx, None)
-            if proc is not None:
-                proc.join()
-            
-            if status == 'err':
-                print(f'Failed to preload {chunk_path}: {payload}')
-                continue
-            lmdb_path = payload
+                if status == 'err':
+                    print(f'Failed to preload {chunk_path}: {payload}')
+                    continue
+                lmdb_path = payload
 
-            del payload
+                del payload
 
-            dataset = LMDBChunkDataset(lmdb_path, transform_tight=transform_tight, transform_context=transform_context)
-            loader_kwargs = dict(
-                batch_size=batch_size,
-                shuffle=True,
-                num_workers=num_workers,
-                collate_fn=collate_fn,
-                pin_memory=use_pin_memory,
-                persistent_workers=False,
-            )
-            if num_workers > 0:
-                loader_kwargs['prefetch_factor'] = 2
+                dataset = LMDBChunkDataset(lmdb_path, transform_tight=transform_tight, transform_context=transform_context)
+                loader_kwargs = dict(
+                    batch_size=batch_size,
+                    shuffle=True,
+                    num_workers=num_workers,
+                    collate_fn=collate_fn,
+                    pin_memory=use_pin_memory,
+                    persistent_workers=False,
+                )
+                if num_workers > 0:
+                    loader_kwargs['prefetch_factor'] = 2
 
-            if use_weighted_sampler:
-                cached = weight_cache.get(lmdb_path)
-                if cached is None:
-                    weights, counts = build_sampler_weights(
-                        lmdb_path,
-                        dataset.seq_ids,
-                        cross_pow=sampler_powers["crosses"],
-                        action_pow=sampler_powers["actions"],
-                        look_pow=sampler_powers["looks"],
+                if use_weighted_sampler:
+                    cached = weight_cache.get(lmdb_path)
+                    if cached is None:
+                        weights, counts = build_sampler_weights(
+                            lmdb_path,
+                            dataset.seq_ids,
+                            cross_pow=sampler_powers["crosses"],
+                            action_pow=sampler_powers["actions"],
+                            look_pow=sampler_powers["looks"],
+                        )
+                        weight_cache[lmdb_path] = (weights, counts)
+                    else:
+                        weights, counts = cached
+
+                    sampler = WeightedRandomSampler(
+                        weights=torch.DoubleTensor(weights),
+                        num_samples=len(weights),
+                        replacement=True,
                     )
-                    weight_cache[lmdb_path] = (weights, counts)
-                else:
-                    weights, counts = cached
+                    loader_kwargs["sampler"] = sampler
+                    loader_kwargs["shuffle"] = False
+                    print(
+                        "Sampler counts: "
+                        f"actions={dict(counts['actions'])} "
+                        f"looks={dict(counts['looks'])} "
+                        f"crosses={dict(counts['crosses'])} "
+                        f"powers={sampler_powers}"
+                    )
 
-                sampler = WeightedRandomSampler(
-                    weights=torch.DoubleTensor(weights),
-                    num_samples=len(weights),
-                    replacement=True,
+                loader = DataLoader(dataset, **loader_kwargs)
+                print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] {len(loader)} batches from {chunk_path}")
+
+                chunk_loss_sum, chunk_n_batches = train_one_chunk(
+                    model,
+                    loader,
+                    criterion,
+                    optimizer,
+                    device,
+                    args.model_type,
+                    loss_weight=loss_weight,
+                    scaler=scaler,
+                    use_amp=use_amp,
+                    use_pin_memory=use_pin_memory,
                 )
-                loader_kwargs["sampler"] = sampler
-                loader_kwargs["shuffle"] = False
-                print(
-                    "Sampler counts: "
-                    f"actions={dict(counts['actions'])} "
-                    f"looks={dict(counts['looks'])} "
-                    f"crosses={dict(counts['crosses'])} "
-                    f"powers={sampler_powers}"
-                )
+                epoch_loss_sum += chunk_loss_sum
+                epoch_n_batches += chunk_n_batches
 
-            loader = DataLoader(dataset, **loader_kwargs)
-            print(f"\n[Chunk {chunk_idx + 1}/{len(train_chunk_files)}] {len(loader)} batches from {chunk_path}")
-            
-            avg_loss = train_one_chunk(
-                model,
-                loader,
-                criterion,
-                optimizer,
-                device,
-                args.model_type,
-                loss_weight=loss_weight,
-                scaler=scaler,
-                use_amp=use_amp,
-                use_pin_memory=use_pin_memory,
-            )
-            epoch_loss.append(avg_loss)
+                del lmdb_path, dataset, loader
+                if device.type == "cuda":
+                    torch.cuda.empty_cache()
+                gc.collect()
 
-            del lmdb_path, dataset, loader
-            if device.type == "cuda":
-                torch.cuda.empty_cache()
-            gc.collect()
+                next_idx = chunk_idx + preload
+                if next_idx < len(train_chunk_files):
+                    wait_for_memory(threshold=96, interval=1)
+                    p = mp.Process(target=mp_async_load, args=(next_idx, train_chunk_files[next_idx], queue))
+                    p.start()
+                    processes[next_idx] = p
 
-            next_idx = chunk_idx + preload
-            if next_idx < len(train_chunk_files):
-                wait_for_memory(threshold=96, interval=1)
-                p = mp.Process(target=mp_async_load, args=(next_idx, train_chunk_files[next_idx], queue))
-                p.start()
-                processes[next_idx] = p
-
-        # collect any remaining queue items and join remaining processes
-        remaining = len(processes)
-        for _ in range(remaining):
-            try:
-                idx, status, payload = queue.get(timeout=2)
-                # discard or free payload immediately
-                if status == 'ok':
-                    del payload
-                results.pop(idx, None)
-            except Exception:
-                pass
-
-        for idx, proc in list(processes.items()):
-            proc.join()
-            processes.pop(idx, None)
+        finally:
+            for idx, proc in list(processes.items()):
+                proc.terminate()
+                proc.join()
+            processes.clear()
+            while not queue.empty():
+                try:
+                    queue.get_nowait()
+                except Exception:
+                    break
 
         # final cleanup — clear results to prevent stale entries bleeding into the next epoch
         results.clear()
@@ -504,10 +498,10 @@ def main():
         torch.cuda.empty_cache()
 
         # ---- end of chunks ----
-        if len(epoch_loss) == 0:
+        if epoch_n_batches == 0:
             avg_epoch_loss = float('nan')
         else:
-            avg_epoch_loss = sum(epoch_loss) / len(epoch_loss)
+            avg_epoch_loss = epoch_loss_sum / epoch_n_batches
         print(f"Epoch {epoch + 1} average loss: {avg_epoch_loss:.4f}")
 
         # Save model with model type suffix
@@ -530,14 +524,16 @@ def main():
                 transform_context=transform_context
             )
 
-            val_loader = DataLoader(
-                val_dataset,
+            val_loader_kwargs = dict(
                 batch_size=batch_size,
                 shuffle=False,
-                num_workers=0,
+                num_workers=num_workers,
                 collate_fn=collate_fn,
-                pin_memory=use_pin_memory
+                pin_memory=use_pin_memory,
             )
+            if num_workers > 0:
+                val_loader_kwargs['prefetch_factor'] = 2
+            val_loader = DataLoader(val_dataset, **val_loader_kwargs)
 
             chunk_loss_sum, chunk_n, chunk_corrects, chunk_preds, chunk_targets = validate_one_epoch(
                 model,

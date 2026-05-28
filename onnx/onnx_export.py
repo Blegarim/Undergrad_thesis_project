@@ -17,7 +17,7 @@ class EnsembleModelONNX(torch.nn.Module):
     def forward(self, images_tight, images_context, motions):
         out = self.model(images_tight, images_context, motions)
 
-        return out["actions"], out["looks"], out["crosses_pooled"]
+        return out["actions"], out["looks"], out["crosses_frame"]
     
 def main():
     device = torch.device("cpu")
@@ -52,14 +52,14 @@ def main():
         (dummy_tight, dummy_context, dummy_motions),
         os.path.join(project_root, "onnx", "pedestrian_model.onnx"),
         input_names=["images_tight", "images_context", "motions"],
-        output_names=["actions", "looks", "crosses_pooled"],
+        output_names=["actions", "looks", "crosses_frame"],
         dynamic_axes={          # allow variable batch size
             "images_tight":    {0: "batch"},
             "images_context":  {0: "batch"},
             "motions":         {0: "batch"},
             "actions":         {0: "batch"},
             "looks":           {0: "batch"},
-            "crosses_pooled":  {0: "batch"},
+            "crosses_frame":  {0: "batch"},
         },
         opset_version=17
     )

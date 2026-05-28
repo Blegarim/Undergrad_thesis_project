@@ -26,7 +26,7 @@ Motion seqs  → MotionEncoder (tight crop + motion) ──┘
 
 All modules share a unified `d_model = 128` via [`get_unified_dim_model()`](config.py).
 
-Model output dict keys: `actions`, `looks`, `crosses_pooled`, `crosses_frame` (frame-level crosses is
+Model output dict keys: `actions`, `looks`, `crosses_frame` (frame-level crosses is
 full-model only).
 
 ## Setup
